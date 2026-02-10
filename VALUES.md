@@ -65,7 +65,7 @@ __Covenant__: Individual agreed by lease, deed, or other legal contract.
 
 #### [Dragon] - "For mid-maxing players that make sure they dont lose”
 
-<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/d24f64ac-3fca-4301-a0e8-91ecfd59d172" align="right"/>
+<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/2b4287cd-d9a8-4e25-bf3d-b481cf8789f2" align="right"/>
 
 - __Theme__: hierarchy, dominance, inevitability of power. 
 - __Core Mechanic__: Control the Enemy
@@ -81,7 +81,7 @@ __Covenant__: Individual agreed by lease, deed, or other legal contract.
 
 #### [Phoenix] - "For high-risk/high-reward/snowball type players - Speedrunners"
 
-<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/2b4287cd-d9a8-4e25-bf3d-b481cf8789f2" align="right"/>
+<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/d24f64ac-3fca-4301-a0e8-91ecfd59d172" align="right"/>
 
 - __Theme__: suffering → transcendence.
 - __Core Mechanic__: Death Is a Resource
