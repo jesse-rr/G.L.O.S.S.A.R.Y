@@ -122,3 +122,6 @@ __Covenant__: Individual agreed by lease, deed, or other legal contract.
     - Sacrifice
 
 - _Your chosen Patron directly alters the final fight_
+
+### Multiplayer
+- Battle of seeds (like balatro)
