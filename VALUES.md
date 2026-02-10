@@ -47,6 +47,7 @@ __Covenant__: Individual agreed by lease, deed, or other legal contract.
 
 ### Covenants Mechanics
 #### [Ouroborus] - "For smart players/For achieving higher % rate"
+<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/848c4a99-2543-4085-9056-1b2fe6dba852" align="right"/>
 - __Theme__: recursion, memory, inevitability.
 - __Core Mechanic__: Reversal / Recursion
   - Once per floor, you may rewind a combat turn
@@ -59,9 +60,9 @@ __Covenant__: Individual agreed by lease, deed, or other legal contract.
   - Identifying symbols gives Echoes
   - Echoes = currency used to rewind / repeat
   - Religious symbols = stronger Echo generation (because belief = memory)
-<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/848c4a99-2543-4085-9056-1b2fe6dba852" align="right"/>
 
 #### [Dragon] - "For mid-maxing players that make sure they dont lose”
+<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/d24f64ac-3fca-4301-a0e8-91ecfd59d172" align="right"/>
 - __Theme__: hierarchy, dominance, inevitability of power. 
 - __Core Mechanic__: Control the Enemy
   - Enemies can be Suppressed: Delays their turn
@@ -73,9 +74,9 @@ __Covenant__: Individual agreed by lease, deed, or other legal contract.
   - Enemy debuffs that feel authoritative
     - Nordic / Roman symbols = dominance boosts
     - Religious symbols = obedience mechanics
-<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/d24f64ac-3fca-4301-a0e8-91ecfd59d172" align="right"/>
 
 #### [Phoenix] - "For high-risk/high-reward/snowball type players - Speedrunners"
+<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/2b4287cd-d9a8-4e25-bf3d-b481cf8789f2" align="right"/>
 - __Theme__: suffering → transcendence.
 - __Core Mechanic__: Death Is a Resource
   - You revive, but: Lose max HP | Gain permanent buffs
@@ -87,7 +88,6 @@ __Covenant__: Individual agreed by lease, deed, or other legal contract.
   - Religious symbols unlock resurrection variants
     - Egyptian symbols → soul / afterlife buffs
     - Christian symbolism → sacrifice effects
-<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/2b4287cd-d9a8-4e25-bf3d-b481cf8789f2" align="right"/>
 
 ---
 
