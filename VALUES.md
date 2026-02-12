@@ -1,7 +1,9 @@
 ### Game Simple Explanation
 
 _The higher you climb Babel, the less the world obeys rules and the more it obeys concepts. Your glossary ties those concepts to you, never lose your glossary._
+> Game __INSPIRATION__: Tunic
 
+[see link](https://www.google.com/search?q=tunic+book+game+gameplay&client=firefox-b-e&hs=rBLp&sca_esv=f9bf97a32107c6c3&channel=entpr&udm=2&biw=1920&bih=955&sxsrf=ANbL-n7Q03x25smGkFhJsCAu54a1iIIFNA%3A1770936428651&ei=bFiOacK7J5HO5OUPre34kAw&ved=0ahUKEwjCof-lhNWSAxURJ7kGHa02HsIQ4dUDCBI&uact=5&oq=tunic+book+game+gameplay&gs_lp=Egtnd3Mtd2l6LWltZyIYdHVuaWMgYm9vayBnYW1lIGdhbWVwbGF5SLAQUNUDWKMPcAN4AJABAJgBcKAB8QiqAQQxLjEwuAEDyAEA-AEBmAIDoALrAcICBBAAGB7CAgYQABgIGB6YAwCIBgGSBwMxLjKgB4cGsgcDMC4yuAfkAcIHBTAuMS4yyAcNgAgA&sclient=gws-wiz-img#sv=CAMSXhoyKhBlLTN0cjM5MG1SdHVUWFdNMg4zdHIzOTBtUnR1VFhXTToOdktwNUFBRmlaa3VqZ00gBCokCg5tN2tWanBMR09kSWtJTRIQZS0zdHIzOTBtUnR1VFhXTRgAMAEYByDQhKnQCTACSggQAhgCIAIoAg)
 ---
 
 ### Game Flow
