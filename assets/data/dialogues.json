@@ -1,3 +1,33 @@
 {
+  "default": [
+    "...",
+    "You fall... remembered by no one.",
+    "A name leaves you, and a covenant is born."
+  ],
+  "player": [
+    "..."
+  ],
+  "wanderer": [
+    "Ah. You chose the short ending.",
+    "We've known each other. Just not now",
+    "Careful, some aren't."
+  ],
 
+  "snake": [
+    "The Snake oversees your fate.",
+    "The skin sheds.",
+    "The snake coils back the moments you lost."
+  ],
+
+  "phoenix": [
+    "The Phoenix witness your fire.",
+    "The ash ignites.",
+    "The phoenix lifts you from your ashes."
+  ],
+
+  "dragon": [
+    "The dragon’s gaze falls upon you.",
+    "The crown rises.",
+    "The dragon commands all around you."
+  ]
 }
