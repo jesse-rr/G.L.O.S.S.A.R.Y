@@ -1,0 +1,99 @@
+{
+  "Balance Keeper": {
+    "theme": "Yin / Yang - Duality and Equilibrium",
+    "phase1": {
+      "title": "Divided Harmony",
+      "identity": "Embodies opposing forces in separate forms.",
+      "mechanicConcept": "Alternates between Light (offense) and Shadow (defense) each turn."
+    },
+    "phase2": {
+      "title": "Perfect Convergence",
+      "identity": "Opposites collapse into unity.",
+      "mechanicConcept": "Mirrors player actions — attack becomes defense, defense becomes attack."
+    }
+  },
+
+  "The Awakened One": {
+    "theme": "Buddhism - Detachment and Enlightenment",
+    "phase1": {
+      "title": "Silent Contemplation",
+      "identity": "Does not initiate aggression.",
+      "mechanicConcept": "Only reacts to player actions."
+    },
+    "phase2": {
+      "title": "Emptiness Realized",
+      "identity": "Transcends worldly mechanics.",
+      "mechanicConcept": "Removes all buffs, debuffs, and status effects from both sides."
+    }
+  },
+
+  "The Prophet": {
+    "theme": "Judaism - Covenant and Divine Law",
+    "phase1": {
+      "title": "Bearer of the Word",
+      "identity": "Declares binding commandments.",
+      "mechanicConcept": "Imposes temporary combat rules (e.g., cannot repeat same action)."
+    },
+    "phase2": {
+      "title": "Living Covenant",
+      "identity": "The law becomes embodied force.",
+      "mechanicConcept": "Breaking imposed rules causes severe punishment."
+    }
+  },
+
+  "The Shepherd": {
+    "theme": "Christianity - Sacrifice and Redemption",
+    "phase1": {
+      "title": "Guiding Grace",
+      "identity": "Protective and restorative.",
+      "mechanicConcept": "Heals periodically and shields allies (or self)."
+    },
+    "phase2": {
+      "title": "The Sacrificial King",
+      "identity": "Falls and rises transformed.",
+      "mechanicConcept": "Upon defeat, resurrects once with altered abilities and increased power."
+    }
+  },
+
+  "Hermit Sage": {
+    "theme": "Taoism - Flow and Effortless Action",
+    "phase1": {
+      "title": "Still Water",
+      "identity": "Moves only when necessary.",
+      "mechanicConcept": "Has high evasion and counter-based responses."
+    },
+    "phase2": {
+      "title": "The Uncarved Path",
+      "identity": "Becomes aligned with the natural flow.",
+      "mechanicConcept": "Redirects player damage back partially or converts it into healing."
+    }
+  },
+
+  "Radiant Kami": {
+    "theme": "Shinto - Radiance and Kami",
+    "phase1": {
+      "title": "Radiant Presence",
+      "identity": "Brings overwhelming light.",
+      "mechanicConcept": "Applies blinding or clarity-altering effects."
+    },
+    "phase2": {
+      "title": "Sun Hidden in the Cave",
+      "identity": "Light withdraws, chaos spreads.",
+      "mechanicConcept": "Field darkens — random effects trigger each turn until light returns."
+    }
+  },
+
+  "The Rationalist": {
+    "theme": "Atheism - Reason and Material Reality",
+    "phase1": {
+      "title": "Cold Analysis",
+      "identity": "Studies patterns.",
+      "mechanicConcept": "Adapts to repeated player strategies (reduced damage from repeated moves)."
+    },
+    "phase2": {
+      "title": "The Silent Cosmos",
+      "identity": "Strips away transcendence.",
+      "mechanicConcept": "Disables all supernatural/status mechanics — pure rational combat."
+    }
+  }
+}

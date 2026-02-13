@@ -17,11 +17,13 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class CovenantScreen implements Screen {
 
+    private Texture backgroundSheet;
     private Texture selectorSheet;
     private Texture dragonSheet;
     private Texture phoenixSheet;
     private Texture snakeSheet;
 
+    private Animation<TextureRegion> backgroundAnimation;
     private Animation<TextureRegion> selectorAnimation;
     private Animation<TextureRegion> dragonAnimation;
     private Animation<TextureRegion> phoenixAnimation;
@@ -37,7 +39,6 @@ public class CovenantScreen implements Screen {
     private Rectangle cardBtn1;
     private Rectangle cardBtn2;
     private Rectangle cardBtn3;
-    private Rectangle goAloneBtn;
 
     private Vector3 mouse;
     private Rectangle selectedBtn;
@@ -59,11 +60,13 @@ public class CovenantScreen implements Screen {
 
         batch = new SpriteBatch();
 
+        backgroundSheet = new Texture("exports/BG - Covenant-Sheet.png");
         selectorSheet = new Texture("exports/Covenant-Selector-Btn-Sheet.png");
         dragonSheet = new Texture("exports/Dragon-Sheet.png");
         phoenixSheet = new Texture("exports/Phoenix-Sheet.png");
         snakeSheet = new Texture("exports/Snake-Sheet.png");
 
+        backgroundAnimation = loadAnimation(backgroundSheet, 8, 1, 0.2f, Animation.PlayMode.LOOP);
         selectorAnimation = loadAnimation(selectorSheet, 7, 1, 0.1f, Animation.PlayMode.LOOP);
         dragonAnimation = loadAnimation(dragonSheet, 5, 1, 0.1f, Animation.PlayMode.LOOP);
         phoenixAnimation = loadAnimation(phoenixSheet, 5, 1, 0.1f, Animation.PlayMode.LOOP);
@@ -83,7 +86,6 @@ public class CovenantScreen implements Screen {
         cardBtn1 = new Rectangle(card1X, cardY, cardWidth, cardHeight);
         cardBtn2 = new Rectangle(card2X, cardY, cardWidth, cardHeight);
         cardBtn3 = new Rectangle(card3X, cardY, cardWidth, cardHeight);
-        goAloneBtn = new Rectangle(1175, 0, 105, 45);
 
         selectedBtn = cardBtn2;
         mouse = new Vector3();
@@ -93,6 +95,8 @@ public class CovenantScreen implements Screen {
     public void render(float delta) {
 
         stateTime += delta;
+
+        TextureRegion backgroundFrame = backgroundAnimation.getKeyFrame(stateTime);
 
         TextureRegion selectorFrame = selectorAnimation.getKeyFrame(stateTime);
 
@@ -121,6 +125,10 @@ public class CovenantScreen implements Screen {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
+        batch.setColor(0.5f, 0.5f, 0.5f, 1f);
+        batch.draw(backgroundFrame, 0, 0, 1280 , 720);
+        batch.setColor(1f, 1f, 1f, 1f);
+
         drawCard(dragonFrame, cardBtn1, selectedBtn == cardBtn1, scale);
         drawCard(phoenixFrame, cardBtn2, selectedBtn == cardBtn2, scale);
         drawCard(snakeFrame, cardBtn3, selectedBtn == cardBtn3, scale);
@@ -143,8 +151,6 @@ public class CovenantScreen implements Screen {
         shapeRenderer.rect(cardBtn1.x, cardBtn1.y, cardBtn1.width, cardBtn1.height);
         shapeRenderer.rect(cardBtn2.x, cardBtn2.y, cardBtn2.width, cardBtn2.height);
         shapeRenderer.rect(cardBtn3.x, cardBtn3.y, cardBtn3.width, cardBtn3.height);
-        shapeRenderer.rect(goAloneBtn.x, goAloneBtn.y, goAloneBtn.width, goAloneBtn.height);
-
         shapeRenderer.end();
     }
 
