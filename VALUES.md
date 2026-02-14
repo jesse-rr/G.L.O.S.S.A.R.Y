@@ -1,3 +1,15 @@
+### World
+Babel (90% do jogo) - Mesopotamia
+
+### Summary
+A shadow climbs the Babels seven levels searching for its godhood, utilizing items & knownledge for better odds of ascending. The shadow does not know itself, but it seaks to become someone (a covenant). The knownledge is kept in its glossary together with items he finds. 
+
+### Main character
+Shadow
+
+### Bossess
+Pool of 7 - https://github.com/jesse-rr/G.L.O.S.S.A.R.Y/blob/main/assets/data/bosses.json 
+
 ### Game Simple Explanation
 
 _The higher you climb Babel, the less the world obeys rules and the more it obeys concepts. Your glossary ties those concepts to you, never lose your glossary._
