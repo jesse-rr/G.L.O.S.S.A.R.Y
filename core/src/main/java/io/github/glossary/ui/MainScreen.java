@@ -1,7 +1,7 @@
 package io.github.glossary.ui;
 
-import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -9,14 +9,15 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import io.github.glossary.entity.PlayerData;
 import io.github.glossary.util.ScreenManager;
 
-import static com.badlogic.gdx.graphics.g2d.Animation.*;
+import static com.badlogic.gdx.graphics.g2d.Animation.PlayMode;
+import static io.github.glossary.util.GameUtils.loadAnimation;
 
 public class MainScreen implements Screen {
 
@@ -35,7 +36,6 @@ public class MainScreen implements Screen {
     private SpriteBatch batch;
     private Viewport viewport;
     private Camera camera;
-    private ShapeRenderer shapeRenderer;
 
     private Rectangle newGameBtn;
     private Rectangle continueBtn;
@@ -51,22 +51,21 @@ public class MainScreen implements Screen {
         batch = new SpriteBatch();
 
         backgroundSheet = new Texture("exports/Start-Page-Sheet.png");
-        selectorSheet = new Texture("exports/Menu-Btn-Sheet.png");
+        selectorSheet = new Texture("exports/Menu-Selector-Sheet.png");
         cloudAnimationSheet = new Texture("exports/Cloud-Animation-Sheet.png");
 
-        animation1 = this.loadAnimation(backgroundSheet, 9, 1, 0.1f, PlayMode.LOOP);
-        animation2 = this.loadAnimation(selectorSheet, 9, 1, 0.1f, PlayMode.LOOP);
-        animation3 = this.loadAnimation(cloudAnimationSheet, 18, 1, 0.1f, PlayMode.NORMAL);
+        animation1 = loadAnimation(backgroundSheet, 9, 1, 0.1f, PlayMode.LOOP);
+        animation2 = loadAnimation(selectorSheet, 9, 1, 0.1f, PlayMode.LOOP);
+        animation3 = loadAnimation(cloudAnimationSheet, 18, 1, 0.1f, PlayMode.NORMAL);
 
         stateTime = 0f;
+
         camera = new OrthographicCamera();
         viewport = new FitViewport(1280, 720, camera);
         viewport.apply(true);
 
         camera.position.set(640, 360, 0);
         camera.update();
-
-        shapeRenderer = new ShapeRenderer();
 
         newGameBtn = new Rectangle(130, 355, 215, 45);
         continueBtn = new Rectangle(130, 293, 215, 45);
@@ -84,14 +83,13 @@ public class MainScreen implements Screen {
 
         if (cloudPlaying) {
             cloudStateTime += delta;
-            if (animation3.isAnimationFinished(cloudStateTime)) {
-                cloudPlaying = false;
-            }
         }
 
         TextureRegion bgFrame = animation1.getKeyFrame(stateTime);
         TextureRegion selectorFrame = animation2.getKeyFrame(stateTime);
         TextureRegion cloudFrame = animation3.getKeyFrame(cloudStateTime);
+
+        int cloudFrameIndex = animation3.getKeyFrameIndex(cloudStateTime);
 
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -99,37 +97,40 @@ public class MainScreen implements Screen {
         viewport.apply();
         camera.update();
 
-        handleInput();
+        if (!cloudPlaying) {
+            handleInput();
+        }
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        batch.draw(bgFrame, 0, 0, 1280, 720);
+        if (!cloudPlaying || cloudFrameIndex < 8) {
+            batch.draw(bgFrame, 0, 0, 1280, 720);
 
-        if (cloudPlaying) {
-            batch.draw(cloudFrame, 0, 0, 1280, 720);
-        }
-
-        batch.draw(
+            batch.draw(
                 selectorFrame,
                 selectedBtn.x - 60,
                 selectedBtn.y,
                 50,
                 selectedBtn.height
-        );
+            );
+        }
+
+        if (cloudPlaying) {
+            batch.draw(cloudFrame, 0, 0, 1280, 720);
+        }
 
         batch.end();
 
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        shapeRenderer.setColor(1, 0, 0, 1);
+        if (cloudPlaying && animation3.isAnimationFinished(cloudStateTime)) {
+            if (selectedBtn == newGameBtn && newGameBtn.contains(mouse.x, mouse.y)) {
+                ScreenManager.showCovenant();
+            }
 
-        shapeRenderer.rect(newGameBtn.x, newGameBtn.y, newGameBtn.width, newGameBtn.height);
-        shapeRenderer.rect(continueBtn.x, continueBtn.y, continueBtn.width, continueBtn.height);
-        shapeRenderer.rect(helpBtn.x, helpBtn.y, helpBtn.width, helpBtn.height);
-        shapeRenderer.rect(exitBtn.x, exitBtn.y, exitBtn.width, exitBtn.height);
-
-        shapeRenderer.end();
+            if (selectedBtn == helpBtn && helpBtn.contains(mouse.x, mouse.y)) {
+                ScreenManager.showBoss(new PlayerData());
+            }
+        }
     }
 
     @Override
@@ -147,22 +148,6 @@ public class MainScreen implements Screen {
         backgroundSheet.dispose();
         selectorSheet.dispose();
         cloudAnimationSheet.dispose();
-        shapeRenderer.dispose();
-    }
-
-    private Animation<TextureRegion> loadAnimation(Texture textureSheet, int framesCount, int rows, float velocity, PlayMode playMode) {
-        TextureRegion[][] tmp = TextureRegion.split(
-                textureSheet,
-                textureSheet.getWidth() / framesCount,
-                textureSheet.getHeight() / rows
-        );
-        TextureRegion[] frames = new TextureRegion[framesCount];
-        for (int i = 0; i < framesCount; i++) {
-            frames[i] = tmp[0][i];
-        }
-        Animation<TextureRegion> temp = new Animation<>(velocity, frames);
-        temp.setPlayMode(playMode);
-        return temp;
     }
 
     private void handleInput() {
@@ -172,7 +157,6 @@ public class MainScreen implements Screen {
 
         if (newGameBtn.contains(mouse.x, mouse.y)) {
             selectedBtn = newGameBtn;
-
         } else if (continueBtn.contains(mouse.x, mouse.y)) {
             selectedBtn = continueBtn;
         } else if (helpBtn.contains(mouse.x, mouse.y)) {
@@ -183,22 +167,19 @@ public class MainScreen implements Screen {
 
         if (Gdx.input.justTouched()) {
 
-            if (selectedBtn == newGameBtn ||
-                    selectedBtn == continueBtn ||
-                    selectedBtn == helpBtn) {
-
+            if (selectedBtn == newGameBtn && newGameBtn.contains(mouse.x, mouse.y)) {
                 cloudPlaying = true;
                 cloudStateTime = 0f;
             }
 
-            if (selectedBtn == newGameBtn) {
-                ScreenManager.showCovenant();
+            if (selectedBtn == helpBtn && helpBtn.contains(mouse.x, mouse.y)) {
+                cloudPlaying = true;
+                cloudStateTime = 0f;
             }
 
-            if (selectedBtn == exitBtn) {
+            if (selectedBtn == exitBtn && exitBtn.contains(mouse.x, mouse.y)) {
                 Gdx.app.exit();
             }
         }
     }
-
 }
