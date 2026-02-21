@@ -191,18 +191,90 @@ High risk, snowball potential.
 
 ## 12 Core Items
 
-1. Seraph’s Plume
-2. Echojar of the Damned
-3. Reversed Scale
-4. 404: Location Not Found
-5. Schizostone
-6. Runefall
-7. VoidFrame
-8. Broken Crown
-9. Namaste?
-10. The Archive
-11. Fog of War
-12. Second Amendment
+1. **Seraph's Plume (Feather)**
+<details>
+<summary>Effect Details</summary>
+- Revives the user once per battle at 30% HP and grants 1 turn of invulnerability.  
+- After revival, user suffers –25% damage output for the rest of the fight.
+</details>
+
+2. **Echojar of The Damned (Bottle)**
+<details>
+<summary>Effect Details</summary>
+- Replays the first attack chain performed in the battle (same targets + effects).  
+- Replayed attacks deal –40% damage.
+</details>
+
+3. **Reversed Scale (Dragon Scale)**
+<details>
+<summary>Effect Details</summary>
+- Inverts all status effects (buffs <-> debuffs).  
+- Inverts order of draw.
+</details>
+
+4. **404: Location Not Found (Map)**
+<details>
+<summary>Effect Details</summary>
+- Makes all effects have a 100% sure hit.  
+- 25% chance to disable an item for next round (other than this one).
+</details>
+
+5. **Schizostone (Rock)**
+<details>
+<summary>Effect Details</summary>
+- 50% chance to deal double damage.  
+- 50% chance to receive double damage.
+</details>
+
+6. **Runefall (Thor’s Hammer)**
+<details>
+<summary>Effect Details</summary>
+- Calls lightning that deals heavy AoE damage and stuns enemies for 1 turn.  
+- User becomes exhausted and skips their next turn.
+</details>
+
+7. **VoidFrame (Photo)**
+<details>
+<summary>Effect Details</summary>
+- Captures an enemy, removing them from battle for 1 turn.  
+- Released enemy gains +20% attack for 2 turns.
+</details>
+
+8. **Broken Crown (Crown)**
+<details>
+<summary>Effect Details</summary>
+- Grants +30% damage and forces enemies to prioritize the user.  
+- User receives +25% incoming damage.
+</details>
+
+9. **Namaste? (Prayer Beads / Malas)**
+<details>
+<summary>Effect Details</summary>
+- Fully cleanses debuffs and heals 35% HP.  
+- User cannot attack next turn.
+</details>
+
+10. **The Archive (Deck of Cards)**
+<details>
+<summary>Effect Details</summary>
+- Draws a random stored effect from previous chains (attacks).  
+- Effect is halved.
+</details>
+
+11. **Fog of War (Skull Smoke)**
+<details>
+<summary>Effect Details</summary>
+- Makes enemies attack each other for 1 turn.  
+- User becomes confused this turn too.
+</details>
+
+12. **Second Amendment (Gun with Flag)**
+<details>
+<summary>Effect Details</summary>
+- Deals enormous damage and Marks an enemy (takes double damage).  
+- Costs 25% of total gemstones per use (minimum 20).
+</details>
+
 
 Each item has:
 
