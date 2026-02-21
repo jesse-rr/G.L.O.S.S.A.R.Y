@@ -2,9 +2,9 @@
 
 ### *Game Design Document (GDD)*
 
-**Genre:** Roguelike Deckbuilder / Symbolic Turn-Based RPG
-**Structure:** 7-Floor Run-Based Tower Climber
-**Primary Inspiration:** Tunic & Slay-The-Spire
+- **Genre:** Roguelike Deckbuilder / Symbolic Turn-Based RPG
+- **Structure:** 7-Floor Run-Based Tower Climber
+- **Primary Inspiration:** Tunic & Slay-The-Spire
 
 ---
 
