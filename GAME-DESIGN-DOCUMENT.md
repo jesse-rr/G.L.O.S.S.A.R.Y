@@ -4,46 +4,36 @@
 
 **Genre:** Roguelike Deckbuilder / Symbolic Turn-Based RPG
 **Structure:** 7-Floor Run-Based Tower Climber
-**Primary Inspiration:** Tunic
+**Primary Inspiration:** Tunic & Slay-The-Spire
 
 ---
 
 # 1. High Concept
 
-**G.L.O.S.S.A.R.Y** is a symbolic roguelike set in a mythic interpretation of Mesopotamian Babel.
-
-You play as **The Shadow**, an undefined being climbing the seven levels of Babel in pursuit of godhood. The higher you ascend, the less reality obeys physics and the more it obeys **concepts**.
-Your only constant is your **Glossary**.
+**G.L.O.S.S.A.R.Y** is a symbolic roguelike set in a mythic interpretation of Mesopotamian "Tower of Babel". You play as **The Shadow**, an undefined being climbing the seven levels of Babel in pursuit of godhood. The higher you ascend, the less reality obeys physics, thus your only constant are the records in your **Glossary**.
 
 The Glossary records:
-
-* Identified symbols
-* Learned runes
-* Relics
-* Echoes (memory currency)
-* Concept bindings
-
-If you lose your Glossary, you lose your identity.
-
+* Symbols
+* Runes
+* Relics (Items)
+* Beasts
+* Bosses
+* Regions
+  
 ---
 
 # 2. Setting
 
-## Babel – Mesopotamia (90% of the Game)
+## Babel – Mesopotamia
 
-Inspired by:
+Babel is divided into **7 Floors**, the higher the more distorted.
 
-* Mesopotamia
-* Tower of Babel
-
-Babel is divided into **7 Floors**, each representing a breakdown of reality.
-
-| Floors | State of Reality | Gameplay Effect              |
-| ------ | ---------------- | ---------------------------- |
-| 1–2    | Mundane Reality  | Symbols are decorative       |
-| 3–4    | Cultural Bleed   | Symbols gain passive effects |
-| 5–6    | Symbol Collapse  | Gods contradict each other   |
-| 7      | Inhuman Apex     | Enemies are pure concepts    |
+| Floors | State of Reality  | Gameplay Effect                      |
+| ------ | ----------------- | -------------------------------------|
+| 1–2    | Mundane Reality   | Everything works as intended         |
+| 3–4    | Cultural Bleed    | Unidentified records = ~10% Failing  |
+| 5–6    | Symbolic Collapse | Unidentified records = ~30% Failing  |
+| 7      | Inhuman Horizon   | Unidentified records = ~100% Failing |
 
 ---
 
@@ -59,10 +49,7 @@ Babel is divided into **7 Floors**, each representing a breakdown of reality.
 8. Ascend to Godhood or Fall to the Corpse Pile
 
 Optional:
-
-* Run (Floors 1–3 only)
-* Use Active Items
-* Sacrifice Items for Tributes
+* Buy Items
 
 ---
 
@@ -70,18 +57,16 @@ Optional:
 
 ## The Shadow
 
-* No defined identity.
+* No defined identity. (No Base Class)
 * Seeks covenant to become "someone."
-* Has no base class — Covenant defines playstyle.
-* Progression tied to Glossary, not XP.
+* Progression is tied to its glossary - Death = Restart glossary.
 
 ---
 
 # 5. Combat System – “Living Language”
 
-Turn-Based Symbol Construction System.
-
-Each turn you receive random **Runes**.
+- Turn-Based Symbol Construction System.
+- Each turn you receive/draw random **Runes** - up to 7 in hand.
 
 Example Runes:
 
@@ -95,15 +80,15 @@ Example Runes:
 You build Chains:
 
 * ᚠ + ᚲ → Fire Blast
-* ᚱ + ᚲ → Dash Attack
-* ᛞ + ᚠ → Barrier Recharge
+* ᚱ + ᚲ → Dash
+* ᛞ + ᚠ → Forcefield
 
 ### Rules:
 
 * Longer Chains = stronger effects
-* Some combinations unlock hidden words
-* Identified symbols enhance rune efficiency
-* Chain memory stored in Glossary
+* Unidentified runes/chains are weaker
+* Identified runes enhance rune efficiency
+* Chain memory is stored in Glossary
 
 ---
 
@@ -119,18 +104,18 @@ You build Chains:
 
 # 7. Currencies
 
-| Currency | Gained By          | Purpose            |
-| -------- | ------------------ | ------------------ |
-| Money    | Killing enemies    | Buy items          |
-| Echoes   | Analyzing symbols  | Rewind / recursion |
-| Ashes    | Taking damage      | Phoenix mechanics  |
-| Tributes | Sacrificing relics | Covenant abilities |
+| Currency  | Gained By           | Purpose            |
+| --------- | ------------------- | ------------------ |
+| Gemstones | Killing enemies     | Buy/Use items      |
+| Echoes    | Analyzing symbols   | Snake mechanics    |
+| Ashes     | Taking damage       | Phoenix mechanics  |
+| Tributes  | Sacrificing records | Covenant mechanics |
 
 ---
 
 # 8. Covenants
 
-A Covenant defines your philosophy of ascension.
+A Covenant defines your ascension.
 
 ---
 
@@ -232,23 +217,10 @@ Reversed Scale + Broken Crown → Self-buff inversion meta.
 
 # 10. Boss Structure
 
-Floor 7 triggers one of 7 Conceptual Bosses.
-
-Boss archetypes represent:
-
-* Authority
-* Memory
-* Sacrifice
-* Language
-* Dominion
-* Recursion
-* Oblivion
-
-Final boss altered by chosen Covenant.
+Floor 7 triggers one of 7 Conceptual Bosses. This will be choosen by found symbols by user (Yin-Yang | Dharma Wheel | etc...), if no religion symbols are found - Hidden boss is triggered.
 
 If defeated:
 → Ascend to Godhood
-
 If defeated by boss:
 → Thrown to corpse pile (run ends)
 
@@ -257,17 +229,13 @@ If defeated by boss:
 # 11. Glossary System (Meta-Progression)
 
 The Glossary:
-
-* Records identified symbols
-* Stores Echoes
-* Unlocks passive world effects
-* Expands rune pool
-* Unlocks hidden words
-
-Never lose your Glossary.
-
-It ties **concepts to you**.
-
+* Symbols
+* Runes
+* Relics (Items)
+* Beasts
+* Bosses
+* Regions
+* Game Configuration
 ---
 
 # 12. Multiplayer – Battle of Seeds
@@ -277,30 +245,21 @@ Inspired structurally by asynchronous roguelike competition.
 * Players share same Seed
 * Identical symbol layout
 * Compete for:
-
-  * Fastest ascension
-  * Highest concept control
-  * Most efficient Echo usage
-
-Leaderboards:
-
-* Fewest turns
-* Most symbols identified
-* Highest survival margin
+  * Fastest ascension (3 Lives)
+* First Player to reach a boss enables timer for player 2 (3 minutes)
+  * Player 2 Fails to reach boss (-1 live)
+  * Player 2 Succeeds to reach boss (Battle for boss goes) 
 
 ---
 
 # 13. Difficulty Curve
 
-| Stage | Challenge Type      |
-| ----- | ------------------- |
-| Early | Tactical combat     |
-| Mid   | Concept stacking    |
-| Late  | Reality instability |
-| Final | Identity challenge  |
-
-The game transitions from:
-Dungeon Crawler → Mythic System → Philosophical Combat
+| Stage       | Challenge Type                                        |
+| ----------- | ----------------------------------------------------- |
+| Early (1-2) | Simple Combat                                         |
+| Mid   (3-4) | Start of Chains                                       |
+| Late  (5-6) | Structuring Full Build                                |
+| Final (7)   | Full build - Clean up of unidentified builds/records  |
 
 ---
 
@@ -310,50 +269,26 @@ Dungeon Crawler → Mythic System → Philosophical Combat
 * Living runes glowing
 * UI feels like carved tablet
 * Symbols animate when identified
-* Final floor: language visually breaks apart
+* Symbols have glint/Other identifiable animations
+* The higher the floor the more glichy the UI/Game becomes
 
-Minimalist storytelling.
-No direct exposition.
-
+Minimalist storytelling. (No dialogue)  
 Player learns through:
-
-* Symbol behavior
-* Glossary fragments
-* Environmental contradiction
+* Repetition
 
 ---
 
 # 15. Pillars of Design
 
 1. Knowledge is Power
-2. Memory is Currency
-3. Identity is Constructed
-4. Death is Utility
-5. Language is Weapon
+2. All Knowledge is Stored in Glossary
+3. The More you Identify the More Possibilities 
 
 ---
 
-# 16. Endgame Philosophy
+# 16. Philosophy
 
-You begin as Shadow.
-
-You choose a Covenant.
-
-You climb Babel.
-
-At Floor 7, the question is not:
-
-“Can you win?”
-
-But:
-
-“Are you worthy of defining meaning?”
-
----
-
-If you’d like, next I can:
-
-* Design the 7 specific Bosses in detail
-* Balance the rune-combination combat mathematically
-* Create a full sample run
-* Or structure this into a pitch-ready publisher document
+1. You begin as Shadow.
+2. You choose a Covenant.
+3. You climb Babel.
+4. At Floor 7, the question is “Are you worthy of defining yourself?”
