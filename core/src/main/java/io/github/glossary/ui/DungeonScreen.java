@@ -5,11 +5,16 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.graphics.g2d.Animation.PlayMode;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import io.github.glossary.entity.Covenant;
+import io.github.glossary.entity.NodeType;
 import io.github.glossary.entity.PlayerData;
+import io.github.glossary.util.MapNode;
+
 
 import static io.github.glossary.util.GameUtils.*;
 
@@ -21,12 +26,24 @@ public class DungeonScreen implements Screen {
     private Texture gemstoneTexture;
     private Texture heartTexture;
     private Texture glossaryTexture;
+    private Texture mapTexture;
+
+    private Texture eyeOfRaTexture;
+    private Texture merchantTexture;
+    private Texture normalCombatTexture;
+    private Texture bossCombatTexture;
 
     private Texture echoTexture;
     private Texture fireTexture;
     private Texture tributeTexture;
 
     private Animation<TextureRegion> characterAnimation;
+
+    private Animation<TextureRegion> mapAnimation;
+    private Animation<TextureRegion> eyeAnimation;
+    private Animation<TextureRegion> merchantAnimation;
+    private Animation<TextureRegion> normalCombatAnimation;
+    private Animation<TextureRegion> bossCombatAnimation;
 
     private float stateTime;
     private float runTime = 0f;
@@ -38,6 +55,9 @@ public class DungeonScreen implements Screen {
     private Viewport viewport;
     private Camera camera;
     private BitmapFont font;
+    private Vector3 mouse;
+
+    private MapNode[] nodes;
 
     private PlayerData playerData;
 
@@ -57,11 +77,23 @@ public class DungeonScreen implements Screen {
         heartTexture = new Texture("exports/Heart32.png");
         glossaryTexture = new Texture("exports/Glossary.png");
 
+        mapTexture = new Texture("exports/Map-v1-Sheet.png");
+
+        eyeOfRaTexture = new Texture("exports/Eye-Of-Ra-Sheet.png");
+        merchantTexture = new Texture("exports/Merchant-Sheet.png");
+        normalCombatTexture = new Texture("exports/Normal-Combat-Sheet.png");
+        bossCombatTexture = new Texture("exports/Boss-Crown-Sheet.png");
+
         echoTexture = new Texture("exports/Echo32.png");
         fireTexture = new Texture("exports/Fire32.png");
         tributeTexture = new Texture("exports/Tribute32.png");
 
         characterAnimation = loadAnimation(characterSheet, 6, 1, 0.1f, PlayMode.LOOP);
+        mapAnimation = loadAnimation(mapTexture, 4, 1, 0.1f, PlayMode.NORMAL);
+        eyeAnimation = loadAnimation(eyeOfRaTexture, 6, 1, 0.1f, PlayMode.NORMAL);
+        merchantAnimation = loadAnimation(merchantTexture, 6, 1, 0.1f, PlayMode.NORMAL);
+        normalCombatAnimation = loadAnimation(normalCombatTexture, 6, 1, 0.1f, PlayMode.NORMAL);
+        bossCombatAnimation = loadAnimation(bossCombatTexture, 6, 1, 0.1f, PlayMode.NORMAL);
 
         stateTime = 0f;
 
@@ -73,8 +105,11 @@ public class DungeonScreen implements Screen {
 
         character = new Rectangle(200, 150, 104, 248);
 
+        drawNodes();
+
         camera.position.set(640, 360, 0);
         camera.update();
+        mouse = new Vector3();
     }
 
     @Override
@@ -161,8 +196,144 @@ public class DungeonScreen implements Screen {
             1280 / 2f - timer.width / 2f,
             baseline);
 
+        batch.draw(mapAnimation.getKeyFrames()[0], (1280 - 720f) / 2f, 0, 720, 720);
+        renderNodes(delta);
+
         batch.end();
     }
+
+    private void renderNodes(float delta) {
+
+        mouse.set(Gdx.input.getX(), Gdx.input.getY(), 0);
+        camera.unproject(mouse);
+
+        for (MapNode node : nodes) {
+
+            boolean isHovering = node.getRectangle().contains(mouse.x, mouse.y);
+            node.update(delta, isHovering);
+
+            Animation<TextureRegion> animation = null;
+
+            switch (node.getType()) {
+                case NORMAL_COMBAT:
+                    animation = normalCombatAnimation;
+                    break;
+                case MERCHANT:
+                    animation = merchantAnimation;
+                    break;
+                case BOSS:
+                    animation = bossCombatAnimation;
+                    break;
+                case EVENT:
+                    animation = eyeAnimation;
+                    break;
+            }
+
+            TextureRegion frame;
+
+            if (node.getAnimTime() == 0f) {
+                frame = animation.getKeyFrames()[0];
+            } else {
+                frame = animation.getKeyFrame(node.getAnimTime(), false);
+            }
+
+            float nodeCenterX = node.getRectangle().x + node.getRectangle().width / 2f;
+            float nodeCenterY = node.getRectangle().y + node.getRectangle().height / 2f;
+
+            float scale = 1f;
+            if (node.getType() == NodeType.BOSS) {
+                scale = 2f; // double size
+            }
+
+            float width = frame.getRegionWidth() * scale;
+            float height = frame.getRegionHeight() * scale;
+
+            batch.draw(
+                frame,
+                nodeCenterX - width / 2f,
+                nodeCenterY - height / 2f,
+                width,
+                height
+            );
+        }
+    }
+
+    private void drawNodes() {
+
+        nodes = new MapNode[25];
+
+        final float centerX = 640f;   // center of 1280x720
+        final float centerY = 360f;
+
+        final float outerRadius = 300f;
+        final float middleRadius = 180f;
+
+        final float nodeSize = 80f;   // LOGICAL SIZE (hitbox)
+
+        int index = 0;
+
+        // ================= OUTER RING (16)
+        for (int i = 0; i < 16; i++) {
+
+            float angleDeg = i * 22.5f;
+            float angleRad = MathUtils.degreesToRadians * angleDeg;
+
+            float x = centerX + MathUtils.cos(angleRad) * outerRadius;
+            float y = centerY + MathUtils.sin(angleRad) * outerRadius;
+
+            nodes[index++] = new MapNode(
+                x - nodeSize / 2f,
+                y - nodeSize / 2f,
+                nodeSize,
+                nodeSize,
+                getRandomNodeType()
+            );
+        }
+
+        // ================= MIDDLE RING (8)
+        for (int i = 0; i < 8; i++) {
+
+            float angleDeg = i * 45f;
+            float angleRad = MathUtils.degreesToRadians * angleDeg;
+
+            float x = centerX + MathUtils.cos(angleRad) * middleRadius;
+            float y = centerY + MathUtils.sin(angleRad) * middleRadius;
+
+            nodes[index++] = new MapNode(
+                x - nodeSize / 2f,
+                y - nodeSize / 2f,
+                nodeSize,
+                nodeSize,
+                getRandomNodeType()
+            );
+        }
+
+        // ================= CENTER (BOSS)
+        nodes[index] = new MapNode(
+            centerX - nodeSize / 2f,
+            centerY - nodeSize / 2f,
+            nodeSize,
+            nodeSize,
+            NodeType.BOSS
+        );
+    }
+
+    private NodeType getRandomNodeType() {
+        final float eyeChance = 0.2f;
+        final float merchantChance = 0.1f;
+
+        float roll = MathUtils.random();
+        if (roll < eyeChance) {
+            return NodeType.EVENT;
+        }
+        else if (roll < eyeChance + merchantChance) {
+            return NodeType.MERCHANT;
+        }
+        else {
+            return NodeType.NORMAL_COMBAT;
+        }
+    }
+
 
     @Override
     public void resize(int width, int height) {
