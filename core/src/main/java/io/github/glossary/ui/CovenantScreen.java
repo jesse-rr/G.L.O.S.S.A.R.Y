@@ -78,12 +78,12 @@ public class CovenantScreen implements Screen {
         snakeSheet = new Texture("exports/Snake-Sheet.png");
         cloudSheet = new Texture("exports/Cloud-Animation-Sheet.png");
 
-        backgroundAnimation = loadAnimation(backgroundSheet, 8, 1, 0.2f, Animation.PlayMode.LOOP);
-        selectorAnimation = loadAnimation(selectorSheet, 7, 1, 0.1f, Animation.PlayMode.LOOP);
-        dragonAnimation = loadAnimation(dragonSheet, 5, 1, 0.1f, Animation.PlayMode.LOOP);
-        phoenixAnimation = loadAnimation(phoenixSheet, 5, 1, 0.1f, Animation.PlayMode.LOOP);
-        snakeAnimation = loadAnimation(snakeSheet, 5, 1, 0.1f, Animation.PlayMode.LOOP);
-        cloudAnimation = loadAnimation(cloudSheet, 18, 1, 0.1f, Animation.PlayMode.NORMAL);
+        backgroundAnimation = loadAnimation(backgroundSheet, 8, 1, 0.08f, Animation.PlayMode.LOOP);
+        selectorAnimation = loadAnimation(selectorSheet, 7, 1, 0.08f, Animation.PlayMode.LOOP);
+        dragonAnimation = loadAnimation(dragonSheet, 5, 1, 0.08f, Animation.PlayMode.LOOP);
+        phoenixAnimation = loadAnimation(phoenixSheet, 5, 1, 0.08f, Animation.PlayMode.LOOP);
+        snakeAnimation = loadAnimation(snakeSheet, 5, 1, 0.08f, Animation.PlayMode.LOOP);
+        cloudAnimation = loadAnimation(cloudSheet, 24, 1, 0.08f, Animation.PlayMode.NORMAL);
 
         stateTime = 0f;
 
@@ -139,7 +139,7 @@ public class CovenantScreen implements Screen {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        if (!cloudPlaying || cloudFrameIndex < 8) {
+        if (!cloudPlaying || cloudFrameIndex < 18) {
 
             batch.setColor(0.5f, 0.5f, 0.5f, 1f);
             batch.draw(backgroundFrame, 0, 0, 1280 , 720);

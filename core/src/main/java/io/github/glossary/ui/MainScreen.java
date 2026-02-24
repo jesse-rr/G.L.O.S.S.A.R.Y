@@ -54,9 +54,9 @@ public class MainScreen implements Screen {
         selectorSheet = new Texture("exports/Menu-Selector-Sheet.png");
         cloudAnimationSheet = new Texture("exports/Cloud-Animation-Sheet.png");
 
-        animation1 = loadAnimation(backgroundSheet, 9, 1, 0.1f, PlayMode.LOOP);
-        animation2 = loadAnimation(selectorSheet, 9, 1, 0.1f, PlayMode.LOOP);
-        animation3 = loadAnimation(cloudAnimationSheet, 18, 1, 0.1f, PlayMode.NORMAL);
+        animation1 = loadAnimation(backgroundSheet, 9, 1, 0.08f, PlayMode.LOOP);
+        animation2 = loadAnimation(selectorSheet, 9, 1, 0.08f, PlayMode.LOOP);
+        animation3 = loadAnimation(cloudAnimationSheet, 24, 1, 0.08f, PlayMode.NORMAL);
 
         stateTime = 0f;
 
@@ -104,7 +104,7 @@ public class MainScreen implements Screen {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        if (!cloudPlaying || cloudFrameIndex < 8) {
+        if (!cloudPlaying || cloudFrameIndex < 18) {
             batch.draw(bgFrame, 0, 0, 1280, 720);
 
             batch.draw(

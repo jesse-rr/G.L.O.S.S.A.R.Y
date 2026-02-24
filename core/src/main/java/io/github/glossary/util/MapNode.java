@@ -1,14 +1,11 @@
 package io.github.glossary.util;
-
 import com.badlogic.gdx.math.Rectangle;
 import io.github.glossary.entity.NodeType;
 
 public class MapNode {
-
     private Rectangle rectangle;
     private NodeType type;
     private boolean visited;
-
     private float animTime = 0f;
     private boolean hovered = false;
 
@@ -19,7 +16,6 @@ public class MapNode {
 
     public void update(float delta, boolean isHovering) {
         hovered = isHovering;
-
         if (hovered) {
             animTime += delta;
             if (animTime > 0.5f) animTime = 0.5f;
@@ -29,8 +25,15 @@ public class MapNode {
         }
     }
 
-    public float getAnimTime() { return animTime; }
-    public Rectangle getRectangle() { return rectangle; }
-    public NodeType getType() { return type; }
-    public void setVisited(boolean visited) { this.visited = visited; }
+    public Rectangle getRectangle() {
+        return rectangle;
+    }
+
+    public NodeType getType() {
+        return type;
+    }
+
+    public float getAnimTime() {
+        return animTime;
+    }
 }

@@ -6,7 +6,6 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.graphics.g2d.Animation.PlayMode;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -33,6 +32,8 @@ public class DungeonScreen implements Screen {
     private Texture normalCombatTexture;
     private Texture bossCombatTexture;
 
+    private Texture runesTexture;
+
     private Texture echoTexture;
     private Texture fireTexture;
     private Texture tributeTexture;
@@ -44,12 +45,9 @@ public class DungeonScreen implements Screen {
     private Animation<TextureRegion> merchantAnimation;
     private Animation<TextureRegion> normalCombatAnimation;
     private Animation<TextureRegion> bossCombatAnimation;
+    private Animation<TextureRegion> runesAnimation;
 
     private float stateTime;
-    private float runTime = 0f;
-    private boolean isFinishedRun;
-
-    private Rectangle character;
 
     private SpriteBatch batch;
     private Viewport viewport;
@@ -84,16 +82,20 @@ public class DungeonScreen implements Screen {
         normalCombatTexture = new Texture("exports/Normal-Combat-Sheet.png");
         bossCombatTexture = new Texture("exports/Boss-Crown-Sheet.png");
 
+        runesTexture = new Texture("exports/Runes-Sheet.png");
+
         echoTexture = new Texture("exports/Echo32.png");
         fireTexture = new Texture("exports/Fire32.png");
         tributeTexture = new Texture("exports/Tribute32.png");
 
-        characterAnimation = loadAnimation(characterSheet, 6, 1, 0.1f, PlayMode.LOOP);
-        mapAnimation = loadAnimation(mapTexture, 4, 1, 0.1f, PlayMode.NORMAL);
-        eyeAnimation = loadAnimation(eyeOfRaTexture, 6, 1, 0.1f, PlayMode.NORMAL);
-        merchantAnimation = loadAnimation(merchantTexture, 6, 1, 0.1f, PlayMode.NORMAL);
-        normalCombatAnimation = loadAnimation(normalCombatTexture, 6, 1, 0.1f, PlayMode.NORMAL);
-        bossCombatAnimation = loadAnimation(bossCombatTexture, 6, 1, 0.1f, PlayMode.NORMAL);
+        characterAnimation = loadAnimation(characterSheet, 6, 1, 0.08f, PlayMode.LOOP);
+        mapAnimation = loadAnimation(mapTexture, 4, 1, 0.08f, PlayMode.NORMAL);
+        eyeAnimation = loadAnimation(eyeOfRaTexture, 6, 1, 0.05f, PlayMode.NORMAL);
+        merchantAnimation = loadAnimation(merchantTexture, 6, 1, 0.05f, PlayMode.NORMAL);
+        normalCombatAnimation = loadAnimation(normalCombatTexture, 6, 1, 0.05f, PlayMode.NORMAL);
+        bossCombatAnimation = loadAnimation(bossCombatTexture, 6, 1, 0.05f, PlayMode.NORMAL);
+
+        runesAnimation = loadAnimation(runesTexture, 6, 1, 0.05f, PlayMode.NORMAL);
 
         stateTime = 0f;
 
@@ -102,8 +104,6 @@ public class DungeonScreen implements Screen {
         viewport.apply(true);
         font = loadFont("aseprite.ttf", 16);
         font.setColor(Color.WHITE);
-
-        character = new Rectangle(200, 150, 104, 248);
 
         drawNodes();
 
@@ -116,10 +116,6 @@ public class DungeonScreen implements Screen {
     public void render(float delta) {
 
         stateTime += delta;
-
-        if (!isFinishedRun) {
-            runTime += delta;
-        }
 
         float uiY = 720 - 32 - 4;
         float heartStartX = 16;
@@ -227,6 +223,9 @@ public class DungeonScreen implements Screen {
                 case EVENT:
                     animation = eyeAnimation;
                     break;
+                case RUNE:
+                    animation = runesAnimation;
+                    break;
             }
 
             TextureRegion frame;
@@ -281,12 +280,20 @@ public class DungeonScreen implements Screen {
             float x = centerX + MathUtils.cos(angleRad) * outerRadius;
             float y = centerY + MathUtils.sin(angleRad) * outerRadius;
 
+            NodeType type;
+
+            if (i == 0 || i == 4 || i == 8 || i == 12) {
+                type = NodeType.RUNE;
+            } else {
+                type = getRandomNodeType();
+            }
+
             nodes[index++] = new MapNode(
                 x - nodeSize / 2f,
                 y - nodeSize / 2f,
                 nodeSize,
                 nodeSize,
-                getRandomNodeType()
+                type
             );
         }
 
