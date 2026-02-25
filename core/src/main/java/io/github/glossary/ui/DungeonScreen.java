@@ -79,7 +79,7 @@ public class DungeonScreen implements Screen {
         mouse = new Vector3();
 
         // ✅ Initialize MapUI
-        mapUI = new MapUI();
+//        mapUI = new MapUI();
     }
 
     @Override
@@ -163,7 +163,7 @@ public class DungeonScreen implements Screen {
             baseline);
 
         // ✅ Delegate map rendering
-        mapUI.render(batch, stateTime, camera);
+//        mapUI.render(batch, stateTime, camera);
 
         batch.end();
     }
