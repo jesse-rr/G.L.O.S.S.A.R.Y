@@ -1,22 +1,27 @@
 package io.github.glossary.util;
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import io.github.glossary.entity.NodeType;
 
 public class MapNode {
-    private Rectangle rectangle;
+    private final Rectangle rectangle;
     private NodeType type;
     private boolean visited;
     private float animTime = 0f;
-    private boolean hovered = false;
+    private Animation<TextureRegion> runeAnimation;
 
     public MapNode(float x, float y, float w, float h, NodeType type) {
         this.rectangle = new Rectangle(x, y, w, h);
         this.type = type;
     }
 
+    public MapNode(float x, float y, float w, float h) {
+        this.rectangle = new Rectangle(x, y, w, h);
+    }
+
     public void update(float delta, boolean isHovering) {
-        hovered = isHovering;
-        if (hovered) {
+        if (isHovering) {
             animTime += delta;
             if (animTime > 0.5f) animTime = 0.5f;
         } else {
@@ -35,5 +40,17 @@ public class MapNode {
 
     public float getAnimTime() {
         return animTime;
+    }
+
+    public void setRuneAnimation(Animation<TextureRegion> anim) {
+        this.runeAnimation = anim;
+    }
+
+    public Animation<TextureRegion> getRuneAnimation() {
+        return runeAnimation;
+    }
+
+    public void setType(NodeType type) {
+        this.type = type;
     }
 }

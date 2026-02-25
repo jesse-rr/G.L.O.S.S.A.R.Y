@@ -4,5 +4,6 @@ public enum NodeType {
     NORMAL_COMBAT,
     BOSS,
     MERCHANT,
-    RUNE, EVENT
+    RUNE,
+    EVENT
 }

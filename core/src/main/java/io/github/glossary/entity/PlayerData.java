@@ -6,12 +6,14 @@ public class PlayerData {
     private int gemstoneCount;
     private int specialCurrencyCount;
     private int currentFloor;
+    private int fightCount;
 
     public PlayerData() {
         this.heartCount = 3;
         this.gemstoneCount = 0;
         this.specialCurrencyCount = 0;
         this.currentFloor = 1;
+        this.fightCount = 0;
     }
 
     public int getHeartCount() {
@@ -52,5 +54,17 @@ public class PlayerData {
 
     public void newFloor() {
         this.currentFloor += currentFloor;
+    }
+
+    public void setCurrentFloor(int currentFloor) {
+        this.currentFloor = currentFloor;
+    }
+
+    public int getFightCount() {
+        return fightCount;
+    }
+
+    public void setFightCount(int fightCount) {
+        this.fightCount = fightCount;
     }
 }
