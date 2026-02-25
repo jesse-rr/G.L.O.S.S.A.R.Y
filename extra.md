@@ -1,0 +1,1 @@
+Bonus per completed ring
