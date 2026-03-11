@@ -1,5 +1,5 @@
 { "columns":40,
- "image":"tileset\/Objects.aseprite",
+ "image":"..\/tileset\/Objects.aseprite",
  "imageheight":720,
  "imagewidth":1280,
  "margin":0,

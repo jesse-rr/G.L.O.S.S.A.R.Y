@@ -1,5 +1,5 @@
 { "columns":40,
- "image":"tileset\/Mechanic-Floor.aseprite",
+ "image":"..\/tileset\/Mechanic-Floor.aseprite",
  "imageheight":720,
  "imagewidth":1280,
  "margin":0,

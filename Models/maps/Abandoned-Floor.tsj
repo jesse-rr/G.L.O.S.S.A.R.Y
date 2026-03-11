@@ -1,5 +1,5 @@
 { "columns":40,
- "image":"tileset\/Abandoned-Floor.aseprite",
+ "image":"..\/tileset\/Abandoned-Floor.aseprite",
  "imageheight":720,
  "imagewidth":1280,
  "margin":0,
