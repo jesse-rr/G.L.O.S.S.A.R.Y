@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="1" height="1" tilewidth="32" tileheight="32" infinite="1" nextlayerid="45" nextobjectid="1">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="1" height="1" tilewidth="32" tileheight="32" infinite="1" nextlayerid="46" nextobjectid="20">
  <tileset firstgid="1" source="Desert-Floor.tsj"/>
  <tileset firstgid="881" source="Objects.tsj"/>
  <tileset firstgid="1761" source="Abandoned-Floor.tsj"/>
@@ -829,7 +829,7 @@
 </chunk>
   </data>
  </layer>
- <layer id="41" name="Roof++" width="1" height="1">
+ <layer id="41" name="Roof++" width="1" height="1" visible="0">
   <data encoding="csv">
    <chunk x="-16" y="-16" width="16" height="16">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -905,7 +905,7 @@
 </chunk>
   </data>
  </layer>
- <layer id="37" name="Roof" width="1" height="1">
+ <layer id="37" name="Roof" width="1" height="1" visible="0">
   <data encoding="csv">
    <chunk x="-16" y="-16" width="16" height="16">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -981,7 +981,7 @@
 </chunk>
   </data>
  </layer>
- <layer id="40" name="Roof+" width="1" height="1">
+ <layer id="40" name="Roof+" width="1" height="1" visible="0">
   <data encoding="csv">
    <chunk x="-16" y="-16" width="16" height="16">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -1057,7 +1057,31 @@
 </chunk>
   </data>
  </layer>
- <layer id="42" name="Roof-Top" width="1" height="1">
+ <layer id="42" name="Roof-Top" width="1" height="1" visible="0">
   <data encoding="csv"/>
  </layer>
+ <objectgroup id="45" name="collisions">
+  <object id="1" x="64" y="288">
+   <polygon points="0,0 96,0 96,-32 160,-32 160,-64 192,-64 192,-128 224,-128 224,-416 192,-416 192,-480 160,-480 160,-512 96,-512 96,-544 -160,-544 -160,-512 -224,-512 -224,-480 -256,-480 -256,-416 -288,-416 -288,-128 -256,-128 -256,-64 -224,-64 -224,-32 -160,-32 -160,0 -64,0 -64,224 -96,224 -96,32 -192,32 -192,0 -256,0 -256,-32 -288,-32 -288,-96 -320,-96 -320,-448 -288,-448 -288,-512 -256,-512 -256,-544 -192,-544 -192,-576 128,-576 128,-544 192,-544 192,-512 224,-512 224,-448 256,-448 256,-96 224,-96 224,-32 192,-32 192,0 128,0 128,32 32,32 32,224 0,224"/>
+  </object>
+  <object id="2" x="0" y="416">
+   <polygon points="0,0 64,0 64,96 0,96"/>
+  </object>
+  <object id="3" x="-160" y="32" width="32" height="64"/>
+  <object id="4" x="-64" y="-64" width="32" height="96"/>
+  <object id="5" x="96" y="-64" width="32" height="96"/>
+  <object id="6" x="192" y="32" width="32" height="64"/>
+  <object id="8" x="-183" y="-193.348" width="14" height="12.3043"/>
+  <object id="9" x="-215.011" y="-129.304" width="14" height="12.3043"/>
+  <object id="10" x="232.971" y="-193.254" width="14" height="12.3043"/>
+  <object id="11" x="264.986" y="-129.196" width="14" height="12.3043"/>
+  <object id="12" x="136.957" y="-257.283" width="14" height="12.3043"/>
+  <object id="13" x="-86.9688" y="-257.246" width="14" height="12.3043"/>
+  <object id="14" x="-215" y="-110" width="13.913" height="56.913"/>
+  <object id="15" x="-214.968" y="-45.9676" width="13.913" height="56.913"/>
+  <object id="16" x="-215.028" y="50.0534" width="13.913" height="56.913"/>
+  <object id="17" x="265" y="50" width="13.913" height="56.913"/>
+  <object id="18" x="264.96" y="-45.9773" width="13.913" height="56.913"/>
+  <object id="19" x="264.964" y="-109.931" width="13.913" height="56.913"/>
+ </objectgroup>
 </map>
