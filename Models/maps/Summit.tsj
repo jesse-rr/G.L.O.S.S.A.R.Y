@@ -1,0 +1,14 @@
+{ "columns":40,
+ "image":"..\/tileset\/Summit-Floor.aseprite",
+ "imageheight":720,
+ "imagewidth":1280,
+ "margin":0,
+ "name":"Summit",
+ "spacing":0,
+ "tilecount":880,
+ "tiledversion":"1.11.2",
+ "tileheight":32,
+ "tilewidth":32,
+ "type":"tileset",
+ "version":"1.10"
+}
