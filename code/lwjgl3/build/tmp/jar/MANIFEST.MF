@@ -1,4 +1,0 @@
-Manifest-Version: 1.0
-Main-Class: io.github.glossary.lwjgl3.Lwjgl3Launcher
-Enable-Native-Access: ALL-UNNAMED
-
