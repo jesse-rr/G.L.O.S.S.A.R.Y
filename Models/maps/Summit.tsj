@@ -6,7 +6,7 @@
  "name":"Summit",
  "spacing":0,
  "tilecount":880,
- "tiledversion":"1.11.2",
+ "tiledversion":"1.12.1",
  "tileheight":32,
  "tilewidth":32,
  "type":"tileset",
