@@ -1,15 +1,24 @@
 import * as Phaser from 'phaser';
 import { PlayerData } from '../data/PlayerData';
 
-const CUBE_SIZE = 55;
+const CUBE_SIZE = 50.5;
 
 const CUBE_POSITIONS = [
-    { x: 117, y: 100 },
-    { x: 86, y: 172 },
-    { x: 150, y: 172 },
-    { x: 57, y: 244 },
-    { x: 121, y: 244 },
-    { x: 185, y: 244 }
+    { x: 141, y: 126.5 },
+    { x: 110, y: 190.5 },
+    { x: 175, y: 190.5 },
+    { x: 77, y: 254.5 },
+    { x: 141, y: 254.5 },
+    { x: 205, y: 254.5 }
+];
+
+const ACHIEVEMENT_TOOLTIPS = [
+    "Mastered: Unlocked every rune, item, boss, enemy, and location. True completion!",
+    "Greed Unleashed: Collected every rune and item through relentless pursuit.",
+    "Covenant Conqueror: Chose all three covenants in your journey.",
+    "Cat Mode: Discovered and unlocked the secret cat mode.",
+    "Champion: Achieved ultimate victory.",
+    "Defeat: Faced loss, but every end is a new beginning."
 ];
 
 export class AchievementsUI extends Phaser.Scene {
@@ -32,22 +41,61 @@ export class AchievementsUI extends Phaser.Scene {
 
         const playerData = PlayerData.getInstance();
 
+        // Tooltip setup (hidden by default)
+        this.tooltipBg = this.add.rectangle(0, 0, 400, 80, 0x000000, 0.8)
+            .setOrigin(0, 0)
+            .setVisible(false)
+            .setDepth(100);
+        this.tooltipText = this.add.text(0, 0, '', {
+            fontSize: '22px',
+            color: '#847E87',
+            fontFamily: 'font',
+            wordWrap: { width: 380 },
+            lineSpacing: 6,
+            align: 'left'
+        }).setOrigin(0, 0).setVisible(false).setDepth(101);
+
         CUBE_POSITIONS.forEach((pos, i) => {
             const achievement = playerData.achievements[i];
             const locked = !achievement || !achievement.unlocked;
 
             if (locked) {
-                const screenX = this.baseX + pos.x * this.imgScale;
-                const screenY = this.baseY + pos.y * this.imgScale;
-                const size = CUBE_SIZE * this.imgScale;
+                const size = Math.round(CUBE_SIZE * this.imgScale);
+                const halfSize = size / 2;
+                const screenX = Math.round(this.baseX + pos.x * this.imgScale - halfSize);
+                const screenY = Math.round(this.baseY + pos.y * this.imgScale - halfSize);
 
                 const overlay = this.add.rectangle(screenX, screenY, size, size, 0x000000, 0.75)
                     .setOrigin(0.5)
-                    .setDepth(10);
+                    .setDepth(10)
+                    .setInteractive({ useHandCursor: true })
+                    .on('pointerover', () => this.showTooltip(i, screenY))
+                    .on('pointerout', () => this.hideTooltip());
 
                 this.overlays.push(overlay);
             }
         });
+    }
+
+    private showTooltip(index: number, y: number) {
+        if (!this.tooltipBg || !this.tooltipText) return;
+        const text = ACHIEVEMENT_TOOLTIPS[index];
+        this.tooltipText.setText(text);
+        this.tooltipText.setPosition(40, y - 20); // 40px from left, aligned with cube
+        this.tooltipText.setVisible(true);
+        // Adjust background size to text
+        const bounds = this.tooltipText.getBounds();
+        this.tooltipBg.setPosition(bounds.x - 10, bounds.y - 10);
+        this.tooltipBg.setSize(bounds.width + 20, bounds.height + 20);
+        this.tooltipBg.setVisible(true);
+        this.tooltipVisible = true;
+    }
+
+    private hideTooltip() {
+        if (!this.tooltipBg || !this.tooltipText) return;
+        this.tooltipBg.setVisible(false);
+        this.tooltipText.setVisible(false);
+        this.tooltipVisible = false;
     }
 
     update() {
@@ -55,9 +103,11 @@ export class AchievementsUI extends Phaser.Scene {
 
         this.overlays.forEach((overlay, i) => {
             const pos = CUBE_POSITIONS[this.getLockedIndex(i)];
+            const size = Math.round(CUBE_SIZE * this.imgScale);
+            const halfSize = size / 2;
             overlay.setPosition(
-                this.baseX + pos.x * this.imgScale,
-                this.baseY + pos.y * this.imgScale - scrollY
+                Math.round(this.baseX + pos.x * this.imgScale - halfSize),
+                Math.round(this.baseY + pos.y * this.imgScale - halfSize - scrollY)
             );
         });
     }
