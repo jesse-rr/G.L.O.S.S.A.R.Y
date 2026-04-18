@@ -14,11 +14,12 @@ const CANVAS_SCALE = 2;
 
 const BUTTONS = [
         { label: 'NEW SAVE', srcX: 79, srcY: 178, srcW: 90, srcH: 22 },
-        { label: 'CONTINUE', srcX: 79, srcY: 210, srcW: 90, srcH: 22 },
-        { label: 'HELP', srcX: 57, srcY: 242, srcW: 48, srcH: 22 },
+        { label: 'MULTIPLAYER', srcX: 95, srcY: 210, srcW: 126, srcH: 22 },
+        { label: 'HELP', srcX: 55, srcY: 242, srcW: 48, srcH: 22 },
         { label: 'EXIT', srcX: 55, srcY: 274, srcW: 44, srcH: 22 },
 ] as const;
 
+const BUTTON_LEFT_X = 34;
 const SEL_SRC_W = 12;
 const SEL_GAP = 0;
 
@@ -67,9 +68,10 @@ export class MainMenu extends Phaser.Scene {
             .setFlipX(true)
             .play('sel_anim');
 
+        const buttonLeft = BUTTON_LEFT_X * CANVAS_SCALE;
         for (let i = 0; i < BUTTONS.length; i++) {
             const btn = BUTTONS[i];
-            const cx = btn.srcX * CANVAS_SCALE;
+            const cx = buttonLeft + (btn.srcW * CANVAS_SCALE) / 2;
             const cy = btn.srcY * CANVAS_SCALE;
             const bw = btn.srcW * CANVAS_SCALE;
             const bh = btn.srcH * CANVAS_SCALE;
@@ -111,7 +113,8 @@ export class MainMenu extends Phaser.Scene {
 
     private positionSelector(i: number) {
         const btn = BUTTONS[i];
-        const cx = btn.srcX * CANVAS_SCALE;
+        const buttonLeft = BUTTON_LEFT_X * CANVAS_SCALE;
+        const cx = buttonLeft + (btn.srcW * CANVAS_SCALE) / 2;
         const cy = btn.srcY * CANVAS_SCALE;
         const bw = btn.srcW * CANVAS_SCALE;
         const selDisplayW = SEL_SRC_W * CANVAS_SCALE;

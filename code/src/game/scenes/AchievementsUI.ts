@@ -1,15 +1,15 @@
 import * as Phaser from 'phaser';
-import { PlayerData } from '../data/PlayerData';
+import { UserData } from '../data/UserData';
 
 const CUBE_SIZE = 50.5;
 
 const CUBE_POSITIONS = [
-    { x: 141, y: 126.5 },
-    { x: 110, y: 190.5 },
-    { x: 175, y: 190.5 },
-    { x: 77, y: 254.5 },
-    { x: 141, y: 254.5 },
-    { x: 205, y: 254.5 }
+    { x: 246, y: 107.5 },
+    { x: 214, y: 171.5 },
+    { x: 278, y: 171.5 },
+    { x: 182, y: 235.5 },
+    { x: 246, y: 235.5 },
+    { x: 310, y: 235.5 }
 ];
 
 const ACHIEVEMENT_TOOLTIPS = [
@@ -27,7 +27,13 @@ export class AchievementsUI extends Phaser.Scene {
     private baseY = 0;
     private imgScale = 2;
     private parentScene!: Phaser.Scene;
+
     private overlays: Phaser.GameObjects.Rectangle[] = [];
+    private overlayToIndex: number[] = [];
+
+    tooltipBg!: Phaser.GameObjects.Rectangle;
+    tooltipText!: Phaser.GameObjects.Text;
+    tooltipVisible: boolean = false;
 
     constructor() {
         super('AchievementsUI');
@@ -39,21 +45,24 @@ export class AchievementsUI extends Phaser.Scene {
         this.baseY = data.y;
         this.imgScale = data.scale || 2;
 
-        const playerData = PlayerData.getInstance();
+        const playerData = UserData.getInstance();
 
-        // Tooltip setup (hidden by default)
         this.tooltipBg = this.add.rectangle(0, 0, 400, 80, 0x000000, 0.8)
             .setOrigin(0, 0)
             .setVisible(false)
-            .setDepth(100);
+            .setDepth(1000);
+
         this.tooltipText = this.add.text(0, 0, '', {
             fontSize: '22px',
             color: '#847E87',
             fontFamily: 'font',
             wordWrap: { width: 380 },
-            lineSpacing: 6,
-            align: 'left'
-        }).setOrigin(0, 0).setVisible(false).setDepth(101);
+            lineSpacing: 6
+        })
+        .setResolution(10)
+        .setOrigin(0, 0)
+        .setVisible(false)
+        .setDepth(1001);
 
         CUBE_POSITIONS.forEach((pos, i) => {
             const achievement = playerData.achievements[i];
@@ -61,67 +70,77 @@ export class AchievementsUI extends Phaser.Scene {
 
             if (locked) {
                 const size = Math.round(CUBE_SIZE * this.imgScale);
-                const halfSize = size / 2;
-                const screenX = Math.round(this.baseX + pos.x * this.imgScale - halfSize);
-                const screenY = Math.round(this.baseY + pos.y * this.imgScale - halfSize);
 
-                const overlay = this.add.rectangle(screenX, screenY, size, size, 0x000000, 0.75)
+                const x = Math.round(this.baseX + pos.x * this.imgScale);
+                const y = Math.round(this.baseY + pos.y * this.imgScale);
+
+                const overlay = this.add.rectangle(x, y, size, size, 0x000000, 0.75)
                     .setOrigin(0.5)
-                    .setDepth(10)
-                    .setInteractive({ useHandCursor: true })
-                    .on('pointerover', () => this.showTooltip(i, screenY))
-                    .on('pointerout', () => this.hideTooltip());
+                    .setDepth(100)
+                    .setInteractive({ useHandCursor: true });
+
+                overlay.on('pointerover', () => {
+                    const scrollY = this.parentScene.cameras.main.scrollY;
+
+                    const worldX = x;
+                    const worldY = y - scrollY;
+
+                    this.showTooltip(i, worldX, worldY);
+                });
+
+                overlay.on('pointerout', () => {
+                    this.hideTooltip();
+                });
 
                 this.overlays.push(overlay);
+                this.overlayToIndex.push(i);
             }
         });
     }
 
-    private showTooltip(index: number, y: number) {
-        if (!this.tooltipBg || !this.tooltipText) return;
+    private showTooltip(index: number, x: number, y: number) {
         const text = ACHIEVEMENT_TOOLTIPS[index];
+
         this.tooltipText.setText(text);
-        this.tooltipText.setPosition(40, y - 20); // 40px from left, aligned with cube
-        this.tooltipText.setVisible(true);
-        // Adjust background size to text
+
         const bounds = this.tooltipText.getBounds();
-        this.tooltipBg.setPosition(bounds.x - 10, bounds.y - 10);
-        this.tooltipBg.setSize(bounds.width + 20, bounds.height + 20);
+
+        const tooltipWidth = bounds.width + 20;
+        const tooltipHeight = bounds.height + 20;
+
+        const offsetX = 20;
+
+        const bgX = x - tooltipWidth - offsetX;
+        const bgY = y - tooltipHeight / 2;
+
+        this.tooltipBg.setPosition(bgX, bgY);
+        this.tooltipBg.setSize(tooltipWidth, tooltipHeight);
         this.tooltipBg.setVisible(true);
+
+        this.tooltipText.setPosition(bgX + 10, bgY + 10);
+        this.tooltipText.setVisible(true);
+
         this.tooltipVisible = true;
     }
 
     private hideTooltip() {
-        if (!this.tooltipBg || !this.tooltipText) return;
         this.tooltipBg.setVisible(false);
         this.tooltipText.setVisible(false);
         this.tooltipVisible = false;
     }
 
     update() {
-        const scrollY = (this.parentScene.cameras.main as any).scrollY;
+        const scrollY = this.parentScene.cameras.main.scrollY;
 
         this.overlays.forEach((overlay, i) => {
-            const pos = CUBE_POSITIONS[this.getLockedIndex(i)];
+            const index = this.overlayToIndex[i];
+            const pos = CUBE_POSITIONS[index];
             const size = Math.round(CUBE_SIZE * this.imgScale);
-            const halfSize = size / 2;
-            overlay.setPosition(
-                Math.round(this.baseX + pos.x * this.imgScale - halfSize),
-                Math.round(this.baseY + pos.y * this.imgScale - halfSize - scrollY)
-            );
-        });
-    }
 
-    private getLockedIndex(overlayIndex: number): number {
-        const playerData = PlayerData.getInstance();
-        let lockedCount = 0;
-        for (let i = 0; i < CUBE_POSITIONS.length; i++) {
-            const achievement = playerData.achievements[i];
-            if (!achievement || !achievement.unlocked) {
-                if (lockedCount === overlayIndex) return i;
-                lockedCount++;
-            }
-        }
-        return 0;
+            const x = Math.round(this.baseX + pos.x * this.imgScale);
+            const y = Math.round(this.baseY + pos.y * this.imgScale - scrollY);
+
+            overlay.setPosition(x, y);
+        });
     }
 }

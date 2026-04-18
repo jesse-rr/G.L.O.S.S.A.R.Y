@@ -3,14 +3,14 @@ export interface AchievementData {
     unlocked: boolean;
 }
 
-export class PlayerData {
+export class UserData {
     achievements: AchievementData[] = [
         { id: 'completionist', unlocked: false },
-        { id: 'alchemist', unlocked: false },
+        { id: 'greedy', unlocked: false },
         { id: 'ritualist', unlocked: false },
         { id: 'cat_whisperer', unlocked: false },
         { id: 'champion', unlocked: false },
-        { id: 'necromancer', unlocked: false }
+        { id: 'bum', unlocked: false }
     ];
 
     itemsDiscovered: string[] = [];
@@ -23,13 +23,13 @@ export class PlayerData {
     catModeFound: boolean = false;
     completedGame: boolean = false;
 
-    private static instance: PlayerData;
+    private static instance: UserData;
 
-    static getInstance(): PlayerData {
-        if (!PlayerData.instance) {
-            PlayerData.instance = new PlayerData();
+    static getInstance(): UserData {
+        if (!UserData.instance) {
+            UserData.instance = new UserData();
         }
-        return PlayerData.instance;
+        return UserData.instance;
     }
 
     unlockAchievement(id: string): void {
