@@ -1,4 +1,6 @@
 import { Scene } from 'phaser';
+import { UserData } from '../data/UserData';
+import { PlayerData } from '../data/PlayerData';
 
 export class Boot extends Scene {
     constructor() {
@@ -17,6 +19,9 @@ export class Boot extends Scene {
             frameWidth: 32,
             frameHeight: 32,
         });
+        
+        this.registry.set('userData', UserData.getInstance());
+        this.registry.set('playerData', PlayerData.getInstance());
     }
 
     create() {

@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { UserData } from '../data/UserData';
 
 const FONT_FAMILY = 'VCRosdNEUE';
 
@@ -65,19 +66,28 @@ export class SettingsUI extends Phaser.Scene {
 
             { type: 'slider', ox: rightTextX + uiOffset, oy: startY, value: 50, label: rightLabels[0] },
             { type: 'button', ox: rightTextX + uiOffset, oy: startY + gap, toggle: false, label: rightLabels[1] },
-            { type: 'button', ox: rightTextX + uiOffset, oy: startY + gap * 2, toggle: true, enabled: false, label: rightLabels[2] },
+            { type: 'button', ox: rightTextX + uiOffset, oy: startY + gap * 2, toggle: false, label: rightLabels[2] },
             { type: 'download', ox: rightTextX + uiOffset, oy: startY + gap * 3, label: rightLabels[3] }
         ];
+
+        const userData = this.registry.get('userData') as UserData;
 
         this.elements.forEach((el, i) => {
             el.obj = this.add.container(0, 0);
 
-            const label = this.add.text(-380, 0, el.label ?? '', {
+            const labelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
                 fontSize: '34px',
                 color: '#847E87',
                 fontFamily: FONT_FAMILY
-            }).setOrigin(0, 0.5);
+            };
 
+            if (i === 5 && userData.achievements[3].unlocked) {
+                labelStyle.color = '#4a4a4a';
+                labelStyle.strikethrough = true;
+            }
+
+            const label = this.add.text(-380, 0, el.label ?? '', labelStyle).setOrigin(0, 0.5);
+            el.labelText = label;
             el.obj.add(label);
 
             if (el.type === 'button') {
@@ -85,9 +95,17 @@ export class SettingsUI extends Phaser.Scene {
                     .setOrigin(0.5)
                     .setInteractive({ cursor: 'pointer' })
                     .on('pointerover', () => this.select(i))
-                    .on('pointerdown', () => this.activate(i));
+                    .on('pointerdown', (p: Phaser.Input.Pointer) => {
+                        if (p.button !== 0) return;
+                        this.activate(i);
+                    });
 
                 const btn = this.add.image(0, 0, 'ui-items', 2).setScale(scale);
+                el.btnImage = btn;
+
+                if (i === 5 && userData.achievements[3].unlocked) {
+                    btn.setAlpha(0.5);
+                }
 
                 el.yesIcon = this.add.image(0, 0, 'ui-items', 0)
                     .setScale(scale)
@@ -148,6 +166,7 @@ export class SettingsUI extends Phaser.Scene {
                     .setInteractive({ cursor: 'pointer' })
                     .on('pointerover', () => this.select(i))
                     .on('pointerdown', (p: Phaser.Input.Pointer) => {
+                        if (p.button !== 0) return;
                         const minX = leftEdge - 36;
                         const maxX = rightEdge - 68;
 
@@ -165,7 +184,10 @@ export class SettingsUI extends Phaser.Scene {
                     .setOrigin(0.5)
                     .setInteractive({ cursor: 'pointer' })
                     .on('pointerover', () => this.select(i))
-                    .on('pointerdown', () => this.activate(i));
+                    .on('pointerdown', (p: Phaser.Input.Pointer) => {
+                        if (p.button !== 0) return;
+                        this.activate(i);
+                    });
 
                 const dl = this.add.image(0, 0, 'ui-items', 3).setScale(scale);
 
@@ -268,14 +290,23 @@ export class SettingsUI extends Phaser.Scene {
             if (el.yesIcon) el.yesIcon.setVisible(el.enabled);
         }
 
+        if (i === 5) {
+            const userData = this.registry.get('userData') as UserData;
+            if (!userData.achievements[3].unlocked) {
+                userData.achievements[3].unlocked = true;
+                if (el.labelText) {
+                    el.labelText.setColor('#4a4a4a');
+                    el.labelText.setStyle({ strikethrough: true });
+                }
+                if (el.btnImage) {
+                    el.btnImage.setAlpha(0.5);
+                }
+                this.scene.launch('Cat');
+            }
+        }
+
         if (el.type === 'download') {
-            const data = {
-                vsync: this.elements[0].enabled,
-                particles: this.elements[1].enabled,
-                screenShake: this.elements[2].enabled,
-                volume: this.elements[3].value,
-                catMode: this.elements[5].enabled
-            };
+            const data = this.registry.get('userData') || {};
 
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');

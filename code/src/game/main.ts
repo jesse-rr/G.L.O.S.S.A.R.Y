@@ -6,6 +6,9 @@ import { Settings } from './scenes/Settings';
 import { SettingsUI } from './scenes/SettingsUI';
 import { Achievements } from './scenes/Achievements';
 import { AchievementsUI } from './scenes/AchievementsUI';
+import { Covenant } from './scenes/Covenant';
+import { CombatScene } from './scenes/CombatScene';
+import { Cat } from './util/Cat';
 
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
@@ -27,7 +30,10 @@ const config: Phaser.Types.Core.GameConfig = {
         Settings,
         SettingsUI,
         Achievements,
-        AchievementsUI
+        AchievementsUI,
+        Covenant,
+        CombatScene,
+        Cat
     ]
 };
 

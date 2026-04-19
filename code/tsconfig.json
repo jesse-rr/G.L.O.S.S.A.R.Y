@@ -24,6 +24,6 @@
         "noUncheckedSideEffectImports": true
     },
     "include": [
-        "src"
+        "public/src"
     ]
 }

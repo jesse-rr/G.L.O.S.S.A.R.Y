@@ -19,8 +19,6 @@ export class UserData {
 
     deaths: number = 0;
     wins: number = 0;
-
-    catModeFound: boolean = false;
     completedGame: boolean = false;
 
     private static instance: UserData;
@@ -78,7 +76,6 @@ export class UserData {
             covenantsDiscovered: this.covenantsDiscovered,
             deaths: this.deaths,
             wins: this.wins,
-            catModeFound: this.catModeFound,
             completedGame: this.completedGame
         };
     }
@@ -90,7 +87,6 @@ export class UserData {
         if (data.covenantsDiscovered) this.covenantsDiscovered = data.covenantsDiscovered;
         if (data.deaths !== undefined) this.deaths = data.deaths;
         if (data.wins !== undefined) this.wins = data.wins;
-        if (data.catModeFound !== undefined) this.catModeFound = data.catModeFound;
         if (data.completedGame !== undefined) this.completedGame = data.completedGame;
     }
 }

@@ -29,12 +29,14 @@ export class AchievementsUI extends Phaser.Scene {
     private imgScale = 2;
     private parentScene!: Phaser.Scene;
 
+    private hitZones: Phaser.GameObjects.Rectangle[] = [];
     private overlays: Phaser.GameObjects.Rectangle[] = [];
     private overlayToIndex: number[] = [];
 
     tooltipBg!: Phaser.GameObjects.Rectangle;
     tooltipText!: Phaser.GameObjects.Text;
     tooltipVisible: boolean = false;
+    private currentHoveredIndex: number | null = null;
 
     constructor() {
         super('AchievementsUI');
@@ -46,7 +48,7 @@ export class AchievementsUI extends Phaser.Scene {
         this.baseY = data.y;
         this.imgScale = data.scale || 2;
 
-        const playerData = UserData.getInstance();
+        const userData = this.registry.get('userData') as UserData;
 
         this.tooltipBg = this.add.rectangle(0, 0, 400, 80, 0x000000, 0.8)
             .setOrigin(0, 0)
@@ -66,33 +68,33 @@ export class AchievementsUI extends Phaser.Scene {
         .setDepth(1001);
 
         CUBE_POSITIONS.forEach((pos, i) => {
-            const achievement = playerData.achievements[i];
-            const locked = !achievement || !achievement.unlocked;
+            const size = Math.round(CUBE_SIZE * this.imgScale);
+            const x = Math.round(this.baseX + pos.x * this.imgScale);
+            const y = Math.round(this.baseY + pos.y * this.imgScale);
 
-            if (locked) {
-                const size = Math.round(CUBE_SIZE * this.imgScale);
+            const hitZone = this.add.rectangle(x, y, size, size, 0x000000, 0)
+                .setOrigin(0.5)
+                .setDepth(99)
+                .setInteractive({ useHandCursor: true });
 
-                const x = Math.round(this.baseX + pos.x * this.imgScale);
-                const y = Math.round(this.baseY + pos.y * this.imgScale);
+            hitZone.on('pointerover', () => {
+                this.currentHoveredIndex = i;
+                const scrollY = this.parentScene.cameras.main.scrollY;
+                this.showTooltip(i, x, y - scrollY);
+            });
 
+            hitZone.on('pointerout', () => {
+                this.currentHoveredIndex = null;
+                this.hideTooltip();
+            });
+
+            this.hitZones.push(hitZone);
+
+            const achievement = userData.achievements[i];
+            if (!achievement || !achievement.unlocked) {
                 const overlay = this.add.rectangle(x, y, size, size, 0x000000, 0.75)
                     .setOrigin(0.5)
-                    .setDepth(100)
-                    .setInteractive({ useHandCursor: true });
-
-                overlay.on('pointerover', () => {
-                    const scrollY = this.parentScene.cameras.main.scrollY;
-
-                    const worldX = x;
-                    const worldY = y - scrollY;
-
-                    this.showTooltip(i, worldX, worldY);
-                });
-
-                overlay.on('pointerout', () => {
-                    this.hideTooltip();
-                });
-
+                    .setDepth(100);
                 this.overlays.push(overlay);
                 this.overlayToIndex.push(i);
             }
@@ -101,16 +103,11 @@ export class AchievementsUI extends Phaser.Scene {
 
     private showTooltip(index: number, x: number, y: number) {
         const text = ACHIEVEMENT_TOOLTIPS[index];
-
         this.tooltipText.setText(text);
-
         const bounds = this.tooltipText.getBounds();
-
         const tooltipWidth = bounds.width + 20;
         const tooltipHeight = bounds.height + 20;
-
         const offsetX = 20;
-
         const bgX = x - tooltipWidth - offsetX;
         const bgY = y - tooltipHeight / 2;
 
@@ -131,17 +128,40 @@ export class AchievementsUI extends Phaser.Scene {
     }
 
     update() {
+        const userData = this.registry.get('userData') as UserData;
         const scrollY = this.parentScene.cameras.main.scrollY;
 
-        this.overlays.forEach((overlay, i) => {
+        for (let i = this.overlays.length - 1; i >= 0; i--) {
+            const overlay = this.overlays[i];
             const index = this.overlayToIndex[i];
-            const pos = CUBE_POSITIONS[index];
-            const size = Math.round(CUBE_SIZE * this.imgScale);
+            const achievement = userData.achievements[index];
 
+            if (achievement && achievement.unlocked) {
+                overlay.destroy();
+                this.overlays.splice(i, 1);
+                this.overlayToIndex.splice(i, 1);
+                continue;
+            }
+
+            const pos = CUBE_POSITIONS[index];
             const x = Math.round(this.baseX + pos.x * this.imgScale);
             const y = Math.round(this.baseY + pos.y * this.imgScale - scrollY);
-
             overlay.setPosition(x, y);
-        });
+        }
+
+        for (let i = 0; i < this.hitZones.length; i++) {
+            const pos = CUBE_POSITIONS[i];
+            const x = Math.round(this.baseX + pos.x * this.imgScale);
+            const y = Math.round(this.baseY + pos.y * this.imgScale - scrollY);
+            this.hitZones[i].setPosition(x, y);
+        }
+
+        if (this.tooltipVisible && this.currentHoveredIndex !== null) {
+            const index = this.currentHoveredIndex;
+            const pos = CUBE_POSITIONS[index];
+            const x = Math.round(this.baseX + pos.x * this.imgScale);
+            const y = Math.round(this.baseY + pos.y * this.imgScale - scrollY);
+            this.showTooltip(index, x, y);
+        }
     }
 }

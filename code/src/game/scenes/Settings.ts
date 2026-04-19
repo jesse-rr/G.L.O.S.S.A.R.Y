@@ -34,7 +34,8 @@ export class Settings extends Phaser.Scene {
             .setScrollFactor(0)
             .setInteractive({ useHandCursor: true });
 
-        goBack.on('pointerdown', () => {
+        goBack.on('pointerdown', (p: Phaser.Input.Pointer) => {
+            if (p.button !== 0) return;
             this.scene.stop('SettingsUI');
             this.scene.stop();
             this.scene.resume('MainMenu');

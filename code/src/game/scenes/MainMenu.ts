@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 
-const BG_FRAME_RATE = 6;
+const BG_FRAME_RATE = 8;
 const SELECTOR_FRAME_RATE = 10;
 const STOP_DELAY = 5000;
 
@@ -86,7 +86,10 @@ export class MainMenu extends Phaser.Scene {
                 this.input.setDefaultCursor('pointer');
             });
             zone.on('pointerout', () => this.input.setDefaultCursor('default'));
-            zone.on('pointerdown', () => this.onButtonClick(btn.label));
+            zone.on('pointerdown', (p: Phaser.Input.Pointer) => {
+                if (p.button !== 0) return;
+                this.onButtonClick(btn.label);
+            });
         }
 
         this.positionSelector(0);
@@ -103,11 +106,13 @@ export class MainMenu extends Phaser.Scene {
         console.log(`[MainMenu] Button: ${label}`);
         switch (label) {
             case BUTTONS[0].label:
+                this.scene.launch('Covenant');
                 break;
             case BUTTONS[1].label:
                 break;
             case BUTTONS[2].label:
-                this.openSettings();
+                this.scene.pause();
+                this.scene.launch('Help');
                 break;
             case BUTTONS[3].label:
                 this.game.destroy(true, true);
@@ -159,10 +164,5 @@ export class MainMenu extends Phaser.Scene {
         this.stopTimer?.remove(false);
         this.scale.off('resize', this.resize, this);
         this.input.setDefaultCursor('default');
-    }
-
-    private openSettings() {
-        this.scene.pause();
-        this.scene.launch('Help');
     }
 }
