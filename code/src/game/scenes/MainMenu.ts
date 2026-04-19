@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 
-const FRAME_RATE = 8;
+const BG_FRAME_RATE = 6;
+const SELECTOR_FRAME_RATE = 10;
 const STOP_DELAY = 5000;
 
 const ANIM_DEFS = [
@@ -29,7 +30,7 @@ export class MainMenu extends Phaser.Scene {
     private selL!: Phaser.GameObjects.Sprite;
     private selR!: Phaser.GameObjects.Sprite;
     private currentAnim: number = 0;
-    // private activeButton: number = 0;
+    private selectedButton: number = 0;
     private stopTimer?: Phaser.Time.TimerEvent;
 
     constructor() {
@@ -41,15 +42,15 @@ export class MainMenu extends Phaser.Scene {
             this.anims.create({
                 key: def.bgKey,
                 frames: this.anims.generateFrameNumbers('homeAnim', { start: def.start, end: def.end }),
-                frameRate: FRAME_RATE,
+                frameRate: BG_FRAME_RATE,
                 repeat: -1,
             });
         }
 
         this.anims.create({
             key: 'sel_anim',
-            frames: this.anims.generateFrameNumbers('selectorAnim', { start: 0, end: 4 }),
-            frameRate: FRAME_RATE,
+            frames: this.anims.generateFrameNumbers('selectorAnim', { start: 0, end: 2 }),
+            frameRate: SELECTOR_FRAME_RATE,
             repeat: -1,
         });
 
@@ -81,7 +82,6 @@ export class MainMenu extends Phaser.Scene {
                 .setInteractive({ cursor: 'pointer' });
 
             zone.on('pointerover', () => {
-                // this.activeButton = i;
                 this.positionSelector(i);
                 this.input.setDefaultCursor('pointer');
             });
@@ -90,6 +90,10 @@ export class MainMenu extends Phaser.Scene {
         }
 
         this.positionSelector(0);
+
+        this.input.keyboard!.on('keydown-UP', () => this.moveSelection(-1));
+        this.input.keyboard!.on('keydown-DOWN', () => this.moveSelection(1));
+        this.input.keyboard!.on('keydown-ENTER', () => this.onButtonClick(BUTTONS[this.selectedButton].label));
 
         this.scale.on('resize', this.resize, this);
         this.playCurrentAnim();
@@ -138,6 +142,11 @@ export class MainMenu extends Phaser.Scene {
     private advanceAnim() {
         this.currentAnim = (this.currentAnim + 1) % ANIM_DEFS.length;
         this.playCurrentAnim();
+    }
+
+    private moveSelection(dir: number) {
+        this.selectedButton = Phaser.Math.Wrap(this.selectedButton + dir, 0, BUTTONS.length);
+        this.positionSelector(this.selectedButton);
     }
 
     private resize() {

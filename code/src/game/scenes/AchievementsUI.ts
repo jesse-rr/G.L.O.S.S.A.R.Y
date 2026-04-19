@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { UserData } from '../data/UserData';
 
 const CUBE_SIZE = 50.5;
+const FONT_FAMILY = 'VCRosdNEUE';
 
 const CUBE_POSITIONS = [
     { x: 246, y: 107.5 },
@@ -55,7 +56,7 @@ export class AchievementsUI extends Phaser.Scene {
         this.tooltipText = this.add.text(0, 0, '', {
             fontSize: '22px',
             color: '#847E87',
-            fontFamily: 'font',
+            fontFamily: FONT_FAMILY,
             wordWrap: { width: 380 },
             lineSpacing: 6
         })

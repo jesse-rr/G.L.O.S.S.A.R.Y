@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser';
 
+const FONT_FAMILY = 'VCRosdNEUE';
+
 export class Help extends Phaser.Scene {
     private scrollY = 0;
     private maxScroll = 0;
@@ -9,7 +11,7 @@ export class Help extends Phaser.Scene {
     }
 
     preload() {
-        this.load.font('font', 'assets/exports/VCRosdNEUE.ttf');
+        this.load.font(FONT_FAMILY, 'assets/exports/VCRosdNEUE.ttf');
         this.load.image('help-ui', 'assets/exports/UI/Help-UI.png');
         this.load.image('settings-ui', 'assets/exports/UI/Settings-UI.png');
         this.load.image('achievements-ui', 'assets/exports/UI/Achievements-UI.png');
@@ -45,7 +47,7 @@ export class Help extends Phaser.Scene {
         this.add.text(centerX, y + 125, helpText, {
             fontSize: '22px',
             color: '#847E87',
-            fontFamily: 'font',
+            fontFamily: FONT_FAMILY,
             wordWrap: { width: 860 },
             lineSpacing: 6,
             align: 'center'

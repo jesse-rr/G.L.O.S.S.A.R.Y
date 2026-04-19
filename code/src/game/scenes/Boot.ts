@@ -7,15 +7,15 @@ export class Boot extends Scene {
 
     preload() {
         // 7680×360 → 12 frames of 640×360
-        this.load.spritesheet('homeAnim', 'assets/UI/Homescreen-Sheet-UI.png', {
+        this.load.spritesheet('homeAnim', 'assets/exports/UI/Homescreen-BG-Sheet.png', {
             frameWidth: 640,
             frameHeight: 360,
         });
 
-        // 60×31 → 5 frames of 12×31
-        this.load.spritesheet('selectorAnim', 'assets/Animations/Homescreen-Selector-Sheet.png', {
-            frameWidth: 12,
-            frameHeight: 31,
+        // 96×32 → 3 frames of 32×32
+        this.load.spritesheet('selectorAnim', 'assets/exports/UI/Homescreen-Selector-Sheet.png', {
+            frameWidth: 32,
+            frameHeight: 32,
         });
     }
 

@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser';
 
+const FONT_FAMILY = 'VCRosdNEUE';
+
 export class SettingsUI extends Phaser.Scene {
 
     private elements: any[] = [];
@@ -21,7 +23,7 @@ export class SettingsUI extends Phaser.Scene {
     }
 
     preload() {
-        this.load.font('font', 'assets/exports/VCRosdNEUE.ttf')
+        this.load.font(FONT_FAMILY, 'assets/exports/VCRosdNEUE.ttf')
         this.load.spritesheet('ui-items', 'assets/exports/UI/UI-Items.png', {
             frameWidth: 32,
             frameHeight: 32
@@ -73,7 +75,7 @@ export class SettingsUI extends Phaser.Scene {
             const label = this.add.text(-380, 0, el.label ?? '', {
                 fontSize: '34px',
                 color: '#847E87',
-                fontFamily: 'font'
+                fontFamily: FONT_FAMILY
             }).setOrigin(0, 0.5);
 
             el.obj.add(label);
@@ -119,7 +121,7 @@ export class SettingsUI extends Phaser.Scene {
                     .setStyle({
                         fontSize: '26px',
                         color: '#847E87',
-                        fontFamily: 'font'
+                        fontFamily: FONT_FAMILY
                     })
                     .setDepth(3);
 
