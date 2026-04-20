@@ -43,8 +43,8 @@ const config: Phaser.Types.Core.GameConfig = {
         autoCenter: Scale.CENTER_BOTH,
     },
     physics: {
-        default: 'arcade',
-        arcade: {
+        default: 'matter',
+        matter: {
             gravity: { y: 0, x: 0 },
             debug: true
         }
