@@ -109,6 +109,8 @@ export class MainMenu extends Phaser.Scene {
                 this.scene.launch('Covenant');
                 break;
             case BUTTONS[1].label:
+                this.scene.pause();
+                this.scene.launch('Multiplayer');
                 break;
             case BUTTONS[2].label:
                 this.scene.pause();

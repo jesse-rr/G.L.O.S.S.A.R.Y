@@ -1,13 +1,17 @@
 import * as Phaser from 'phaser';
+import { MultiplayerData } from '../data/MultiplayerData';
 
-export class Settings extends Phaser.Scene {
+export class Multiplayer extends Phaser.Scene {
 
     constructor() {
-        super('Settings');
+        super('Multiplayer');
     }
 
     preload() {
-        this.load.image('settings-ui', 'assets/exports/UI/Settings-UI.png');
+        const multiplayerData = MultiplayerData.getInstance();
+
+        this.load.image('multiplayer-bg', 'assets/exports/UI/Multiplayer-UI.png');
+        this.load.image('multiplayer-room-ui', 'assets/exports/UI/Multiplayer-Room-UI.png');
         this.load.image('go-back-ui', 'assets/exports/UI/Go-Back-UI.png');
     }
 
@@ -22,11 +26,9 @@ export class Settings extends Phaser.Scene {
         const centerX = Math.floor(this.scale.width / 2);
         const centerY = Math.floor(this.scale.height / 2);
 
-        const settings = this.add.image(centerX, centerY, 'settings-ui')
+        const bg = this.add.image(centerX, centerY, 'multiplayer-bg')
             .setOrigin(0.5)
             .setScale(scale);
-
-        const settingsTop = centerY - settings.displayHeight / 2;
 
         const goBack = this.add.image(20, 20, 'go-back-ui')
             .setOrigin(0)
@@ -37,21 +39,13 @@ export class Settings extends Phaser.Scene {
 
         goBack.on('pointerdown', (p: Phaser.Input.Pointer) => {
             if (p.button !== 0) return;
-            this.scene.stop('SettingsUI');
             this.scene.stop();
             this.scene.resume('MainMenu');
         });
 
         this.input.keyboard!.on('keydown-ESC', () => {
-            this.scene.stop('SettingsUI');
             this.scene.stop();
             this.scene.resume('MainMenu');
-        });
-
-        this.scene.launch('SettingsUI', {
-            x: centerX,
-            y: settingsTop,
-            scene: this
         });
     }
 }

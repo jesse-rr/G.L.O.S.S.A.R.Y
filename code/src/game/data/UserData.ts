@@ -3,6 +3,13 @@ export interface AchievementData {
     unlocked: boolean;
 }
 
+class Settings {
+    volume: number = 50;
+    vsync: boolean = true;
+    particles: boolean = true;
+    screenShake: boolean = true;
+}
+
 export class UserData {
     achievements: AchievementData[] = [
         { id: 'completionist', unlocked: false },
@@ -20,14 +27,46 @@ export class UserData {
     deaths: number = 0;
     wins: number = 0;
     completedGame: boolean = false;
+    settings: Settings = new Settings();
 
     private static instance: UserData;
 
     static getInstance(): UserData {
         if (!UserData.instance) {
-            UserData.instance = new UserData();
+            const instance = new UserData();
+            instance.load();
+
+            const handler = {
+                get(obj: any, prop: any): any {
+                    const val = obj[prop];
+                    if (typeof val === 'object' && val !== null) {
+                        return new Proxy(val, handler);
+                    }
+                    if (typeof val === 'function') {
+                        return function (...args: any[]) {
+                            const res = val.apply(obj, args);
+                            if (typeof prop === 'string' && !['save', 'load', 'loadFromJSON', 'toJSON'].includes(prop)) {
+                                obj.save?.() ?? instance.save();
+                            }
+                            return res;
+                        };
+                    }
+                    return val;
+                },
+                set(obj: any, prop: any, val: any): boolean {
+                    obj[prop] = val;
+                    instance.save();
+                    return true;
+                }
+            };
+
+            UserData.instance = new Proxy(instance, handler) as UserData;
         }
         return UserData.instance;
+    }
+
+    updateSettings(settings: Settings): void {
+        this.settings = settings;
     }
 
     unlockAchievement(id: string): void {
@@ -58,6 +97,9 @@ export class UserData {
         if (this.covenantsDiscovered.length < 3 && !this.covenantsDiscovered.includes(covenant)) {
             this.covenantsDiscovered.push(covenant);
         }
+        if (this.covenantsDiscovered.length === 3) {
+            this.unlockAchievement('ritualist');
+        }
     }
 
     addDeath(): void {
@@ -76,7 +118,8 @@ export class UserData {
             covenantsDiscovered: this.covenantsDiscovered,
             deaths: this.deaths,
             wins: this.wins,
-            completedGame: this.completedGame
+            completedGame: this.completedGame,
+            settings: this.settings
         };
     }
 
@@ -88,5 +131,21 @@ export class UserData {
         if (data.deaths !== undefined) this.deaths = data.deaths;
         if (data.wins !== undefined) this.wins = data.wins;
         if (data.completedGame !== undefined) this.completedGame = data.completedGame;
+        if (data.settings) this.settings = data.settings;
+    }
+
+    save(): void {
+        localStorage.setItem('glossary_user_data', JSON.stringify(this.toJSON()));
+    }
+
+    load(): void {
+        const data = localStorage.getItem('glossary_user_data');
+        if (data) {
+            try {
+                this.loadFromJSON(JSON.parse(data));
+            } catch (e) {
+                console.error("Failed to load user data", e);
+            }
+        }
     }
 }

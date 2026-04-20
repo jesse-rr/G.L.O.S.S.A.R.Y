@@ -23,15 +23,44 @@ export class PlayerData {
 
     static getInstance(): PlayerData {
         if (!PlayerData.instance) {
-            PlayerData.instance = new PlayerData();
+            const instance = new PlayerData();
+            instance.load();
+
+            const handler = {
+                get(obj: any, prop: any): any {
+                    const val = obj[prop];
+                    if (typeof val === 'object' && val !== null) {
+                        return new Proxy(val, handler);
+                    }
+                    if (typeof val === 'function') {
+                        return function (...args: any[]) {
+                            const res = val.apply(obj, args);
+                            if (typeof prop === 'string' && !['save', 'load', 'loadFromJSON', 'toJSON'].includes(prop)) {
+                                obj.save?.() ?? instance.save();
+                            }
+                            return res;
+                        };
+                    }
+                    return val;
+                },
+                set(obj: any, prop: any, val: any): boolean {
+                    obj[prop] = val;
+                    instance.save();
+                    return true;
+                }
+            };
+
+            PlayerData.instance = new Proxy(instance, handler) as PlayerData;
         }
         return PlayerData.instance;
     }
 
-    setCovenantData(covenant: CovenantType, specialCurrency: number = 0): void {
+    setCovenantData(covenant: CovenantType): void {
         this.covenant = covenant;
-        this.specialCurrency = specialCurrency;
-        this.hp = this.maxHp;
+    }
+
+    updateSpecialCurrency(quantity: number): void {
+        this.specialCurrency += quantity;
     }
 
     addItem(itemId: string, quantity: number = 1): void {
@@ -99,5 +128,41 @@ export class PlayerData {
         this.hp = this.maxHp;
         this.items = [];
         this.runes = [];
+    }
+    toJSON(): object {
+        return {
+            covenant: this.covenant,
+            gemstones: this.gemstones,
+            specialCurrency: this.specialCurrency,
+            hp: this.hp,
+            maxHp: this.maxHp,
+            items: this.items,
+            runes: this.runes
+        };
+    }
+
+    loadFromJSON(data: any): void {
+        if (data.covenant) this.covenant = data.covenant;
+        if (data.gemstones !== undefined) this.gemstones = data.gemstones;
+        if (data.specialCurrency !== undefined) this.specialCurrency = data.specialCurrency;
+        if (data.hp !== undefined) this.hp = data.hp;
+        if (data.maxHp !== undefined) this.maxHp = data.maxHp;
+        if (data.items) this.items = data.items;
+        if (data.runes) this.runes = data.runes;
+    }
+
+    save(): void {
+        localStorage.setItem('glossary_player_data', JSON.stringify(this.toJSON()));
+    }
+
+    load(): void {
+        const data = localStorage.getItem('glossary_player_data');
+        if (data) {
+            try {
+                this.loadFromJSON(JSON.parse(data));
+            } catch (e) {
+                console.error("Failed to load player data", e);
+            }
+        }
     }
 }

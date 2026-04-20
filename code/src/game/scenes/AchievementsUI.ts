@@ -48,6 +48,11 @@ export class AchievementsUI extends Phaser.Scene {
         this.baseY = data.y;
         this.imgScale = data.scale || 2;
 
+        this.hitZones = [];
+        this.overlays = [];
+        this.overlayToIndex = [];
+        this.currentHoveredIndex = null;
+
         const userData = this.registry.get('userData') as UserData;
 
         this.tooltipBg = this.add.rectangle(0, 0, 400, 80, 0x000000, 0.8)

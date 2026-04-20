@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser';
 import { PlayerData } from '../data/PlayerData';
+import { UserData } from '../data/UserData';
+import { ScreenShake } from '../util/ScreenShake';
 
 const BG_FRAME_RATE = 8;
 const CARD_FRAME_RATE = 8;
@@ -44,6 +46,8 @@ export class Covenant extends Phaser.Scene {
     }
 
     create() {
+        this.cards = [];
+        this.selectedCardIndex = DEFAULT_CARD_INDEX;
         const centerX = this.scale.width / 2;
         const centerY = this.scale.height / 2;
 
@@ -77,11 +81,6 @@ export class Covenant extends Phaser.Scene {
                 this.setSelectedCard(i);
             });
 
-            sprite.on('pointerout', (pointer: Phaser.Input.Pointer) => {
-                if (this.getCardIndexAtPointer(pointer) === -1) {
-                    this.setSelectedCard(DEFAULT_CARD_INDEX);
-                }
-            });
 
             sprite.on('pointerdown', () => {
                 this.selectCovenant(covenant.key as any);
@@ -156,14 +155,15 @@ export class Covenant extends Phaser.Scene {
     private selectCovenant(covenant: 'dragon' | 'phoenix' | 'ouroborus'): void {
         const playerData = this.registry.get('playerData') as PlayerData;
         playerData.setCovenantData(covenant);
-        
+        const userData = this.registry.get('userData') as UserData;
+        userData.discoverCovenant(covenant);
+
         const sceneKeys = ['MainMenu', 'Help', 'Settings', 'SettingsUI', 'Achievements', 'AchievementsUI', 'Covenant'];
         for (const key of sceneKeys) {
             if (this.scene.isActive(key)) {
                 this.scene.stop(key);
             }
         }
-
         this.scene.start('CombatScene');
     }
 }

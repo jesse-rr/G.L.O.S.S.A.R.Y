@@ -58,19 +58,18 @@ export class SettingsUI extends Phaser.Scene {
 
         const leftLabels = ['VSync', 'Particles', 'Screen Shake'];
         const rightLabels = ['Volume', 'Screen Size', 'Cat Mode', 'User Data'];
+        const userData = this.registry.get('userData') as UserData;
 
         this.elements = [
-            { type: 'button', ox: leftTextX + uiOffset, oy: startY, toggle: true, enabled: false, label: leftLabels[0] },
-            { type: 'button', ox: leftTextX + uiOffset, oy: startY + gap, toggle: true, enabled: false, label: leftLabels[1] },
-            { type: 'button', ox: leftTextX + uiOffset, oy: startY + gap * 2, toggle: true, enabled: false, label: leftLabels[2] },
+            { type: 'button', ox: leftTextX + uiOffset, oy: startY, toggle: true, enabled: userData.settings.vsync, label: leftLabels[0] },
+            { type: 'button', ox: leftTextX + uiOffset, oy: startY + gap, toggle: true, enabled: userData.settings.particles, label: leftLabels[1] },
+            { type: 'button', ox: leftTextX + uiOffset, oy: startY + gap * 2, toggle: true, enabled: userData.settings.screenShake, label: leftLabels[2] },
 
-            { type: 'slider', ox: rightTextX + uiOffset, oy: startY, value: 50, label: rightLabels[0] },
+            { type: 'slider', ox: rightTextX + uiOffset, oy: startY, value: userData.settings.volume, label: rightLabels[0] },
             { type: 'button', ox: rightTextX + uiOffset, oy: startY + gap, toggle: false, label: rightLabels[1] },
             { type: 'button', ox: rightTextX + uiOffset, oy: startY + gap * 2, toggle: false, label: rightLabels[2] },
             { type: 'download', ox: rightTextX + uiOffset, oy: startY + gap * 3, label: rightLabels[3] }
         ];
-
-        const userData = this.registry.get('userData') as UserData;
 
         this.elements.forEach((el, i) => {
             el.obj = this.add.container(0, 0);
@@ -83,7 +82,6 @@ export class SettingsUI extends Phaser.Scene {
 
             if (i === 5 && userData.achievements[3].unlocked) {
                 labelStyle.color = '#4a4a4a';
-                labelStyle.strikethrough = true;
             }
 
             const label = this.add.text(-380, 0, el.label ?? '', labelStyle).setOrigin(0, 0.5);
@@ -152,9 +150,12 @@ export class SettingsUI extends Phaser.Scene {
 
                     knob.x = Phaser.Math.Linear(minX, maxX, t);
                     txt.setText(`${Math.round(el.value)}`);
+
+                    const userData = this.registry.get('userData') as UserData;
+                    userData.settings.volume = Math.round(el.value);
                 };
 
-                update(50);
+                update(el.value);
 
                 const rowHit = this.add.zone(-177, sliderY, 415, 40)
                     .setOrigin(0.5)
@@ -288,6 +289,17 @@ export class SettingsUI extends Phaser.Scene {
         if (el.type === 'button' && el.toggle) {
             el.enabled = !el.enabled;
             if (el.yesIcon) el.yesIcon.setVisible(el.enabled);
+
+            const userData = this.registry.get('userData') as UserData;
+            if (i === 0) {
+                userData.settings.vsync = el.enabled;
+                this.game.loop.targetFps = el.enabled ? 60 : 240;
+                this.game.loop.forceSetTimeOut = !el.enabled;
+                this.game.loop.stop();
+                this.game.loop.start((this.game.loop as any).callback);
+            }
+            if (i === 1) userData.settings.particles = el.enabled;
+            if (i === 2) userData.settings.screenShake = el.enabled;
         }
 
         if (i === 5) {

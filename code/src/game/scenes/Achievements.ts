@@ -29,6 +29,7 @@ export class Achievements extends Phaser.Scene {
         const goBack = this.add.image(20, 20, 'go-back-ui')
             .setOrigin(0)
             .setScale(2)
+            .setFlipX(true)
             .setScrollFactor(0)
             .setInteractive({ useHandCursor: true });
 

@@ -91,11 +91,19 @@ export class Help extends Phaser.Scene {
         const goBack = this.add.image(20, 20, 'go-back-ui')
             .setOrigin(0)
             .setScale(2)
+            .setFlipX(true)
             .setScrollFactor(0)
             .setInteractive({ useHandCursor: true });
 
         goBack.on('pointerdown', (p: Phaser.Input.Pointer) => {
             if (p.button !== 0) return;
+            this.scene.stop('SettingsUI');
+            this.scene.stop('AchievementsUI');
+            this.scene.stop();
+            this.scene.resume('MainMenu');
+        });
+
+        this.input.keyboard!.on('keydown-ESC', () => {
             this.scene.stop('SettingsUI');
             this.scene.stop('AchievementsUI');
             this.scene.stop();
