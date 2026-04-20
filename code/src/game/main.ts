@@ -10,6 +10,7 @@ import { Covenant } from './scenes/Covenant';
 import { CombatScene } from './scenes/CombatScene';
 import { Cat } from './util/Cat';
 import { Multiplayer } from './scenes/Multiplayer';
+import { ControlsUI } from './scenes/ControlsUI';
 
 let useVsync = true;
 try {
@@ -31,6 +32,7 @@ const config: Phaser.Types.Core.GameConfig = {
     pixelArt: true,
     roundPixels: true,
     antialias: false,
+    resolution: Math.max(window.devicePixelRatio || 1, 2),
     fps: {
         forceSetTimeOut: !useVsync,
         target: useVsync ? 60 : 144
@@ -50,7 +52,8 @@ const config: Phaser.Types.Core.GameConfig = {
         Covenant,
         CombatScene,
         Cat,
-        Multiplayer
+        Multiplayer,
+        ControlsUI
     ]
 };
 

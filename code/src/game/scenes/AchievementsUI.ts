@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { UserData } from '../data/UserData';
 
 const CUBE_SIZE = 50.5;
-const FONT_FAMILY = 'VCRosdNEUE';
+import { FONT_FAMILY } from '../constants';
 
 const CUBE_POSITIONS = [
     { x: 246, y: 107.5 },
@@ -67,10 +67,10 @@ export class AchievementsUI extends Phaser.Scene {
             wordWrap: { width: 380 },
             lineSpacing: 6
         })
-        .setResolution(10)
-        .setOrigin(0, 0)
-        .setVisible(false)
-        .setDepth(1001);
+            .setResolution(10)
+            .setOrigin(0, 0)
+            .setVisible(false)
+            .setDepth(1001);
 
         CUBE_POSITIONS.forEach((pos, i) => {
             const size = Math.round(CUBE_SIZE * this.imgScale);
@@ -102,6 +102,24 @@ export class AchievementsUI extends Phaser.Scene {
                     .setDepth(100);
                 this.overlays.push(overlay);
                 this.overlayToIndex.push(i);
+            }
+        });
+
+        this.input.on('wheel', (_: any, __: any, ___: number, dy: number) => {
+            const parent = this.parentScene as any;
+            parent.scrollY += dy;
+            parent.scrollY = Phaser.Math.Clamp(parent.scrollY, 0, parent.maxScroll);
+            parent.cameras.main.scrollY = Math.floor(parent.scrollY);
+        });
+
+        this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+            if (p.isDown) {
+                const parent = this.parentScene as any;
+                if (parent && parent.scrollY !== undefined) {
+                    parent.scrollY -= p.velocity.y / 10;
+                    parent.scrollY = Phaser.Math.Clamp(parent.scrollY, 0, parent.maxScroll);
+                    parent.cameras.main.scrollY = Math.floor(parent.scrollY);
+                }
             }
         });
     }

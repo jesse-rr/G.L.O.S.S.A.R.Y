@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { PlayerData } from '../data/PlayerData';
 
-const FONT_FAMILY = 'VCRosdNEUE';
+import { FONT_FAMILY } from '../constants';
 
 export class CombatScene extends Phaser.Scene {
     private playerData: PlayerData | null = null;
@@ -169,6 +169,17 @@ export class CombatScene extends Phaser.Scene {
             if (isBookOpen) {
                 toggleBook(false);
             }
+        });
+
+        this.input.keyboard!.on('keydown-Q', () => {
+            if (!this.scene.isPaused()) {
+                this.scene.pause();
+                this.scene.launch('Help', { previousScene: 'CombatScene' });
+            }
+        });
+
+        this.input.keyboard!.on('keydown-G', () => {
+            toggleBook(!isBookOpen);
         });
 
         this.time.addEvent({

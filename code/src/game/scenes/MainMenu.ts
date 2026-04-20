@@ -97,6 +97,7 @@ export class MainMenu extends Phaser.Scene {
         this.input.keyboard!.on('keydown-UP', () => this.moveSelection(-1));
         this.input.keyboard!.on('keydown-DOWN', () => this.moveSelection(1));
         this.input.keyboard!.on('keydown-ENTER', () => this.onButtonClick(BUTTONS[this.selectedButton].label));
+        this.input.keyboard!.on('keydown-Q', () => this.onButtonClick('HELP'));
 
         this.scale.on('resize', this.resize, this);
         this.playCurrentAnim();
@@ -106,6 +107,7 @@ export class MainMenu extends Phaser.Scene {
         console.log(`[MainMenu] Button: ${label}`);
         switch (label) {
             case BUTTONS[0].label:
+                this.scene.pause();
                 this.scene.launch('Covenant');
                 break;
             case BUTTONS[1].label:

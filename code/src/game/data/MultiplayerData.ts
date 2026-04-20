@@ -1,5 +1,9 @@
+import { ROOM_FIRST_WORDS, ROOM_SECOND_WORDS } from '../constants';
+
 export class MultiplayerData {
     rooms: RoomData[] = [];
+    myRoom: RoomData | null = null;
+    joinedRoom: RoomData | null = null;
 
     static instance: MultiplayerData;
 
@@ -9,7 +13,7 @@ export class MultiplayerData {
         }
         return MultiplayerData.instance;
     }
-    
+
     addRoom(room: RoomData): void {
         this.rooms.push(room);
     }
@@ -26,16 +30,10 @@ export class MultiplayerData {
 export class RoomData {
     title: string = this.generateRandomName();
     maxPlayers: number = 3;
+    currentPlayers: number = 1;
     isPrivate: boolean = false;
+    passcode: string = this.generatePasscode();
     ownerId: number = -1;
-    private static instance: RoomData;
-    
-    static getInstance(): RoomData {
-        if (!RoomData.instance) {
-            RoomData.instance = new RoomData();
-        }
-        return RoomData.instance;
-    }
 
     setMaxPlayers(num: number): void {
         this.maxPlayers = num;
@@ -50,8 +48,13 @@ export class RoomData {
     }
 
     private generateRandomName(): string {
-        const firstWord: string[] = ['Shadow', 'Rune', 'Void', 'Echo', 'Ash', 'Coil', 'Crown', 'Ember', 'Babel', 'Glossary', 'Silhouette', 'Fractured', 'Unnamed', 'Hollow', 'Wisp', 'Monolith', 'Sigil', 'Glyph', 'Cipher', 'Shade', 'Abyss', 'Flame', 'Stone', 'Tower', 'Summit'];
-        const secondWord: string[] = ['Ascension', 'Covenant', 'Recursion', 'Dominance', 'Sacrifice', 'Godhood', 'Meaning', 'Identity', 'Symbol', 'Translation', 'Knowledge', 'Reality', 'Forgotten', 'Unwritten', 'Destabilized', 'Glitched', 'Echoes', 'Splinter', 'Relic', 'Sanctum', 'Labyrinth', 'Pilgrim', 'Hollow', 'Remnant', 'Awakening'];
-        return firstWord[Math.floor(Math.random() * firstWord.length)] + ' ' + secondWord[Math.floor(Math.random() * secondWord.length)];
+        return ROOM_FIRST_WORDS[Math.floor(Math.random() * ROOM_FIRST_WORDS.length)] + ' ' + ROOM_SECOND_WORDS[Math.floor(Math.random() * ROOM_SECOND_WORDS.length)];
+    }
+
+    private generatePasscode(): string {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+        return code;
     }
 }

@@ -1,10 +1,11 @@
 import * as Phaser from 'phaser';
 
-const FONT_FAMILY = 'VCRosdNEUE';
+import { FONT_FAMILY } from '../constants';
 
 export class Help extends Phaser.Scene {
     private scrollY = 0;
     private maxScroll = 0;
+    private previousScene = 'MainMenu';
 
     constructor() {
         super('Help');
@@ -15,11 +16,19 @@ export class Help extends Phaser.Scene {
         this.load.image('help-ui', 'assets/exports/UI/Help-UI.png');
         this.load.image('settings-ui', 'assets/exports/UI/Settings-UI.png');
         this.load.image('achievements-ui', 'assets/exports/UI/Achievements-UI.png');
+        this.load.image('controls-ui', 'assets/exports/UI/Controls-UI.png');
         this.load.image('go-back-ui', 'assets/exports/UI/Go-Back-UI.png');
+
+        this.load.spritesheet('ui-items', 'assets/exports/UI/UI-Items.png', {
+            frameWidth: 32,
+            frameHeight: 32
+        });
     }
 
-    create() {
+    create(data: any) {
+        this.previousScene = (data && data.previousScene) ? data.previousScene : 'MainMenu';
         this.cameras.main.roundPixels = true;
+        this.scene.bringToTop();
 
         this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.6)
             .setOrigin(0)
@@ -72,6 +81,15 @@ export class Help extends Phaser.Scene {
 
         y += achievements.displayHeight + spacing;
 
+        const controls = this.add.image(centerX, y, 'controls-ui')
+            .setOrigin(0.5, 0)
+            .setScale(scale);
+
+        const controlsTopX = centerX;
+        const controlsTopY = y;
+
+        y += controls.displayHeight + spacing;
+
         this.maxScroll = Math.max(0, y - this.scale.height);
 
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
@@ -99,15 +117,25 @@ export class Help extends Phaser.Scene {
             if (p.button !== 0) return;
             this.scene.stop('SettingsUI');
             this.scene.stop('AchievementsUI');
+            this.scene.stop('ControlsUI');
             this.scene.stop();
-            this.scene.resume('MainMenu');
+            this.scene.resume(this.previousScene);
         });
 
         this.input.keyboard!.on('keydown-ESC', () => {
             this.scene.stop('SettingsUI');
             this.scene.stop('AchievementsUI');
+            this.scene.stop('ControlsUI');
             this.scene.stop();
-            this.scene.resume('MainMenu');
+            this.scene.resume(this.previousScene);
+        });
+
+        this.input.keyboard!.on('keydown-Q', () => {
+            this.scene.stop('SettingsUI');
+            this.scene.stop('AchievementsUI');
+            this.scene.stop('ControlsUI');
+            this.scene.stop();
+            this.scene.resume(this.previousScene);
         });
 
         this.scene.launch('SettingsUI', {
@@ -115,6 +143,7 @@ export class Help extends Phaser.Scene {
             y: settingsTop,
             scene: this
         });
+        this.scene.bringToTop('SettingsUI');
 
         this.scene.launch('AchievementsUI', {
             x: achievementsTopX,
@@ -122,5 +151,14 @@ export class Help extends Phaser.Scene {
             scale: scale,
             scene: this
         });
+        this.scene.bringToTop('AchievementsUI');
+
+        this.scene.launch('ControlsUI', {
+            x: controlsTopX,
+            y: controlsTopY,
+            scale: scale,
+            scene: this
+        });
+        this.scene.bringToTop('ControlsUI');
     }
 }

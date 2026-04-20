@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { UserData } from '../data/UserData';
 
-const FONT_FAMILY = 'VCRosdNEUE';
+import { FONT_FAMILY } from '../constants';
 
 export class SettingsUI extends Phaser.Scene {
 
@@ -119,12 +119,17 @@ export class SettingsUI extends Phaser.Scene {
                 const leftEdge = -trackWidth / 2;
                 const rightEdge = trackWidth / 2;
 
-                const leftCap = this.add.image(leftEdge - 36, sliderY, 'ui-items', 4)
+                const leftCap = this.add.image(leftEdge - 56, sliderY, 'ui-items', 4)
                     .setOrigin(0, 0.5)
                     .setScale(scale);
 
-                const rightCap = this.add.image(rightEdge - 68, sliderY, 'ui-items', 5)
+                const middleCap = this.add.image(leftEdge, sliderY, 'ui-items', 5)
+                    .setOrigin(0, 0.5)
+                    .setScale(scale);
+
+                const rightCap = this.add.image(rightEdge - 48, sliderY, 'ui-items', 4)
                     .setOrigin(1, 0.5)
+                    .setFlipX(true)
                     .setScale(scale);
 
                 const knob = this.add.image(leftEdge - 36, sliderY, 'ui-items', 1)
@@ -177,7 +182,7 @@ export class SettingsUI extends Phaser.Scene {
                         update(((clamped - minX) / (maxX - minX)) * 100);
                     });
 
-                el.obj.add([rowHit, leftCap, rightCap, hit, knob, txt]);
+                el.obj.add([rowHit, leftCap, middleCap, rightCap, hit, knob, txt]);
             }
 
             if (el.type === 'download') {
@@ -198,13 +203,11 @@ export class SettingsUI extends Phaser.Scene {
 
         this.selL = this.add.sprite(0, 0, 'ui-items', 6)
             .setScale(2)
-            .setDisplaySize(64, 68)
             .play('selector_anim')
             .setDepth(20);
 
         this.selR = this.add.sprite(0, 0, 'ui-items', 6)
             .setScale(2)
-            .setDisplaySize(64, 68)
             .setFlipX(true)
             .play('selector_anim')
             .setDepth(20);
@@ -223,11 +226,27 @@ export class SettingsUI extends Phaser.Scene {
                 const local = el.obj.getWorldTransformMatrix().applyInverse(p.x, p.y);
                 const clamped = Phaser.Math.Clamp(local.x, minX, maxX);
                 update(((clamped - minX) / (maxX - minX)) * 100);
+            } else if (p.isDown) {
+                const parent = this.parentScene as any;
+                if (parent && parent.scrollY !== undefined) {
+                    parent.scrollY -= p.velocity.y / 10;
+                    parent.scrollY = Phaser.Math.Clamp(parent.scrollY, 0, parent.maxScroll);
+                    parent.cameras.main.scrollY = Math.floor(parent.scrollY);
+                }
             }
         });
 
         this.input.on('pointerup', () => {
             this.draggingSlider = null;
+        });
+
+        this.input.on('wheel', (_: any, __: any, ___: number, dy: number) => {
+            const parent = this.parentScene as any;
+            if (parent && parent.scrollY !== undefined) {
+                parent.scrollY += dy;
+                parent.scrollY = Phaser.Math.Clamp(parent.scrollY, 0, parent.maxScroll);
+                parent.cameras.main.scrollY = Math.floor(parent.scrollY);
+            }
         });
     }
 
