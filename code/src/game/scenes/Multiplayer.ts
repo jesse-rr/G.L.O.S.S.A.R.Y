@@ -205,7 +205,7 @@ export class Multiplayer extends Phaser.Scene {
         const roomNameTxt = this.add.text(rightPanelX, createPanelY + 35, '', { fontSize: '18px', color: '#aaaaaa', fontFamily: FONT_FAMILY }).setOrigin(0.5);
         const passcodeTxt = this.add.text(rightPanelX, createPanelY + 65, '', { fontSize: '18px', color: '#ffffff', fontFamily: FONT_FAMILY }).setOrigin(0.5);
         const privateToggle = this.add.text(rightPanelX, createPanelY + 105, '', { fontSize: '20px', fontFamily: FONT_FAMILY }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        const playersToggle = this.add.text(rightPanelX, createPanelY + 145, '', { fontSize: '20px', color: '#aaaaaa', fontFamily: FONT_FAMILY }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const playersToggle = this.add.text(rightPanelX, createPanelY + 145, '', { fontSize: '20px', color: '#aaaaaa', fontFamily: FONT_FAMILY }).setOrigin(0.5);
         const createRoomBtnImg = this.add.image(rightPanelX, createPanelY + 195, 'multiplayer-room-ui-2').setScale(scale).setOrigin(0.5).setInteractive({ useHandCursor: true });
         const createRoomBtnTxt = this.add.text(rightPanelX, createPanelY + 195, '', { fontSize: '20px', fontFamily: FONT_FAMILY }).setOrigin(0.5);
 
@@ -264,15 +264,6 @@ export class Multiplayer extends Phaser.Scene {
             if (md.myRoom) renderPage();
         });
 
-        playersToggle.on('pointerover', () => { if (!md.joinedRoom) playersToggle.setBlendMode(Phaser.BlendModes.ADD); });
-        playersToggle.on('pointerout', () => playersToggle.setBlendMode(Phaser.BlendModes.NORMAL));
-        playersToggle.on('pointerdown', () => {
-            if (md.joinedRoom) return;
-            previewRoom.maxPlayers++;
-            if (previewRoom.maxPlayers > 3) previewRoom.maxPlayers = 1;
-            updateRightPanel();
-            if (md.myRoom) renderPage();
-        });
 
         createRoomBtnImg.on('pointerover', () => {
             if (!md.joinedRoom) {
