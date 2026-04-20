@@ -164,6 +164,6 @@ export class Covenant extends Phaser.Scene {
                 this.scene.stop(key);
             }
         }
-        this.scene.start('CombatScene');
+        this.scene.start('LevelScene');
     }
 }

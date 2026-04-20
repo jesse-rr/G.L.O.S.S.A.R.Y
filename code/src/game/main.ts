@@ -11,6 +11,7 @@ import { CombatScene } from './scenes/CombatScene';
 import { Cat } from './util/Cat';
 import { Multiplayer } from './scenes/Multiplayer';
 import { ControlsUI } from './scenes/ControlsUI';
+import { LevelScene } from './scenes/LevelScene';
 
 let useVsync = true;
 try {
@@ -41,6 +42,13 @@ const config: Phaser.Types.Core.GameConfig = {
         mode: Scale.FIT,
         autoCenter: Scale.CENTER_BOTH,
     },
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 0, x: 0 },
+            debug: true
+        }
+    },
     scene: [
         Boot,
         MainMenu,
@@ -53,7 +61,8 @@ const config: Phaser.Types.Core.GameConfig = {
         CombatScene,
         Cat,
         Multiplayer,
-        ControlsUI
+        ControlsUI,
+        LevelScene
     ]
 };
 

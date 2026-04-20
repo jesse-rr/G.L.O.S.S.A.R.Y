@@ -28,6 +28,7 @@ export class CombatScene extends Phaser.Scene {
             frameWidth: 16,
             frameHeight: 16
         });
+        // this.load.spritesheet('slime', 'assets/exports/Boss/Slime-Sheet.png')
     }
 
     create() {
