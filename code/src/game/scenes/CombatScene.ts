@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { PlayerData } from '../data/PlayerData';
 
 import { FONT_FAMILY } from '../constants';
+import { createVignette } from '../utils/Vignette';
 
 export class CombatScene extends Phaser.Scene {
     private playerData: PlayerData | null = null;
@@ -190,6 +191,7 @@ export class CombatScene extends Phaser.Scene {
             loop: true
         });
 
+        createVignette(this);
 
     }
 

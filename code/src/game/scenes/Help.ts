@@ -27,7 +27,6 @@ export class Help extends Phaser.Scene {
 
     create(data: any) {
         this.previousScene = (data && data.previousScene) ? data.previousScene : 'MainMenu';
-        this.cameras.main.roundPixels = true;
         this.scene.bringToTop();
 
         this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.6)

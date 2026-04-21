@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { PlayerData } from '../data/PlayerData';
+import { createVignette } from '../utils/Vignette';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -8,10 +8,11 @@ export class LevelScene extends Phaser.Scene {
     private mapKey!: string;
     private returnPortalGroup!: Phaser.GameObjects.Group;
     private isTeleporting = false;
-    
+
     private slowZones!: Phaser.GameObjects.Group;
     private targetSlowFactor = 1;
     private currentSlowFactor = 1;
+
 
     constructor() {
         super('LevelScene');
@@ -32,6 +33,8 @@ export class LevelScene extends Phaser.Scene {
         this.load.tilemapTiledJSON('boss-floor-desert', 'assets/exports/Maps/boss-floor-desert.json');
         this.load.tilemapTiledJSON('boss-floor-mechanic', 'assets/exports/Maps/boss-floor-mechanic.json');
 
+        this.load.tilemapTiledJSON('abandoned-settlement', 'assets/exports/Maps/abandoned-settlement.json');
+
         this.load.spritesheet('protagonist', 'assets/exports/Boss/Protagonist-Sheet.png', {
             frameWidth: 32,
             frameHeight: 32
@@ -42,12 +45,48 @@ export class LevelScene extends Phaser.Scene {
         this.slowZones = this.add.group();
         this.targetSlowFactor = 1;
         this.currentSlowFactor = 1;
-        
+
         if (this.scene.isActive('CombatScene')) {
             this.scene.stop('CombatScene');
         }
 
         this.cameras.main.setBackgroundColor('#111111');
+
+        const cam = this.cameras.main;
+        const originalPreRender = cam.preRender.bind(cam);
+        cam.preRender = function () {
+            originalPreRender();
+            const subPixel = 1 / this.zoom;
+            this.scrollX = Math.round(this.scrollX / subPixel) * subPixel;
+            this.scrollY = Math.round(this.scrollY / subPixel) * subPixel;
+            const midX = this.scrollX + this.width * 0.5;
+            const midY = this.scrollY + this.height * 0.5;
+            this.midPoint.set(midX, midY);
+            const displayWidth = this.width / this.zoomX;
+            const displayHeight = this.height / this.zoomY;
+            this.worldView.setTo(
+                midX - displayWidth / 2,
+                midY - displayHeight / 2,
+                displayWidth,
+                displayHeight
+            );
+            const originX = this.width * this.originX;
+            const originY = this.height * this.originY;
+            if (this.isObjectInversion) {
+                this.matrix.loadIdentity();
+                this.matrix.translate(originX, originY);
+                this.matrix.scale(this.zoomX, this.zoomY);
+                this.matrix.rotate(this.rotation);
+                this.matrix.translate(-this.scrollX - originX, -this.scrollY - originY);
+            } else {
+                this.matrix.applyITRS(originX, originY, this.rotation, this.zoomX, this.zoomY);
+                this.matrix.translate(-this.scrollX - originX, -this.scrollY - originY);
+            }
+            this.matrixExternal.applyITRS(this.x, this.y, 0, 1, 1);
+            this.shakeEffect.preRender();
+            this.matrixExternal.multiply(this.matrix, this.matrixCombined);
+        };
+
         this.returnPortalGroup = this.add.group();
 
         if (this.mapKey === 'hub') {
@@ -86,6 +125,8 @@ export class LevelScene extends Phaser.Scene {
                 this.scene.launch('Help', { previousScene: 'LevelScene' });
             }
         });
+
+        createVignette(this);
 
         this.matter.world.on('collisionstart', (event: any) => {
             event.pairs.forEach((pair: any) => {
@@ -131,13 +172,14 @@ export class LevelScene extends Phaser.Scene {
         const height = 800;
 
         this.matter.world.setBounds(-2000, -2000, 4000, 4000);
-        this.cameras.main.setZoom(2.5);
+        this.cameras.main.setZoom(2);
 
         const rect = this.add.rectangle(width / 2, height / 2, 800, 400, 0xaa0000);
 
         this.createPortal(width / 2, height / 2 - 150, 'boss-floor-abandoned', 0x00aa00, 'Abandoned Swamp');
         this.createPortal(width / 2 - 300, height / 2 + 100, 'boss-floor-mechanic', 0xaaaa00, 'Mechanic Island');
         this.createPortal(width / 2 + 300, height / 2 + 100, 'boss-floor-desert', 0xdd8800, 'Desert City');
+        this.createPortal(width / 2, height / 2 + 150, 'abandoned-settlement', 0x44aa44, 'Abandoned Settlement');
 
         const walls = [
             this.add.rectangle(width / 2, height / 2 - 200, 800, 20, 0x000000),
@@ -159,155 +201,182 @@ export class LevelScene extends Phaser.Scene {
         this.add.text(x, y - 40, label, { fontSize: '16px', color: '#ffffff' }).setOrigin(0.5);
     }
 
-private createMap(mapKey: string) {
-    const map = this.make.tilemap({ key: mapKey });
+    private createMap(mapKey: string) {
+        const map = this.make.tilemap({ key: mapKey });
+        const tilesets: Phaser.Tilemaps.Tileset[] = [];
 
-    const tilesets: Phaser.Tilemaps.Tileset[] = [];
-
-    map.tilesets.forEach(ts => {
-        const boundTileset = map.addTilesetImage(ts.name, ts.name + '-Sheet.png');
-        if (boundTileset) {
-            tilesets.push(boundTileset);
-        }
-    });
-
-    map.layers.forEach((layerData, i) => {
-        const layer = map.createLayer(layerData.name, tilesets);
-        if (layer) {
-            layer.setDepth(i);
-        }
-    });
-
-    this.cameras.main.setZoom(2.5);
-    this.matter.world.setBounds(-2000, -2000, 4000, 4000);
-
-    const worldW = map.widthInPixels || 2000;
-    const worldH = map.heightInPixels || 2000;
-
-    map.objects.forEach(layer => {
-        const layerName = layer.name.toLowerCase();
-
-        if (layerName.includes('collision') || layerName.includes('collider')) {
-            layer.objects.forEach(obj => {
-                const x = obj.x || 0;
-                const y = obj.y || 0;
-
-                if (obj.polygon || obj.polyline) {
-                    const points = (obj.polygon || obj.polyline) as any[];
-                    if (!points || points.length < 2) return;
-
-                    let offsetX = 0;
-                    let offsetY = 0;
-                    const shouldOffset = !obj.name?.includes('no-offset');
-
-                    if (shouldOffset) {
-                        if (mapKey === 'boss-floor-abandoned') {
-                            offsetX = -32;
-                            offsetY = -230;
-                        } else if (mapKey === 'boss-floor-desert') {
-                            offsetX = 28;
-                            offsetY = -442;
-                        } else if (mapKey === 'boss-floor-mechanic') {
-                            offsetX = 256;
-                            offsetY = -82;
-                        }
-                    } else {
-                        offsetX += 14;
-                        offsetY -= 8;
-                    }
-
-                    if (obj.polygon) {
-                        const vertices = points.map(p => ({
-                            x: x + p.x + offsetX,
-                            y: y + p.y + offsetY
-                        }));
-
-                        this.matter.add.fromVertices(
-                            vertices[0].x,
-                            vertices[0].y,
-                            vertices,
-                            { isStatic: true },
-                            true
-                        );
-                    } else {
-                        for (let i = 0; i < points.length - 1; i++) {
-                            const p1 = points[i];
-                            const p2 = points[i + 1];
-
-                            const minX = Math.min(p1.x, p2.x);
-                            const minY = Math.min(p1.y, p2.y);
-                            const maxX = Math.max(p1.x, p2.x);
-                            const maxY = Math.max(p1.y, p2.y);
-
-                            const rectW = Math.max(maxX - minX, 4);
-                            const rectH = Math.max(maxY - minY, 4);
-
-                            const rectX = x + minX + (maxX - minX) / 2;
-                            const rectY = y + minY + (maxY - minY) / 2;
-
-                            this.matter.add.rectangle(rectX, rectY, rectW, rectH, { isStatic: true });
-                        }
-                    }
-                } else if (obj.ellipse) {
-                    const rw = obj.width || 16;
-                    const radius = rw / 2;
-                    this.matter.add.circle(x + radius, y + radius, radius, { isStatic: true });
-                } else if (obj.rectangle || (obj.width && obj.height)) {
-                    const rw = obj.width || 16;
-                    const rh = obj.height || 16;
-                    this.matter.add.rectangle(x + rw / 2, y + rh / 2, rw, rh, { isStatic: true });
-                }
-            });
-        }
-    });
-
-    let spawnX = worldW / 2;
-    let spawnY = worldH / 2;
-    let portalX = worldW / 2;
-    let portalY = worldH / 2 + 100;
-
-    if (mapKey === 'boss-floor-abandoned') {
-        spawnX = worldW;
-        spawnY = 380;
-        portalX = worldW;
-        portalY = 430;
-    } else if (mapKey === 'boss-floor-desert') {
-        spawnX = (worldW / 2) - 16;
-        spawnY = 380;
-        portalX = (worldW / 2) - 16;
-        portalY = 430;
-    } else if (mapKey === 'boss-floor-mechanic') {
-        spawnX = (worldW / 2) - 64;
-        spawnY = 795;
-        portalX = (worldW / 2) - 64;
-        portalY = 845;
-    }
-
-    this.spawnPlayer(spawnX, spawnY);
-    this.player.setDepth(this.getPlayerDepth(mapKey));
-    this.createPortal(portalX, portalY, 'hub', 0xff0000, 'Return to Hub');
-
-    const tileSize = 32;
-    const stairHeight = tileSize * 6;
-    const stairCenterY = portalY - (stairHeight / 1.8);
-
-    this.createSlowZone(portalX, stairCenterY, tileSize * 2, stairHeight, 0.6);
-
-    this.matter.world.on('collisionstart', (event: any) => {
-        event.pairs.forEach((pair: any) => {
-            const { bodyA, bodyB } = pair;
-            const gameObjectA = bodyA.gameObject;
-            const gameObjectB = bodyB.gameObject;
-
-            if (gameObjectA === this.player || gameObjectB === this.player) {
-                const portal = gameObjectA === this.player ? gameObjectB : gameObjectA;
-                if (portal && portal.getData('target')) {
-                    this.onPortalOverlap(portal);
-                }
+        map.tilesets.forEach(ts => {
+            const boundTileset = map.addTilesetImage(ts.name, ts.name + '-Sheet.png');
+            if (boundTileset) {
+                tilesets.push(boundTileset);
             }
         });
-    });
-}
+
+        map.layers.forEach((layerData, i) => {
+            const layer = map.createLayer(layerData.name, tilesets);
+            if (layer) {
+                layer.setDepth(i);
+            }
+        });
+
+        this.cameras.main.setZoom(2);
+        this.matter.world.setBounds(-2000, -2000, 4000, 4000);
+
+        map.objects.forEach(layer => {
+            const layerName = layer.name.toLowerCase();
+
+            if (layerName.includes('collision') || layerName.includes('collider')) {
+                layer.objects.forEach(obj => {
+                    const x = obj.x || 0;
+                    const y = obj.y || 0;
+                    const rotation = obj.rotation || 0;
+                    const angle = Phaser.Math.DegToRad(rotation);
+
+                    if (obj.polygon || obj.polyline) {
+                        const points = (obj.polygon || obj.polyline) as any[];
+                        if (!points || points.length < 2) return;
+
+                        const vertices = points.map(p => {
+                            let px = p.x;
+                            let py = p.y;
+                            if (rotation !== 0) {
+                                const r = Phaser.Math.RotateAround({ x: px, y: py }, 0, 0, angle);
+                                px = r.x;
+                                py = r.y;
+                            }
+                            return {
+                                x: x + px,
+                                y: y + py
+                            };
+                        });
+
+                        if (obj.polygon) {
+                            try {
+                                const MatterLib = (Phaser.Physics.Matter as any).Matter;
+
+                                const origBoundsMinX = Math.min(...vertices.map((v: any) => v.x));
+                                const origBoundsMinY = Math.min(...vertices.map((v: any) => v.y));
+                                const origBoundsMaxX = Math.max(...vertices.map((v: any) => v.x));
+                                const origBoundsMaxY = Math.max(...vertices.map((v: any) => v.y));
+
+                                const centroid = MatterLib.Vertices.centre(vertices);
+                                const body = MatterLib.Bodies.fromVertices(centroid.x, centroid.y, [vertices], { isStatic: true });
+
+                                if (body) {
+                                    const bodyBoundsCenterX = (body.bounds.min.x + body.bounds.max.x) / 2;
+                                    const bodyBoundsCenterY = (body.bounds.min.y + body.bounds.max.y) / 2;
+                                    const origBoundsCenterX = (origBoundsMinX + origBoundsMaxX) / 2;
+                                    const origBoundsCenterY = (origBoundsMinY + origBoundsMaxY) / 2;
+
+                                    this.matter.world.add(body);
+
+                                    MatterLib.Body.setPosition(body, {
+                                        x: body.position.x + (origBoundsCenterX - bodyBoundsCenterX),
+                                        y: body.position.y + (origBoundsCenterY - bodyBoundsCenterY)
+                                    });
+                                } else {
+                                    const rw = obj.width || 32;
+                                    const rh = obj.height || 32;
+                                    this.matter.add.rectangle(x + rw / 2, y + rh / 2, rw, rh, { isStatic: true });
+                                }
+                            } catch (e) {
+                            }
+                        } else {
+                            for (let i = 0; i < points.length - 1; i++) {
+                                const p1 = points[i];
+                                const p2 = points[i + 1];
+                                const minX = Math.min(p1.x, p2.x);
+                                const minY = Math.min(p1.y, p2.y);
+                                const maxX = Math.max(p1.x, p2.x);
+                                const maxY = Math.max(p1.y, p2.y);
+                                const rectW = Math.max(maxX - minX, 4);
+                                const rectH = Math.max(maxY - minY, 4);
+                                const rectX = x + minX + (maxX - minX) / 2;
+                                const rectY = y + minY + (maxY - minY) / 2;
+                                this.matter.add.rectangle(rectX, rectY, rectW, rectH, { isStatic: true });
+                            }
+                        }
+                    } else if (obj.ellipse) {
+                        const rw = obj.width || 16;
+                        const rh = obj.height || 16;
+                        const radius = rw / 2;
+                        const cx = x + radius;
+                        const cy = y + radius;
+                        const pos = rotation !== 0 ? Phaser.Math.RotateAround({ x: cx, y: cy }, x, y, angle) : { x: cx, y: cy };
+
+                        this.matter.add.circle(pos.x, pos.y, radius, {
+                            isStatic: true,
+                            angle: angle
+                        });
+                    } else if (obj.rectangle || (obj.width && obj.height)) {
+                        const rw = obj.width || 16;
+                        const rh = obj.height || 16;
+                        const cx = x + rw / 2;
+                        const cy = y + rh / 2;
+                        const pos = rotation !== 0 ? Phaser.Math.RotateAround({ x: cx, y: cy }, x, y, angle) : { x: cx, y: cy };
+
+                        this.matter.add.rectangle(pos.x, pos.y, rw, rh, {
+                            isStatic: true,
+                            angle: angle
+                        });
+                    }
+                });
+            }
+        });
+
+        let spawnX = 0;
+        let spawnY = 0;
+        let portalX = 0;
+        let portalY = 0;
+
+        if (mapKey === 'boss-floor-abandoned') {
+            spawnX = 32;
+            spawnY = 380;
+            portalX = 32;
+            portalY = 430;
+        } else if (mapKey === 'boss-floor-desert') {
+            spawnX = 0;
+            spawnY = 380;
+            portalX = 0;
+            portalY = 430;
+        } else if (mapKey === 'boss-floor-mechanic') {
+            spawnX = 416;
+            spawnY = 795;
+            portalX = 416;
+            portalY = 845;
+        } else if (mapKey === 'abandoned-settlement') {
+            spawnX = 650;
+            spawnY = -353;
+            portalX = 700;
+            portalY = -353;
+        }
+
+        this.spawnPlayer(spawnX, spawnY);
+        this.player.setDepth(this.getPlayerDepth(mapKey));
+        this.createPortal(portalX, portalY, 'hub', 0xff0000, 'Return to Hub');
+
+        if (mapKey !== 'abandoned-settlement') {
+            const tileSize = 32;
+            const stairHeight = tileSize * 6;
+            const stairCenterY = portalY - (stairHeight / 1.8);
+            this.createSlowZone(portalX, stairCenterY, tileSize * 2, stairHeight, 0.6);
+        }
+
+        this.matter.world.on('collisionstart', (event: any) => {
+            event.pairs.forEach((pair: any) => {
+                const { bodyA, bodyB } = pair;
+                const gameObjectA = bodyA.gameObject;
+                const gameObjectB = bodyB.gameObject;
+
+                if (gameObjectA === this.player || gameObjectB === this.player) {
+                    const portal = gameObjectA === this.player ? gameObjectB : gameObjectA;
+                    if (portal && portal.getData('target')) {
+                        this.onPortalOverlap(portal);
+                    }
+                }
+            });
+        });
+    }
 
     private spawnPlayer(x: number, y: number) {
         this.player = this.matter.add.sprite(x, y, 'protagonist');
@@ -319,7 +388,7 @@ private createMap(mapKey: string) {
         this.player.setFrictionStatic(0);
         this.player.setBounce(0);
 
-        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+        this.cameras.main.startFollow(this.player, false, 0.1, 0.1);
         this.player.play('idle');
     }
 
@@ -336,7 +405,6 @@ private createMap(mapKey: string) {
     update() {
         this.currentSlowFactor = Phaser.Math.Linear(this.currentSlowFactor, this.targetSlowFactor, 0.08);
         const speed = 3 * this.currentSlowFactor;
-
         const body = this.player.body as MatterJS.BodyType;
 
         let moveX = 0;
@@ -390,6 +458,7 @@ private createMap(mapKey: string) {
             case 'boss-floor-abandoned': return 9;
             case 'boss-floor-desert': return 12;
             case 'boss-floor-mechanic': return 10;
+            case 'abandoned-settlement': return 20;
             default: return 10;
         }
     }

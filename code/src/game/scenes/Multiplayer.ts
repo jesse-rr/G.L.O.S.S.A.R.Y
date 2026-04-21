@@ -20,8 +20,6 @@ export class Multiplayer extends Phaser.Scene {
     }
 
     create() {
-        this.cameras.main.roundPixels = true;
-
         this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.6)
             .setOrigin(0)
             .setScrollFactor(0);
