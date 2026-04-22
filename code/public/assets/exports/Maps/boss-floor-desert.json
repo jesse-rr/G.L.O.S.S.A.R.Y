@@ -1724,6 +1724,35 @@
         }, 
         {
          "draworder":"topdown",
+         "id":33,
+         "name":"stairs",
+         "objects":[
+                {
+                 "height":283,
+                 "id":105,
+                 "name":"",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"axis",
+                         "type":"string",
+                         "value":"vertical"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":64,
+                 "x":-32.0888888888889,
+                 "y":228.85
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
          "id":27,
          "name":"collisions",
          "objects":[
@@ -2223,8 +2252,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":33,
- "nextobjectid":105,
+ "nextlayerid":34,
+ "nextobjectid":106,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",
