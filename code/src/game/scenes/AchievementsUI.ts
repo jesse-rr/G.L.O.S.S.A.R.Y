@@ -67,7 +67,6 @@ export class AchievementsUI extends Phaser.Scene {
             wordWrap: { width: 380 },
             lineSpacing: 6
         })
-            .setResolution(10)
             .setOrigin(0, 0)
             .setVisible(false)
             .setDepth(1001);

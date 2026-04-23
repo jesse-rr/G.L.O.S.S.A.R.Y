@@ -33,13 +33,12 @@ const config: Phaser.Types.Core.GameConfig = {
     pixelArt: true,
     roundPixels: true,
     antialias: false,
-    resolution: Math.max(window.devicePixelRatio || 1, 2),
     fps: {
         forceSetTimeOut: !useVsync,
         target: useVsync ? 60 : 144
     },
     scale: {
-        mode: Scale.FIT,
+        mode: Scale.NONE,
         autoCenter: Scale.CENTER_BOTH,
     },
     physics: {

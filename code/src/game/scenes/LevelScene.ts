@@ -29,10 +29,11 @@ export class LevelScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('Abandoned-Floor-Sheet.png', 'assets/exports/Maps/Abandoned-Floor-Sheet.png');
-        this.load.image('Desert-Floor-Sheet.png', 'assets/exports/Maps/Desert-Floor-Sheet.png');
-        this.load.image('Mechanic-Floor-Sheet.png', 'assets/exports/Maps/Mechanic-Floor-Sheet.png');
-        this.load.image('Objects-Sheet.png', 'assets/exports/Maps/Objects-Sheet.png');
+        this.load.image('Abandoned-Floor.png', 'assets/exports/tileset/Abandoned-Floor.png');
+        this.load.image('Desert-Floor.png', 'assets/exports/tileset/Desert-Floor.png');
+        this.load.image('Mechanic-Floor.png', 'assets/exports/tileset/Mechanic-Floor.png');
+        this.load.image('Objects.png', 'assets/exports/tileset/Objects.png');
+        this.load.image('Summit-Floor.png', 'assets/exports/tileset/Summit-Floor.png');
 
         this.load.tilemapTiledJSON('boss-floor-abandoned', 'assets/exports/Maps/boss-floor-abandoned.json');
         this.load.tilemapTiledJSON('boss-floor-desert', 'assets/exports/Maps/boss-floor-desert.json');
@@ -66,10 +67,10 @@ export class LevelScene extends Phaser.Scene {
         cam.preRender = function () {
             originalPreRender();
             const subPixel = 1 / this.zoom;
-            this.scrollX = Math.round(this.scrollX / subPixel) * subPixel;
-            this.scrollY = Math.round(this.scrollY / subPixel) * subPixel;
-            const midX = this.scrollX + this.width * 0.5;
-            const midY = this.scrollY + this.height * 0.5;
+            const rx = Math.round(this.scrollX / subPixel) * subPixel;
+            const ry = Math.round(this.scrollY / subPixel) * subPixel;
+            const midX = rx + this.width * 0.5;
+            const midY = ry + this.height * 0.5;
             this.midPoint.set(midX, midY);
             const displayWidth = this.width / this.zoomX;
             const displayHeight = this.height / this.zoomY;
@@ -86,10 +87,10 @@ export class LevelScene extends Phaser.Scene {
                 this.matrix.translate(originX, originY);
                 this.matrix.scale(this.zoomX, this.zoomY);
                 this.matrix.rotate(this.rotation);
-                this.matrix.translate(-this.scrollX - originX, -this.scrollY - originY);
+                this.matrix.translate(-rx - originX, -ry - originY);
             } else {
                 this.matrix.applyITRS(originX, originY, this.rotation, this.zoomX, this.zoomY);
-                this.matrix.translate(-this.scrollX - originX, -this.scrollY - originY);
+                this.matrix.translate(-rx - originX, -ry - originY);
             }
             this.matrixExternal.applyITRS(this.x, this.y, 0, 1, 1);
             this.shakeEffect.preRender();
@@ -145,7 +146,7 @@ export class LevelScene extends Phaser.Scene {
 
                 if (gameObjectA === this.player || gameObjectB === this.player) {
                     const other = gameObjectA === this.player ? gameObjectB : gameObjectA;
-                    
+
                     if (other && other.getData) {
                         if (other.getData('reverseSlow')) {
                             this.inReverseZone = true;
@@ -174,7 +175,7 @@ export class LevelScene extends Phaser.Scene {
 
                 if (gameObjectA === this.player || gameObjectB === this.player) {
                     const other = gameObjectA === this.player ? gameObjectB : gameObjectA;
-                    
+
                     if (other && other.getData) {
                         if (other.getData('reverseSlow')) {
                             this.inReverseZone = false;
@@ -287,8 +288,8 @@ export class LevelScene extends Phaser.Scene {
             const maxY = Math.max(...worldPoints.map(p => p.y));
             const width = maxX - minX;
             const height = maxY - minY;
-            const cx = minX + width/2;
-            const cy = minY + height/2;
+            const cx = minX + width / 2;
+            const cy = minY + height / 2;
             return MatterLib.Bodies.rectangle(cx, cy, width, height, { isStatic: true, isSensor: true });
         }
         vertices = this.ensureClockwise(vertices);
@@ -300,15 +301,15 @@ export class LevelScene extends Phaser.Scene {
             if (bodies && bodies.length > 0) {
                 return bodies[0];
             }
-        } catch (e) {}
+        } catch (e) { }
         const minX = Math.min(...worldPoints.map(p => p.x));
         const minY = Math.min(...worldPoints.map(p => p.y));
         const maxX = Math.max(...worldPoints.map(p => p.x));
         const maxY = Math.max(...worldPoints.map(p => p.y));
         const width = maxX - minX;
         const height = maxY - minY;
-        const cx = minX + width/2;
-        const cy = minY + height/2;
+        const cx = minX + width / 2;
+        const cy = minY + height / 2;
         return MatterLib.Bodies.rectangle(cx, cy, width, height, { isStatic: true, isSensor: true });
     }
 
@@ -317,7 +318,7 @@ export class LevelScene extends Phaser.Scene {
         const tilesets: Phaser.Tilemaps.Tileset[] = [];
 
         map.tilesets.forEach(ts => {
-            const boundTileset = map.addTilesetImage(ts.name, ts.name + '-Sheet.png');
+            const boundTileset = map.addTilesetImage(ts.name, ts.name + '.png');
             if (boundTileset) tilesets.push(boundTileset);
         });
 
@@ -356,32 +357,32 @@ export class LevelScene extends Phaser.Scene {
                                 if (body) {
                                     this.matter.world.add(body);
                                     const bounds = body.bounds;
-                                    const dx = (Math.min(...vertices.map(v=>v.x)) + Math.max(...vertices.map(v=>v.x)))/2 - (bounds.min.x+bounds.max.x)/2;
-                                    const dy = (Math.min(...vertices.map(v=>v.y)) + Math.max(...vertices.map(v=>v.y)))/2 - (bounds.min.y+bounds.max.y)/2;
+                                    const dx = (Math.min(...vertices.map(v => v.x)) + Math.max(...vertices.map(v => v.x))) / 2 - (bounds.min.x + bounds.max.x) / 2;
+                                    const dy = (Math.min(...vertices.map(v => v.y)) + Math.max(...vertices.map(v => v.y))) / 2 - (bounds.min.y + bounds.max.y) / 2;
                                     MatterLib.Body.setPosition(body, { x: body.position.x + dx, y: body.position.y + dy });
                                 } else {
                                     const rw = obj.width || 32, rh = obj.height || 32;
-                                    this.matter.add.rectangle(x + rw/2, y + rh/2, rw, rh, { isStatic: true });
+                                    this.matter.add.rectangle(x + rw / 2, y + rh / 2, rw, rh, { isStatic: true });
                                 }
-                            } catch(e) {}
+                            } catch (e) { }
                         } else {
-                            for (let i = 0; i < vertices.length-1; i++) {
-                                const p1=vertices[i], p2=vertices[i+1];
-                                const minX=Math.min(p1.x,p2.x), minY=Math.min(p1.y,p2.y), maxX=Math.max(p1.x,p2.x), maxY=Math.max(p1.y,p2.y);
-                                const rectW=Math.max(maxX-minX,6), rectH=Math.max(maxY-minY,6);
-                                const rectX=minX+(maxX-minX)/2, rectY=minY+(maxY-minY)/2;
+                            for (let i = 0; i < vertices.length - 1; i++) {
+                                const p1 = vertices[i], p2 = vertices[i + 1];
+                                const minX = Math.min(p1.x, p2.x), minY = Math.min(p1.y, p2.y), maxX = Math.max(p1.x, p2.x), maxY = Math.max(p1.y, p2.y);
+                                const rectW = Math.max(maxX - minX, 6), rectH = Math.max(maxY - minY, 6);
+                                const rectX = minX + (maxX - minX) / 2, rectY = minY + (maxY - minY) / 2;
                                 this.matter.add.rectangle(rectX, rectY, rectW, rectH, { isStatic: true });
                             }
                         }
                     } else if (obj.ellipse) {
-                        const rw = obj.width||16, rh = obj.height||16, radius = rw/2;
+                        const rw = obj.width || 16, rh = obj.height || 16, radius = rw / 2;
                         const cx = x + radius, cy = y + radius;
-                        const pos = rotation!==0 ? Phaser.Math.RotateAround({x:cx,y:cy}, x, y, angle) : {x:cx,y:cy};
+                        const pos = rotation !== 0 ? Phaser.Math.RotateAround({ x: cx, y: cy }, x, y, angle) : { x: cx, y: cy };
                         this.matter.add.circle(pos.x, pos.y, radius, { isStatic: true, angle: angle });
                     } else if (obj.rectangle || (obj.width && obj.height)) {
-                        const rw = obj.width||16, rh = obj.height||16;
-                        const cx = x + rw/2, cy = y + rh/2;
-                        const pos = rotation!==0 ? Phaser.Math.RotateAround({x:cx,y:cy}, x, y, angle) : {x:cx,y:cy};
+                        const rw = obj.width || 16, rh = obj.height || 16;
+                        const cx = x + rw / 2, cy = y + rh / 2;
+                        const pos = rotation !== 0 ? Phaser.Math.RotateAround({ x: cx, y: cy }, x, y, angle) : { x: cx, y: cy };
                         this.matter.add.rectangle(pos.x, pos.y, rw, rh, { isStatic: true, angle: angle });
                     }
                 });
@@ -400,7 +401,7 @@ export class LevelScene extends Phaser.Scene {
                 let visual: Phaser.GameObjects.GameObject;
 
                 const isReverse = obj.name && obj.name.toLowerCase() === 'no-affect';
-                
+
                 if (!isReverse) {
                     const axisProp = obj.properties?.find((p: any) => p.name === 'axis');
                     if (!axisProp) return;
@@ -417,8 +418,8 @@ export class LevelScene extends Phaser.Scene {
                 } else {
                     const width = obj.width || 32;
                     const height = obj.height || 32;
-                    const cx = x + width/2;
-                    const cy = y + height/2;
+                    const cx = x + width / 2;
+                    const cy = y + height / 2;
                     const pos = rotation !== 0 ? Phaser.Math.RotateAround({ x: cx, y: cy }, x, y, angle) : { x: cx, y: cy };
                     body = MatterLib.Bodies.rectangle(pos.x, pos.y, width, height, { isStatic: true, isSensor: true, angle: angle });
                     this.matter.world.add(body);
@@ -458,7 +459,7 @@ export class LevelScene extends Phaser.Scene {
         }
 
         this.spawnPlayer(spawnX, spawnY);
-        this.player.setDepth(15);
+        this.player.setDepth(this.getPlayerDepth(mapKey));
         this.createPortal(portalX, portalY, 'hub', 0xff0000, 'Return to Hub');
 
         this.matter.world.on('collisionstart', (event: any) => {
@@ -482,7 +483,7 @@ export class LevelScene extends Phaser.Scene {
         this.player.setFriction(0);
         this.player.setFrictionStatic(0);
         this.player.setBounce(0);
-        this.cameras.main.startFollow(this.player, false, 0.1, 0.1);
+        this.cameras.main.startFollow(this.player, false, 0.05, 0.05);
         this.player.play('idle');
     }
 
@@ -506,9 +507,9 @@ export class LevelScene extends Phaser.Scene {
         if (this.cursors.up.isDown || this.keys.W.isDown) { moveY = -1; moving = true; }
         else if (this.cursors.down.isDown || this.keys.S.isDown) { moveY = 1; moving = true; }
 
-        let inputVelocity = new Phaser.Math.Vector2(0,0);
+        let inputVelocity = new Phaser.Math.Vector2(0, 0);
         if (moving) inputVelocity = new Phaser.Math.Vector2(moveX, moveY).normalize().scale(speed);
-        
+
         this.player.setVelocity(inputVelocity.x, inputVelocity.y);
 
         if (moving) {
@@ -519,6 +520,16 @@ export class LevelScene extends Phaser.Scene {
             this.player.anims.timeScale = 1;
             if (this.player.anims.currentAnim?.key === 'run') this.player.play('stop').chain('idle');
             else if (this.player.anims.currentAnim?.key !== 'stop' && this.player.anims.currentAnim?.key !== 'idle') this.player.play('idle');
+        }
+    }
+
+    private getPlayerDepth(mapKey: string): number {
+        switch (mapKey) {
+            case 'boss-floor-abandoned': return 8;
+            case 'boss-floor-desert': return 12;
+            case 'boss-floor-mechanic': return 10;
+            case 'abandoned-settlement': return 13;
+            default: return 10;
         }
     }
 }
