@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { PlayerData } from '../data/PlayerData';
 import { UserData } from '../data/UserData';
-import { ScreenShake } from '../util/ScreenShake';
+import { ScreenShake } from '../utils/ScreenShake';
 
 const BG_FRAME_RATE = 8;
 const CARD_FRAME_RATE = 8;

@@ -3,6 +3,11 @@ import * as Phaser from 'phaser';
 const VIGNETTE_KEY = '__vignette__';
 
 export function createVignette(scene: Phaser.Scene, depth: number = 90): Phaser.GameObjects.Image {
+    const existing = scene.children.getByName('vignette') as Phaser.GameObjects.Image;
+    if (existing) {
+        return existing;
+    }
+
     const w = Number(scene.game.config.width);
     const h = Number(scene.game.config.height);
 
@@ -44,6 +49,7 @@ export function createVignette(scene: Phaser.Scene, depth: number = 90): Phaser.
     vignette.setScrollFactor(0);
     vignette.setScale(1 / zoom);
     vignette.setDepth(depth);
+    vignette.setName('vignette');
 
     return vignette;
 }

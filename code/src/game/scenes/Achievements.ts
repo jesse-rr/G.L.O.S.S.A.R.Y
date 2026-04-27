@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { createVignette } from '../utils/Vignette';
 
 export class Achievements extends Phaser.Scene {
 
@@ -36,5 +37,7 @@ export class Achievements extends Phaser.Scene {
             this.scene.stop();
             this.scene.resume('MainMenu');
         });
+
+        createVignette(this);
     }
 }

@@ -40,6 +40,8 @@ export class LevelScene extends Phaser.Scene {
         this.load.tilemapTiledJSON('boss-floor-mechanic', 'assets/exports/Maps/boss-floor-mechanic.json');
 
         this.load.tilemapTiledJSON('abandoned-settlement', 'assets/exports/Maps/abandoned-settlement.json');
+        this.load.tilemapTiledJSON('desert-settlement', 'assets/exports/Maps/desert-settlement.json');
+        this.load.tilemapTiledJSON('mechanic-settlement', 'assets/exports/Maps/mechanic-settlement.json');
 
         this.load.spritesheet('protagonist', 'assets/exports/Boss/Protagonist-Sheet.png', {
             frameWidth: 32,
@@ -220,6 +222,8 @@ export class LevelScene extends Phaser.Scene {
         this.createPortal(width / 2 - 300, height / 2 + 100, 'boss-floor-mechanic', 0xaaaa00, 'Mechanic Island');
         this.createPortal(width / 2 + 300, height / 2 + 100, 'boss-floor-desert', 0xdd8800, 'Desert City');
         this.createPortal(width / 2, height / 2 + 150, 'abandoned-settlement', 0x44aa44, 'Abandoned Settlement');
+        this.createPortal(width / 2 - 300, height / 2 - 100, 'desert-settlement', 0xcc8833, 'Desert Settlement');
+        this.createPortal(width / 2 + 300, height / 2 - 100, 'mechanic-settlement', 0xaaaa00, 'Mechanic Settlement');
 
         const walls = [
             this.add.rectangle(width / 2, height / 2 - 200, 800, 20, 0x000000),
@@ -232,11 +236,14 @@ export class LevelScene extends Phaser.Scene {
         this.spawnPlayer(width / 2, height / 2);
     }
 
-    private createPortal(x: number, y: number, targetMap: string, color: number, label: string) {
-        const portal = this.add.rectangle(x, y, 60, 60, color);
+    private createPortal(x: number, y: number, targetMap: string, color: number, label: string, width: number = 60, height: number = 60) {
+        const portal = this.add.rectangle(x, y, width, height, color);
         this.matter.add.gameObject(portal, { isStatic: true, isSensor: true });
         this.returnPortalGroup.add(portal);
         portal.setData('target', targetMap);
+        if (targetMap === 'hub') {
+            portal.setAlpha(0);
+        }
         this.add.text(x, y - 40, label, { fontSize: '16px', color: '#ffffff' }).setOrigin(0.5);
     }
 
@@ -456,11 +463,20 @@ export class LevelScene extends Phaser.Scene {
             spawnX = 416; spawnY = 795; portalX = 416; portalY = 845;
         } else if (mapKey === 'abandoned-settlement') {
             spawnX = 650; spawnY = -353; portalX = 700; portalY = -353;
+        } else if (mapKey === 'desert-settlement') {
+            spawnX = 50; spawnY = -1000; portalX = 50; portalY = -1100;        } else if (mapKey === 'mechanic-settlement') {
+            spawnX = 0; spawnY = 0; portalX = 50; portalY = -100;        }
+
+        let portalWidth = 60;
+        let portalHeight = 60;
+        if (mapKey === 'desert-settlement') {
+            portalWidth = 120;
+            portalHeight = 120;
         }
 
         this.spawnPlayer(spawnX, spawnY);
         this.player.setDepth(this.getPlayerDepth(mapKey));
-        this.createPortal(portalX, portalY, 'hub', 0xff0000, 'Return to Hub');
+        this.createPortal(portalX, portalY, 'hub', 0xff0000, 'Return to Hub', portalWidth, portalHeight);
 
         this.matter.world.on('collisionstart', (event: any) => {
             event.pairs.forEach((pair: any) => {
@@ -483,7 +499,7 @@ export class LevelScene extends Phaser.Scene {
         this.player.setFriction(0);
         this.player.setFrictionStatic(0);
         this.player.setBounce(0);
-        this.cameras.main.startFollow(this.player, false, 0.05, 0.05);
+        this.cameras.main.startFollow(this.player, false, 0.09, 0.09);
         this.player.play('idle');
     }
 
@@ -507,12 +523,9 @@ export class LevelScene extends Phaser.Scene {
         if (this.cursors.up.isDown || this.keys.W.isDown) { moveY = -1; moving = true; }
         else if (this.cursors.down.isDown || this.keys.S.isDown) { moveY = 1; moving = true; }
 
-        let inputVelocity = new Phaser.Math.Vector2(0, 0);
-        if (moving) inputVelocity = new Phaser.Math.Vector2(moveX, moveY).normalize().scale(speed);
-
-        this.player.setVelocity(inputVelocity.x, inputVelocity.y);
-
         if (moving) {
+            const inputVelocity = new Phaser.Math.Vector2(moveX, moveY).normalize().scale(speed);
+            this.player.setVelocity(inputVelocity.x, inputVelocity.y);
             this.player.anims.timeScale = this.currentSlowFactor;
             if (this.player.anims.currentAnim?.key !== 'run') this.player.play('run');
         } else {
@@ -529,6 +542,8 @@ export class LevelScene extends Phaser.Scene {
             case 'boss-floor-desert': return 12;
             case 'boss-floor-mechanic': return 10;
             case 'abandoned-settlement': return 13;
+            case 'desert-settlement': return 13;
+            case 'mechanic-settlement': return 13;
             default: return 10;
         }
     }

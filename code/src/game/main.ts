@@ -8,7 +8,7 @@ import { Achievements } from './scenes/Achievements';
 import { AchievementsUI } from './scenes/AchievementsUI';
 import { Covenant } from './scenes/Covenant';
 import { CombatScene } from './scenes/CombatScene';
-import { Cat } from './util/Cat';
+import { Cat } from './utils/Cat';
 import { Multiplayer } from './scenes/Multiplayer';
 import { ControlsUI } from './scenes/ControlsUI';
 import { LevelScene } from './scenes/LevelScene';
