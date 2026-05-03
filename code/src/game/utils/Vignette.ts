@@ -44,8 +44,8 @@ export function createVignette(scene: Phaser.Scene, depth: number = 90): Phaser.
     }
 
     const zoom = scene.cameras.main.zoom || 1;
-    const vignette = scene.add.image(0, 0, VIGNETTE_KEY);
-    vignette.setOrigin(-.5, -.5);
+    const vignette = scene.add.image(w / 2, h / 2, VIGNETTE_KEY);
+    vignette.setOrigin(0.5, 0.5);
     vignette.setScrollFactor(0);
     vignette.setScale(1 / zoom);
     vignette.setDepth(depth);

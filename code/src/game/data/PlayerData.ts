@@ -1,11 +1,11 @@
-export type CovenantType = 'dragon' | 'phoenix' | 'ouroborus';
+export type CovenantType = 'dragon' | 'phoenix' | 'snake';
 
 export interface ItemData {
     id: string;
     quantity: number;
 }
 
-export interface RuneData {
+export interface PlayerRuneEntry {
     id: string;
     quantity: number;
 }
@@ -17,7 +17,7 @@ export class PlayerData {
     hp: number = 100;
     maxHp: number = 100;
     items: ItemData[] = [];
-    runes: RuneData[] = [];
+    runes: PlayerRuneEntry[] = [];
 
     private static instance: PlayerData;
 

@@ -15,7 +15,7 @@ const DEFAULT_CARD_INDEX = 1;
 const COVENANTS = [
     { key: 'dragon' },
     { key: 'phoenix' },
-    { key: 'ouroborus' }
+    { key: 'snake' }
 ] as const;
 
 export class Covenant extends Phaser.Scene {
@@ -35,7 +35,7 @@ export class Covenant extends Phaser.Scene {
             frameWidth: CARD_FRAME_WIDTH,
             frameHeight: CARD_FRAME_HEIGHT
         });
-        this.load.spritesheet('ouroborus', 'assets/exports/Covenant/Ouroborus-Sheet.png', {
+        this.load.spritesheet('snake', 'assets/exports/Covenant/Ouroborus-Sheet.png', {
             frameWidth: CARD_FRAME_WIDTH,
             frameHeight: CARD_FRAME_HEIGHT
         });
@@ -152,7 +152,7 @@ export class Covenant extends Phaser.Scene {
         return -1;
     }
 
-    private selectCovenant(covenant: 'dragon' | 'phoenix' | 'ouroborus'): void {
+    private selectCovenant(covenant: 'dragon' | 'phoenix' | 'snake'): void {
         const playerData = this.registry.get('playerData') as PlayerData;
         playerData.setCovenantData(covenant);
         const userData = this.registry.get('userData') as UserData;

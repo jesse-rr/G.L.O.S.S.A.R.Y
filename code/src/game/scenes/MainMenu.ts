@@ -14,10 +14,10 @@ const ANIM_DEFS = [
 const CANVAS_SCALE = 2;
 
 const BUTTONS = [
-        { label: 'NEW SAVE', srcX: 79, srcY: 178, srcW: 90, srcH: 22 },
-        { label: 'MULTIPLAYER', srcX: 95, srcY: 210, srcW: 126, srcH: 22 },
-        { label: 'HELP', srcX: 55, srcY: 242, srcW: 48, srcH: 22 },
-        { label: 'EXIT', srcX: 55, srcY: 274, srcW: 44, srcH: 22 },
+    { label: 'NEW SAVE', srcX: 79, srcY: 178, srcW: 90, srcH: 22 },
+    { label: 'MULTIPLAYER', srcX: 95, srcY: 210, srcW: 126, srcH: 22 },
+    { label: 'HELP', srcX: 55, srcY: 242, srcW: 48, srcH: 22 },
+    { label: 'EXIT', srcX: 55, srcY: 274, srcW: 44, srcH: 22 },
 ] as const;
 
 const BUTTON_LEFT_X = 34;
@@ -119,7 +119,8 @@ export class MainMenu extends Phaser.Scene {
                 this.scene.launch('Help');
                 break;
             case BUTTONS[3].label:
-                this.game.destroy(true, true);
+                this.scene.launch('CombatScene');
+                // this.game.destroy(true, true);
                 break;
         }
     }
