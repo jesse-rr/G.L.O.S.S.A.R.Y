@@ -4,3 +4,5 @@
 4. Fix the problem of: When adding a card to combo, for some reason the combo changes names - might be cause theres two combos with same runes but different position
 5. Create Select buttom to lock in combo
 6. Create animations to "Stack all runes in one" -> Dragon (gets clawed and dissappers), Phoenix (Burns), Snake (Glitches out)
+7. Fix achievments not showing on bottom right.
+8. Finish implementing Multiplayer.
