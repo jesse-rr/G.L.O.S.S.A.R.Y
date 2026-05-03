@@ -1,0 +1,6 @@
+1. Combo text must not be affected by black overlay 
+2. Combo system must have indicator of cards that sync together
+3. Make rune overlay have typing indicator in overlay (base/boost/unique)
+4. Fix the problem of: When adding a card to combo, for some reason the combo changes names - might be cause theres two combos with same runes but different position
+5. Create Select buttom to lock in combo
+6. Create animations to "Stack all runes in one" -> Dragon (gets clawed and dissappers), Phoenix (Burns), Snake (Glitches out)
