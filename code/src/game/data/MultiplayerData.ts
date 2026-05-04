@@ -4,6 +4,7 @@ export class MultiplayerData {
     rooms: RoomData[] = [];
     myRoom: RoomData | null = null;
     joinedRoom: RoomData | null = null;
+    sharedRunes: string[] = [];
 
     static instance: MultiplayerData;
 
@@ -25,13 +26,22 @@ export class MultiplayerData {
     removeRoom(room: RoomData): void {
         this.rooms = this.rooms.filter(r => r !== room);
     }
+
+    generateSharedRunes(allDefinitions: any[]): void {
+        this.sharedRunes = [];
+        this.sharedRunes.push('A');
+
+        const pool = allDefinitions.filter(r => r.letter !== 'A' && r.letter !== 'I' && r.letter !== 'E' && r.letter !== 'P' && r.letter !== 'Z').map(r => r.letter);
+        const shuffled = pool.sort(() => 0.5 - Math.random());
+        this.sharedRunes.push(...shuffled.slice(0, 5));
+    }
 }
 
 export class RoomData {
     title: string = this.generateRandomName();
     maxPlayers: number = 3;
     currentPlayers: number = 1;
-    isPrivate: boolean = false;
+    isPrivate: boolean = true;
     passcode: string = this.generatePasscode();
     ownerId: number = -1;
 

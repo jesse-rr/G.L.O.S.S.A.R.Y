@@ -142,4 +142,8 @@ export class BestiaryData {
     public discoverEntity(id: string) {
         this.discoveredEntities.add(id);
     }
+
+    public getDiscoveredCount(): number {
+        return this.discoveredEntities.size;
+    }
 }

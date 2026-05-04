@@ -103,7 +103,7 @@ export class CombatScene extends Phaser.Scene {
         this.chainLinks = [];
         this.pickerItems = new Map();
 
-        this.seedStarterRunes();
+        // Rune generation is now handled in Covenant scene
         this.initCombatSystem();
 
         if (!this.anims.exists('chain-anim')) {
@@ -232,31 +232,7 @@ export class CombatScene extends Phaser.Scene {
         createVignette(this);
     }
 
-    private seedStarterRunes(): void {
-        if (!this.runeData) return;
-        this.runeData.reset();
 
-        const allDefs = RuneData.getAllDefinitions();
-        const baseRunes = allDefs.filter(r => r.cardType === 'base').map(r => r.letter);
-        const boostRunes = allDefs.filter(r => r.cardType === 'boost').map(r => r.letter);
-        const uniqueRunes = allDefs.filter(r => r.cardType === 'unique').map(r => r.letter);
-
-        const starters: string[] = [];
-
-        starters.push(Phaser.Utils.Array.RemoveRandomElement(baseRunes));
-        starters.push(Phaser.Utils.Array.RemoveRandomElement(boostRunes));
-        starters.push(Phaser.Utils.Array.RemoveRandomElement(uniqueRunes));
-
-        const remaining = [...baseRunes, ...boostRunes, ...uniqueRunes];
-        Phaser.Utils.Array.Shuffle(remaining);
-
-        starters.push(...remaining.slice(0, 4));
-        Phaser.Utils.Array.Shuffle(starters);
-
-        for (const letter of starters) {
-            this.runeData.discoverRune(letter);
-        }
-    }
 
     private initCombatSystem(): void {
         this.combatSystem = new CombatSystem();
@@ -605,7 +581,8 @@ export class CombatScene extends Phaser.Scene {
             }).setOrigin(0.5, 0.5)
                 .setScrollFactor(0)
                 .setDepth(77)
-                .setAlpha(0);
+                .setAlpha(0)
+                .setInteractive({ useHandCursor: true });
 
             const labelWidth = comboLabel.width;
 
@@ -633,6 +610,61 @@ export class CombatScene extends Phaser.Scene {
                 .setDepth(77)
                 .setScrollFactor(0);
             this.chainCards.push(comboContainer);
+
+            comboLabel.on('pointerover', () => {
+                comboLabel.setTint(0xdddddd);
+            });
+
+            comboLabel.on('pointerout', () => {
+                comboLabel.clearTint();
+            });
+
+            comboLabel.on('pointerdown', () => {
+                comboLabel.disableInteractive();
+
+                // 1. Fade out chains and combo text
+                this.tweens.add({
+                    targets: [...this.chainLinks, comboContainer],
+                    alpha: 0,
+                    duration: 300,
+                    ease: 'Quad.easeOut',
+                    onComplete: () => {
+                        // 2. Converge the cards to the center
+                        const actualCards = this.chainCards.filter(c => c !== comboContainer);
+                        
+                        actualCards.forEach((c, idx) => {
+                            c.setDepth(80 + idx); // Stack them correctly
+                        });
+
+                        this.tweens.add({
+                            targets: actualCards,
+                            x: centerX,
+                            duration: 400,
+                            ease: 'Back.easeIn',
+                            onComplete: () => {
+                                // 3. Fade out the stacked cards
+                                this.tweens.add({
+                                    targets: actualCards,
+                                    alpha: 0,
+                                    scale: 0.5,
+                                    duration: 300,
+                                    ease: 'Quad.easeIn',
+                                    onComplete: () => {
+                                        // Restore picker items
+                                        for (const letter of this.selectedChain) {
+                                            const pickerCard = this.pickerItems.get(letter);
+                                            if (pickerCard) pickerCard.setVisible(true);
+                                        }
+                                        this.selectedChain = [];
+                                        this.rebuildChainDisplay(false);
+                                        this.repositionPicker();
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            });
         }
     }
 

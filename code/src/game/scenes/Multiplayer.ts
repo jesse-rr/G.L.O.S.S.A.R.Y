@@ -1,5 +1,8 @@
 import * as Phaser from 'phaser';
 import { MultiplayerData, RoomData } from '../data/MultiplayerData';
+import { RuneData } from '../data/RuneData';
+import { NetworkManager } from '../NetworkManager';
+import { EventBus } from '../EventBus';
 
 import { FONT_FAMILY } from '../constants';
 
@@ -65,15 +68,7 @@ export class Multiplayer extends Phaser.Scene {
 
         const md = MultiplayerData.getInstance();
 
-        // Testing Mocks
-        if (md.getRooms().length === 0 && !md.myRoom && !md.joinedRoom) {
-            for (let i = 0; i < 10; i++) {
-                const mock = new RoomData();
-                mock.isPrivate = true;
-                mock.passcode = '123';
-                md.addRoom(mock);
-            }
-        }
+        // Mocks removed
 
         let selectedRoom: RoomData | null = null;
         let typedPasscode: string = '';
@@ -158,6 +153,9 @@ export class Multiplayer extends Phaser.Scene {
 
                     selectedRoom = room;
                     typedPasscode = '';
+                    if (!room.isPrivate && room.passcode) {
+                        typedPasscode = room.passcode;
+                    }
                     renderPage();
                     if (updateJoinPanel) updateJoinPanel();
                 });
@@ -214,10 +212,12 @@ export class Multiplayer extends Phaser.Scene {
         deleteBtn.on('pointerout', () => deleteBtn.clearTint().setBlendMode(Phaser.BlendModes.NORMAL));
         deleteBtn.on('pointerdown', () => {
             if (md.myRoom) {
-                md.removeRoom(md.myRoom);
+                NetworkManager.getInstance().unregisterRoom(md.myRoom.passcode);
+                NetworkManager.getInstance().disconnect();
                 md.myRoom = null;
             } else if (md.joinedRoom) {
                 md.joinedRoom.currentPlayers--;
+                NetworkManager.getInstance().disconnect();
                 md.joinedRoom = null;
             } else {
                 return;
@@ -259,7 +259,10 @@ export class Multiplayer extends Phaser.Scene {
             if (md.joinedRoom) return;
             previewRoom.isPrivate = !previewRoom.isPrivate;
             updateRightPanel();
-            if (md.myRoom) renderPage();
+            if (md.myRoom) {
+                NetworkManager.getInstance().registerRoom({ ...md.myRoom, id: md.myRoom.passcode });
+                renderPage();
+            }
         });
 
 
@@ -275,14 +278,22 @@ export class Multiplayer extends Phaser.Scene {
             if (md.joinedRoom) return;
 
             if (md.myRoom) {
-                this.scene.stop();
-                this.scene.start('Covenant');
+                md.generateSharedRunes(RuneData.getAllDefinitions());
+                NetworkManager.getInstance().unregisterRoom(md.myRoom.passcode);
+                NetworkManager.getInstance().broadcast({ type: 'START_GAME', sharedRunes: md.sharedRunes });
+                this.scene.launch('TransitionScene', { targetScene: 'Covenant', currentScene: 'Multiplayer' });
             } else {
-                md.myRoom = previewRoom;
-                md.addRoom(previewRoom);
+                createRoomBtnTxt.setText('HOSTING...');
+                NetworkManager.getInstance().hostRoom(previewRoom.passcode, (id) => {
+                    md.myRoom = previewRoom;
+                    NetworkManager.getInstance().registerRoom({ ...previewRoom, id: previewRoom.passcode });
+                    updateRightPanel();
+                    renderPage();
+                }, (err) => {
+                    createRoomBtnTxt.setText('Create');
+                    console.error('Host error', err);
+                });
             }
-            updateRightPanel();
-            renderPage();
         });
 
         updateRightPanel();
@@ -328,7 +339,7 @@ export class Multiplayer extends Phaser.Scene {
 
             if (!selectedRoom) {
                 joinCodeTxt.setText('SELECT ROOM').setColor('#aaaaaa');
-            } else if (!selectedRoom.isPrivate) {
+            } else if (!selectedRoom.isPrivate && selectedRoom.passcode) {
                 joinCodeTxt.setText('OPEN ROOM').setColor('#55ff55');
             } else {
                 let displayCode = typedPasscode.padEnd(6, '-').split('').join(' ');
@@ -338,7 +349,8 @@ export class Multiplayer extends Phaser.Scene {
         updateJoinPanel();
 
         this.input.keyboard!.on('keydown', (event: KeyboardEvent) => {
-            if (!selectedRoom || !selectedRoom.isPrivate) return;
+            if (md.joinedRoom || md.myRoom) return;
+            if (selectedRoom && (!selectedRoom.isPrivate && selectedRoom.passcode)) return;
 
             if (event.key === 'Backspace') {
                 typedPasscode = typedPasscode.slice(0, -1);
@@ -353,57 +365,83 @@ export class Multiplayer extends Phaser.Scene {
         joinRoomBtnImg.on('pointerout', () => joinRoomBtnImg.setBlendMode(Phaser.BlendModes.NORMAL));
         joinRoomBtnImg.on('pointerdown', () => {
             if (md.joinedRoom) {
-                md.joinedRoom.currentPlayers = Math.max(0, md.joinedRoom.currentPlayers - 1);
                 md.joinedRoom = null;
-                selectedRoom = null;
+                NetworkManager.getInstance().disconnect();
                 updateRightPanel();
                 updateJoinPanel();
                 renderPage();
                 return;
             }
 
-            if (!selectedRoom) {
-                if (selectRoomTween && selectRoomTween.isPlaying()) return;
-
-                selectRoomTween = this.tweens.add({
-                    targets: joinCodeTxt,
-                    alpha: 0.2,
-                    duration: 400,
-                    yoyo: true,
-                    repeat: 2,
-                    onComplete: () => joinCodeTxt.setAlpha(1)
-                });
+            if (md.myRoom) {
+                flashJoinButton('ALREADY HOSTING', '#ff5555');
                 return;
             }
 
-            if (md.myRoom || md.joinedRoom) {
-                flashJoinButton('ALREADY IN ROOM', '#ff5555');
-                return;
-            }
-
-            if (selectedRoom.currentPlayers >= selectedRoom.maxPlayers) {
-                flashJoinButton('ROOM FULL', '#ff5555');
-                return;
-            }
-
-            if (selectedRoom.isPrivate && typedPasscode !== selectedRoom.passcode) {
-                flashJoinButton('WRONG CODE', '#ff5555');
+            if (typedPasscode.length !== 6) {
+                flashJoinButton('NEED 6 CHARS', '#ff5555');
                 return;
             }
 
             joinRoomBtnTxt.setText('JOINING...').setColor('#55ff55');
-            this.time.delayedCall(800, () => {
-                if (selectedRoom) {
-                    selectedRoom.currentPlayers++;
-                    md.joinedRoom = selectedRoom;
-                    joinRoomBtnTxt.setText('Join').setColor('#ffffff');
-                    selectedRoom = null;
-                    typedPasscode = '';
-                    updateRightPanel();
-                    updateJoinPanel();
-                    renderPage();
-                }
+            NetworkManager.getInstance().joinRoom(typedPasscode, () => {
+                const fakeRoom = new RoomData();
+                fakeRoom.passcode = typedPasscode;
+                md.joinedRoom = fakeRoom;
+                joinRoomBtnTxt.setText('Leave').setColor('#ffffff');
+                updateRightPanel();
+                updateJoinPanel();
+                renderPage();
+            }, (err) => {
+                flashJoinButton('NOT FOUND', '#ff5555');
+                NetworkManager.getInstance().disconnect();
             });
+        });
+
+        const onNetworkData = (payload: any) => {
+            const data = payload.data;
+            if (data && data.type === 'START_GAME') {
+                md.sharedRunes = data.sharedRunes;
+                this.scene.launch('TransitionScene', { targetScene: 'Covenant', currentScene: 'Multiplayer' });
+            }
+        };
+
+        const onPeerConnected = (peerId: string) => {
+            if (md.myRoom) {
+                md.myRoom.currentPlayers++;
+                NetworkManager.getInstance().registerRoom({ ...md.myRoom, id: md.myRoom.passcode });
+                updateRightPanel();
+                renderPage();
+            }
+        };
+
+        const onPeerDisconnected = (peerId: string) => {
+            if (md.myRoom) {
+                md.myRoom.currentPlayers = Math.max(1, md.myRoom.currentPlayers - 1);
+                NetworkManager.getInstance().registerRoom({ ...md.myRoom, id: md.myRoom.passcode });
+                updateRightPanel();
+                renderPage();
+            }
+        };
+
+        EventBus.on('network-data-received', onNetworkData, this);
+        EventBus.on('peer-connected', onPeerConnected, this);
+        EventBus.on('peer-disconnected', onPeerDisconnected, this);
+
+        const fetchInterval = setInterval(async () => {
+            if (md.myRoom) {
+                NetworkManager.getInstance().registerRoom({ ...md.myRoom, id: md.myRoom.passcode });
+            }
+            const rooms = await NetworkManager.getInstance().fetchRooms();
+            md.rooms = rooms;
+            renderPage();
+        }, 1000);
+
+        this.events.on('shutdown', () => {
+            EventBus.off('network-data-received', onNetworkData, this);
+            EventBus.off('peer-connected', onPeerConnected, this);
+            EventBus.off('peer-disconnected', onPeerDisconnected, this);
+            clearInterval(fetchInterval);
         });
     }
 }

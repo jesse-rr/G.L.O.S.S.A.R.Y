@@ -14,6 +14,7 @@ import { ControlsUI } from './scenes/ControlsUI';
 import { LevelScene } from './scenes/LevelScene';
 import { TransitionScene } from './scenes/TransitionScene';
 import { GlossaryUI } from './scenes/GlossaryUI';
+import { NotificationOverlay } from './scenes/NotificationOverlay';
 
 let useVsync = true;
 try {
@@ -65,7 +66,8 @@ const config: Phaser.Types.Core.GameConfig = {
         ControlsUI,
         LevelScene,
         TransitionScene,
-        GlossaryUI
+        GlossaryUI,
+        NotificationOverlay
     ]
 };
 

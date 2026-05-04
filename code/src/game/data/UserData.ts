@@ -1,3 +1,6 @@
+import { EventBus } from '../EventBus';
+import { BestiaryData } from './BestiaryData';
+
 export interface AchievementData {
     id: string;
     unlocked: boolean;
@@ -71,8 +74,9 @@ export class UserData {
 
     unlockAchievement(id: string): void {
         const achievement = this.achievements.find(a => a.id === id);
-        if (achievement) {
+        if (achievement && !achievement.unlocked) {
             achievement.unlocked = true;
+            EventBus.emit('show-notification', `Achievement Unlocked: ${id.replace('_', ' ').toUpperCase()}`);
         }
     }
 
@@ -84,30 +88,62 @@ export class UserData {
     discoverItem(item: string): void {
         if (!this.itemsDiscovered.includes(item)) {
             this.itemsDiscovered.push(item);
+            EventBus.emit('show-notification', `Item Discovered: ${item}`);
+            this.checkCompletionist();
         }
     }
 
     discoverRune(rune: string): void {
         if (!this.runesDiscovered.includes(rune)) {
             this.runesDiscovered.push(rune);
+            EventBus.emit('show-notification', `Rune Discovered: ${rune}`);
+            if (this.runesDiscovered.length >= 26) {
+                this.unlockAchievement('greedy');
+            }
+            this.checkCompletionist();
         }
     }
 
     discoverCovenant(covenant: string): void {
-        if (this.covenantsDiscovered.length < 3 && !this.covenantsDiscovered.includes(covenant)) {
+        if (!this.covenantsDiscovered.includes(covenant)) {
             this.covenantsDiscovered.push(covenant);
+            EventBus.emit('show-notification', `Covenant Discovered: ${covenant.toUpperCase()}`);
         }
-        if (this.covenantsDiscovered.length === 3) {
+        if (this.covenantsDiscovered.length >= 3) {
             this.unlockAchievement('ritualist');
         }
+        this.checkCompletionist();
     }
 
     addDeath(): void {
         this.deaths++;
+        this.unlockAchievement('bum');
     }
 
     addWin(): void {
         this.wins++;
+        this.completedGame = true;
+        this.unlockAchievement('champion');
+        this.checkCompletionist();
+    }
+
+    checkCompletionist(): void {
+        if (!this.completedGame) return;
+
+        // Check if all other 5 achievements are unlocked
+        const otherAchievements = this.achievements.filter(a => a.id !== 'completionist');
+        if (otherAchievements.some(a => !a.unlocked)) return;
+
+        // Check if all items are discovered (12 items)
+        if (this.itemsDiscovered.length < 12) return;
+
+        // Check if all runes are discovered (26 runes)
+        if (this.runesDiscovered.length < 26) return;
+
+        // Check if all enemies are discovered (10 enemies)
+        if (BestiaryData.getInstance().getDiscoveredCount() < 10) return;
+
+        this.unlockAchievement('completionist');
     }
 
     toJSON(): object {

@@ -132,8 +132,10 @@ export class GlossaryUI extends Scene {
                 .setInteractive({ useHandCursor: true });
             this.contentContainer.add(box);
 
+
             const isUnlocked = RuneData.getInstance().isDiscovered(def.letter);
-            const runeText = this.add.text(x, y, def.letter, {
+            const isFirefox = navigator.userAgent.includes("Firefox");
+            const runeText = this.add.text(x, isFirefox ? y : y + 5, def.letter, {
                 fontFamily: RUNE_FONT,
                 fontSize: '76px',
                 color: '#000000'
@@ -165,10 +167,9 @@ export class GlossaryUI extends Scene {
         this.contentContainer.add(this.detailsContainer);
 
         const isUnlocked = RuneData.getInstance().isDiscovered(def.letter);
+        const isFirefox = navigator.userAgent.includes("Firefox");
 
-
-
-        const letter = this.add.text(10, 120, def.letter, {
+        const letter = this.add.text(10, isFirefox ? 120 : 135, def.letter, {
             fontFamily: RUNE_FONT,
             fontSize: '96px',
             color: '#000000'

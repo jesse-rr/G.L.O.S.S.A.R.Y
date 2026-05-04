@@ -26,11 +26,11 @@ export class Cat extends Phaser.Scene {
 
   create() {
     this.container = document.createElement('div');
-    this.container.style.position = 'absolute';
+    this.container.style.position = 'fixed';
     this.container.style.top = '0';
     this.container.style.left = '0';
-    this.container.style.width = '100%';
-    this.container.style.height = '100%';
+    this.container.style.width = '100vw';
+    this.container.style.height = '100vh';
     this.container.style.zIndex = '1000';
     this.container.style.pointerEvents = 'none';
     document.body.appendChild(this.container);
@@ -42,7 +42,7 @@ export class Cat extends Phaser.Scene {
 
     this.threeRenderer = new THREE.WebGLRenderer({ alpha: true });
     this.threeRenderer.setClearColor(0x000000, 0);
-    this.threeRenderer.setSize(innerWidth, innerHeight);
+    this.threeRenderer.setSize(window.innerWidth, window.innerHeight);
     this.container.appendChild(this.threeRenderer.domElement);
 
     const light = new THREE.DirectionalLight(0xffffff, 1);

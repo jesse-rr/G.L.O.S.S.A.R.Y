@@ -20,12 +20,14 @@ export class Boot extends Scene {
         });
 
         this.load.image('transition', 'assets/exports/UI/Transitions.png');
-        
+        this.load.image('achievement-ui', 'assets/exports/UI/Achievement-UI.png');
+
         this.registry.set('userData', UserData.getInstance());
         this.registry.set('playerData', PlayerData.getInstance());
     }
 
     create() {
+        this.scene.launch('NotificationOverlay');
         this.scene.start('MainMenu');
     }
 }

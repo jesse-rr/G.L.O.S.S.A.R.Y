@@ -80,7 +80,7 @@ export class SettingsUI extends Phaser.Scene {
                 fontFamily: FONT_FAMILY
             };
 
-            if (i === 5 && userData.achievements[3].unlocked) {
+            if (i === 5 && userData.isAchievementUnlocked('cat_whisperer')) {
                 labelStyle.color = '#4a4a4a';
             }
 
@@ -101,7 +101,7 @@ export class SettingsUI extends Phaser.Scene {
                 const btn = this.add.image(0, 0, 'ui-items', 2).setScale(scale);
                 el.btnImage = btn;
 
-                if (i === 5 && userData.achievements[3].unlocked) {
+                if (i === 5 && userData.isAchievementUnlocked('cat_whisperer')) {
                     btn.setAlpha(0.5);
                 }
 
@@ -323,8 +323,8 @@ export class SettingsUI extends Phaser.Scene {
 
         if (i === 5) {
             const userData = this.registry.get('userData') as UserData;
-            if (!userData.achievements[3].unlocked) {
-                userData.achievements[3].unlocked = true;
+            if (!userData.isAchievementUnlocked('cat_whisperer')) {
+                userData.unlockAchievement('cat_whisperer');
                 if (el.labelText) {
                     el.labelText.setColor('#4a4a4a');
                     el.labelText.setStyle({ strikethrough: true });
