@@ -1,3 +1,0 @@
-6. Create animations to "Stack all runes in one" -> Dragon (gets clawed and dissappers), Phoenix (Burns), Snake (Glitches out)
-cv
-8. Finish implementing Multiplayer.

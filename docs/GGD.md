@@ -182,3 +182,16 @@ Based on the `public/assets/exports` directory and original concepts, the assets
 - Final audio balancing, combat tuning, and UI polishing.
 - Comprehensive bug fixing across all maps and multiplayer states.
 - Final playtesting and optimization for a smooth PC release.
+
+---
+
+## 9. Team & Roles
+
+- **Lead Developer & Game Designer:** Jesse Ricardo Rogerio
+  - Architecture, Multiplayer Networking, Core Combat Systems, UI/UX, and Game Logic.
+- **Artist & Animator:** Jesse Ricardo Rogerio
+  - Pixel art, tilesets, environments, character sprites, and animations.
+- **Audio & Sound Design:** Jesse Ricardo Rogerio
+  - SFX generation, ambient soundscapes, and combat feedback.
+
+*(Note: As a solo developer project or core team, roles are consolidated to ensure a cohesive vision across all mechanics.)*
