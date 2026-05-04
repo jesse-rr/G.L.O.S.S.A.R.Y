@@ -14,11 +14,12 @@ export class Boot extends Scene {
             frameHeight: 360,
         });
 
-        // 96×32 → 3 frames of 32×32
         this.load.spritesheet('selectorAnim', 'assets/exports/UI/Homescreen-Selector-Sheet.png', {
             frameWidth: 32,
             frameHeight: 32,
         });
+
+        this.load.image('transition', 'assets/exports/UI/Transitions.png');
         
         this.registry.set('userData', UserData.getInstance());
         this.registry.set('playerData', PlayerData.getInstance());

@@ -10,7 +10,6 @@ import { CombatSystem, CombatPlayer, CombatEnemy } from '../combat/CombatSystem'
 const RUNE_FONT = 'RuneFont';
 const MAX_CHAIN_RUNES = 3;
 const CHAIN_CARD_SCALE = 3;
-const RUNE_CYAN = '#55eeff';
 const PICKER_CARD_SCALE = 2;
 const CHAIN_CARD_W = 48 * CHAIN_CARD_SCALE;
 const CHAIN_GAP = 27;
@@ -42,8 +41,15 @@ export class CombatScene extends Phaser.Scene {
         this.load.font(RUNE_FONT, 'assets/exports/RUNE.TTF');
         this.load.image('battle-ui', 'assets/exports/UI/Battle-UI.png');
         this.load.image('book-ui', 'assets/exports/UI/Book-UI.png');
+        this.load.image('book-layout', 'assets/exports/UI/Book-Layout-1.png');
+        this.load.image('book-layout-2', 'assets/exports/UI/Book-Layout-2.png');
+        this.load.image('book-layout-3', 'assets/exports/UI/Book-Layout-3.png');
+        this.load.image('book-layout-4', 'assets/exports/UI/Book-Layout-4.png');
         this.load.image('player-ui', 'assets/exports/UI/Player-UI.png');
-        this.load.image('rune-overlay', 'assets/exports/UI/Combat-Overlay-Rune.png');
+        this.load.spritesheet('rune-overlay', 'assets/exports/UI/Combat-Overlay-Rune.png', {
+            frameWidth: 48,
+            frameHeight: 64
+        });
         this.load.image('achievement-ui', 'assets/exports/UI/Achievement-UI.png');
         this.load.spritesheet('chain-link', 'assets/exports/UI/Combat-Overlay-Chains.png', {
             frameWidth: 64,
@@ -56,6 +62,30 @@ export class CombatScene extends Phaser.Scene {
         this.load.spritesheet('glossary', 'assets/exports/Objects/Glossary.png', {
             frameWidth: 64,
             frameHeight: 64
+        });
+        this.load.spritesheet('attack-selector', 'assets/exports/UI/Combat-Attack-Selector.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+        this.load.spritesheet('items', 'assets/exports/Objects/Items.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+        
+        // Bestiary Spritesheets
+        this.load.spritesheet('cultist', 'assets/exports/characters/Cultist-Sheet.png', { frameWidth: 57, frameHeight: 67 });
+        this.load.spritesheet('golem', 'assets/exports/characters/Golem-Sheet.png', { frameWidth: 57, frameHeight: 56 });
+        this.load.spritesheet('rationalist', 'assets/exports/characters/Rationalist-Sheet.png', { frameWidth: 59, frameHeight: 73 });
+        this.load.spritesheet('scavenger', 'assets/exports/characters/Scavenger-Sheet.png', { frameWidth: 59, frameHeight: 61 });
+        this.load.spritesheet('slime', 'assets/exports/characters/Slime-Sheet.png', { frameWidth: 32, frameHeight: 27 });
+        this.load.spritesheet('wisp', 'assets/exports/characters/Wisp-Sheet.png', { frameWidth: 27, frameHeight: 51 });
+        this.load.spritesheet('map-outlines', 'assets/exports/Objects/map-outlines.png', {
+            frameWidth: 192,
+            frameHeight: 128
+        });
+        this.load.spritesheet('map-boss-outlines', 'assets/exports/Objects/map-boss-outlines.png', {
+            frameWidth: 64,
+            frameHeight: 128
         });
         this.load.spritesheet('currency', 'assets/exports/Objects/Currency.png', {
             frameWidth: 16,
@@ -82,6 +112,16 @@ export class CombatScene extends Phaser.Scene {
                 frames: this.anims.generateFrameNumbers('chain-link', { start: 0, end: 5 }),
                 frameRate: 8,
                 repeat: -1
+            });
+        }
+
+        if (!this.anims.exists('attack-selector-anim')) {
+            this.anims.create({
+                key: 'attack-selector-anim',
+                frames: this.anims.generateFrameNumbers('attack-selector', { start: 0, end: 3 }),
+                frameRate: 8,
+                repeat: -1,
+                yoyo: true
             });
         }
 
@@ -161,74 +201,10 @@ export class CombatScene extends Phaser.Scene {
             .setScale(2)
             .setInteractive({ useHandCursor: true });
 
-        const overlay = this.add.rectangle(centerX, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.7)
-            .setScrollFactor(0)
-            .setDepth(99)
-            .setVisible(false)
-            .setInteractive();
-
-        const bookUI = this.add.image(centerX, this.scale.height, 'book-ui')
-            .setOrigin(0.5, 1.2)
-            .setScrollFactor(0)
-            .setDepth(100)
-            .setScale(1.5)
-            .setVisible(false)
-            .setInteractive();
-
-        const bmY = this.scale.height - 620;
-        const bookmarks: Phaser.GameObjects.Sprite[] = [];
-        const startX = Math.floor(centerX + 265);
-
-        const bookmarkZone = this.add.rectangle(startX + 48, bmY, 130, 40, 0x000000, 0)
-            .setDepth(100)
-            .setScrollFactor(0)
-            .setVisible(false)
-            .setInteractive();
-
-        bookmarkZone.on('pointerdown', (ptr: any, x: number, y: number, event: any) => {
-            event.stopPropagation();
-        });
-
-        for (let i = 0; i < 4; i++) {
-            const bx = startX + i * 32;
-            const bm = this.add.sprite(bx, bmY, 'bookmarks-ui', i)
-                .setDepth(101)
-                .setScrollFactor(0)
-                .setScale(1.5)
-                .setVisible(false)
-                .setInteractive({ useHandCursor: true });
-
-            bm.on('pointerover', () => { bm.setFrame(i + 4); });
-            bm.on('pointerout', () => { bm.setFrame(i); });
-            bm.on('pointerdown', (ptr: any, x: number, y: number, event: any) => {
-                event.stopPropagation();
-            });
-            bookmarks.push(bm);
-        }
-
-        let isBookOpen = false;
-
-        const toggleBook = (open: boolean) => {
-            isBookOpen = open;
-            bookUI.setVisible(open);
-            overlay.setVisible(open);
-            bookmarkZone.setVisible(open);
-            bookmarks.forEach(bm => bm.setVisible(open));
-        };
-
         glossaryBtn.on('pointerdown', () => {
-            toggleBook(!isBookOpen);
-        });
-
-        bookUI.on('pointerdown', (ptr: any, x: number, y: number, event: any) => {
-            event.stopPropagation();
-        });
-
-        overlay.on('pointerdown', () => toggleBook(false));
-
-        this.input.keyboard!.on('keydown-ESC', () => {
-            if (isBookOpen) {
-                toggleBook(false);
+            if (!this.scene.isActive('GlossaryUI')) {
+                this.scene.pause();
+                this.scene.launch('GlossaryUI', { previousScene: 'CombatScene', isPaused: true });
             }
         });
 
@@ -240,7 +216,10 @@ export class CombatScene extends Phaser.Scene {
         });
 
         this.input.keyboard!.on('keydown-G', () => {
-            toggleBook(!isBookOpen);
+            if (!this.scene.isActive('GlossaryUI')) {
+                this.scene.pause();
+                this.scene.launch('GlossaryUI', { previousScene: 'CombatScene', isPaused: true });
+            }
         });
 
         this.time.addEvent({
@@ -256,9 +235,24 @@ export class CombatScene extends Phaser.Scene {
     private seedStarterRunes(): void {
         if (!this.runeData) return;
         this.runeData.reset();
-        const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        const shuffled = Phaser.Utils.Array.Shuffle([...allLetters]);
-        const starters = shuffled.slice(0, 7);
+
+        const allDefs = RuneData.getAllDefinitions();
+        const baseRunes = allDefs.filter(r => r.cardType === 'base').map(r => r.letter);
+        const boostRunes = allDefs.filter(r => r.cardType === 'boost').map(r => r.letter);
+        const uniqueRunes = allDefs.filter(r => r.cardType === 'unique').map(r => r.letter);
+
+        const starters: string[] = [];
+
+        starters.push(Phaser.Utils.Array.RemoveRandomElement(baseRunes));
+        starters.push(Phaser.Utils.Array.RemoveRandomElement(boostRunes));
+        starters.push(Phaser.Utils.Array.RemoveRandomElement(uniqueRunes));
+
+        const remaining = [...baseRunes, ...boostRunes, ...uniqueRunes];
+        Phaser.Utils.Array.Shuffle(remaining);
+
+        starters.push(...remaining.slice(0, 4));
+        Phaser.Utils.Array.Shuffle(starters);
+
         for (const letter of starters) {
             this.runeData.discoverRune(letter);
         }
@@ -334,9 +328,8 @@ export class CombatScene extends Phaser.Scene {
         discovered.forEach((runeDef) => {
             const itemContainer = this.add.container(0, 0).setScrollFactor(0);
 
-            const cardBg = this.add.image(0, 0, 'rune-overlay')
+            const cardBg = this.add.sprite(0, 0, 'rune-overlay', this.getRuneFrame(runeDef.cardType))
                 .setScale(PICKER_CARD_SCALE)
-                .setTint(0xaaaaaa)
                 .setInteractive({ useHandCursor: true });
 
             const runeText = this.add.text(0, -5, runeDef.letter, {
@@ -500,7 +493,7 @@ export class CombatScene extends Phaser.Scene {
         const chainY = this.scale.height / 2 - 50;
         const totalSlots = this.selectedChain.length;
         const totalWidth = (totalSlots - 1) * CHAIN_SLOT_SPACING;
-        const startSlotX = centerX - totalWidth / 2;
+        const startSlotX = Math.round(centerX - totalWidth / 2);
 
         if (totalSlots === 0) return;
 
@@ -509,7 +502,7 @@ export class CombatScene extends Phaser.Scene {
         for (let i = 1; i < totalSlots; i++) {
             const prevX = startSlotX + (i - 1) * CHAIN_SLOT_SPACING;
             const slotX = startSlotX + i * CHAIN_SLOT_SPACING;
-            const linkX = (prevX + slotX) / 2;
+            const linkX = Math.round((prevX + slotX) / 2);
 
             const isNewLink = animate && i === totalSlots - 1;
 
@@ -518,7 +511,11 @@ export class CombatScene extends Phaser.Scene {
                 .setDepth(74)
                 .setAlpha(isNewLink ? 0 : 1);
 
-            chainSprite.play('chain-anim');
+            if (i % 2 === 0) {
+                chainSprite.playReverse('chain-anim');
+            } else {
+                chainSprite.play('chain-anim');
+            }
 
             if (isNewLink) {
                 this.tweens.add({
@@ -547,9 +544,8 @@ export class CombatScene extends Phaser.Scene {
                 .setDepth(76)
                 .setAlpha(isNew ? 0 : 1);
 
-            const bg = this.add.image(0, 0, 'rune-overlay')
+            const bg = this.add.sprite(0, 0, 'rune-overlay', def ? this.getRuneFrame(def.cardType) : 2)
                 .setScale(CHAIN_CARD_SCALE)
-                .setTint(0xaaaaaa)
                 .setInteractive({ useHandCursor: true });
 
             const runeChar = this.add.text(0, -8, letter, {
@@ -575,13 +571,13 @@ export class CombatScene extends Phaser.Scene {
             });
 
             bg.on('pointerover', () => {
-                bg.setTint(0x666666);
+                bg.setTint(0xdddddd);
                 runeChar.setAlpha(0.5);
                 transLabel.setAlpha(0.5);
             });
 
             bg.on('pointerout', () => {
-                bg.setTint(0xaaaaaa);
+                bg.clearTint();
                 runeChar.setAlpha(1);
                 transLabel.setAlpha(1);
             });
@@ -598,34 +594,44 @@ export class CombatScene extends Phaser.Scene {
 
         const combo = RuneData.findMatchingCombo(this.selectedChain);
         if (combo && totalSlots >= 2) {
-            const comboLabel = this.add.text(centerX, chainY + 105, combo.name, {
+            const hexColor = '#' + this.getCovenantColor(this.playerData!.covenant).toString(16).padStart(6, '0');
+            const comboLabel = this.add.text(centerX, chainY + 125, combo.name, {
                 fontSize: '16px',
-                color: '#FFD700',
+                color: hexColor,
                 fontFamily: FONT_FAMILY,
-                align: 'center'
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 2
             }).setOrigin(0.5, 0.5)
                 .setScrollFactor(0)
                 .setDepth(77)
                 .setAlpha(0);
 
-            const comboDesc = this.add.text(centerX, chainY + 125, combo.description, {
-                fontSize: '11px',
-                color: '#cccccc',
-                fontFamily: FONT_FAMILY,
-                align: 'center'
-            }).setOrigin(0.5, 0.5)
-                .setScrollFactor(0)
+            const labelWidth = comboLabel.width;
+
+            const selectorLeft = this.add.sprite(centerX - labelWidth / 2 - 40, chainY + 125, 'attack-selector')
                 .setDepth(77)
-                .setAlpha(0);
+                .setScrollFactor(0)
+                .setAlpha(0)
+                .play('attack-selector-anim');
+
+            const selectorRight = this.add.sprite(centerX + labelWidth / 2 + 40, chainY + 125, 'attack-selector')
+                .setDepth(77)
+                .setScrollFactor(0)
+                .setAlpha(0)
+                .setFlipX(true)
+                .play('attack-selector-anim');
 
             this.tweens.add({
-                targets: [comboLabel, comboDesc],
+                targets: [comboLabel, selectorLeft, selectorRight],
                 alpha: 1,
                 duration: 400,
                 ease: 'Quad.easeOut'
             });
 
-            const comboContainer = this.add.container(0, 0).add([comboLabel, comboDesc]);
+            const comboContainer = this.add.container(0, 0).add([comboLabel, selectorLeft, selectorRight])
+                .setDepth(77)
+                .setScrollFactor(0);
             this.chainCards.push(comboContainer);
         }
     }
@@ -694,43 +700,47 @@ export class CombatScene extends Phaser.Scene {
 
         this.tooltipContainer.setPosition(tooltipX, tooltipY);
 
-        const padX = -195;
+        const padX = -100;
         let offsetY = 12;
 
         const nameText = this.add.text(padX, offsetY, `${player.name}  [${player.covenant}]`, {
             fontSize: '13px',
             color: '#FFD700',
-            fontFamily: FONT_FAMILY
-        }).setOrigin(0, 0);
+            fontFamily: FONT_FAMILY,
+            align: 'center'
+        }).setOrigin(0.5, 0);
         this.tooltipContainer.add(nameText);
         offsetY += 24;
 
         const hpText = this.add.text(padX, offsetY, `HP: ${player.stats.hp} / ${player.stats.maxHp}`, {
             fontSize: '12px',
             color: '#FFFFFF',
-            fontFamily: FONT_FAMILY
-        }).setOrigin(0, 0);
+            fontFamily: FONT_FAMILY,
+            align: 'center'
+        }).setOrigin(0.5, 0);
         this.tooltipContainer.add(hpText);
         offsetY += 20;
 
         const gemText = this.add.text(padX, offsetY, `Gemstones: ${player.gemstones}`, {
             fontSize: '12px',
             color: '#55ddff',
-            fontFamily: FONT_FAMILY
-        }).setOrigin(0, 0);
+            fontFamily: FONT_FAMILY,
+            align: 'center'
+        }).setOrigin(0.5, 0);
         this.tooltipContainer.add(gemText);
         offsetY += 20;
 
         let chainLabel = 'Combo: None';
         if (player.currentChain && player.currentChain.runes.length > 0) {
-            chainLabel = `Combo: ${player.currentChain.runes.join(' > ')}`;
+            chainLabel = `Combo: ${player.currentChain.runes.join(' ')}`;
         }
         const chainText = this.add.text(padX, offsetY, chainLabel, {
             fontSize: '12px',
             color: '#cccccc',
             fontFamily: FONT_FAMILY,
-            wordWrap: { width: 185 }
-        }).setOrigin(0, 0);
+            wordWrap: { width: 185 },
+            align: 'center'
+        }).setOrigin(0.5, 0);
         this.tooltipContainer.add(chainText);
         offsetY += chainText.height + 10;
 
@@ -747,18 +757,18 @@ export class CombatScene extends Phaser.Scene {
 
     private getCovenantColor(covenant: string): number {
         switch (covenant) {
-            case 'dragon': return 0xff4444;
-            case 'phoenix': return 0xff8800;
-            case 'snake': return 0x44ddaa;
+            case 'dragon': return 0x734f7b;
+            case 'phoenix': return 0x9e2e2e;
+            case 'snake': return 0x545f67;
             default: return 0xaaaaaa;
         }
     }
 
     private getCovenantTint(covenant: string): number {
         switch (covenant) {
-            case 'dragon': return 0xffcccc;
-            case 'phoenix': return 0xccffcc;
-            case 'snake': return 0xccffff;
+            case 'dragon': return 0x734f7b;
+            case 'phoenix': return 0x9e2e2e;
+            case 'snake': return 0x545f67;
             default: return 0xffffff;
         }
     }
@@ -784,6 +794,15 @@ export class CombatScene extends Phaser.Scene {
                 return 3;
             default:
                 return 1;
+        }
+    }
+
+    private getRuneFrame(cardType: string): number {
+        switch (cardType) {
+            case 'boost': return 0;
+            case 'unique': return 1;
+            case 'base': return 2;
+            default: return 2;
         }
     }
 }

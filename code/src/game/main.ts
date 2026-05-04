@@ -12,6 +12,8 @@ import { Cat } from './utils/Cat';
 import { Multiplayer } from './scenes/Multiplayer';
 import { ControlsUI } from './scenes/ControlsUI';
 import { LevelScene } from './scenes/LevelScene';
+import { TransitionScene } from './scenes/TransitionScene';
+import { GlossaryUI } from './scenes/GlossaryUI';
 
 let useVsync = true;
 try {
@@ -61,7 +63,9 @@ const config: Phaser.Types.Core.GameConfig = {
         Cat,
         Multiplayer,
         ControlsUI,
-        LevelScene
+        LevelScene,
+        TransitionScene,
+        GlossaryUI
     ]
 };
 

@@ -107,8 +107,7 @@ export class MainMenu extends Phaser.Scene {
         console.log(`[MainMenu] Button: ${label}`);
         switch (label) {
             case BUTTONS[0].label:
-                this.scene.pause();
-                this.scene.launch('Covenant');
+                this.scene.launch('TransitionScene', { targetScene: 'Covenant', currentScene: 'MainMenu' });
                 break;
             case BUTTONS[1].label:
                 this.scene.pause();
@@ -119,7 +118,7 @@ export class MainMenu extends Phaser.Scene {
                 this.scene.launch('Help');
                 break;
             case BUTTONS[3].label:
-                this.scene.launch('CombatScene');
+                this.scene.launch('TransitionScene', { targetScene: 'CombatScene', currentScene: 'MainMenu' });
                 // this.game.destroy(true, true);
                 break;
         }

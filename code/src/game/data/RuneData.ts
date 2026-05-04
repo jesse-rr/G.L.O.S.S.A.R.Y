@@ -8,6 +8,7 @@ export interface RuneDefinition {
     effectType: RuneEffectType;
     cardType: RuneCardType;
     basePower: number;
+    description: string;
 }
 
 export interface ChainCombo {
@@ -17,33 +18,42 @@ export interface ChainCombo {
 }
 
 const RUNE_DEFINITIONS: RuneDefinition[] = [
-    { letter: 'A', name: 'Aether', translation: 'Strength', effectType: 'damage', cardType: 'base', basePower: 8 },
-    { letter: 'B', name: 'Basalt', translation: 'Shield', effectType: 'defense', cardType: 'base', basePower: 6 },
-    { letter: 'C', name: 'Cipher', translation: 'Pierce', effectType: 'damage', cardType: 'base', basePower: 10 },
-    { letter: 'D', name: 'Dusk', translation: 'Drain', effectType: 'heal', cardType: 'boost', basePower: 5 },
-    { letter: 'E', name: 'Echo', translation: 'Repeat', effectType: 'utility', cardType: 'boost', basePower: 0 },
-    { letter: 'F', name: 'Fyre', translation: 'Burn', effectType: 'damage', cardType: 'base', basePower: 12 },
-    { letter: 'G', name: 'Glyph', translation: 'Mark', effectType: 'debuff', cardType: 'boost', basePower: 4 },
-    { letter: 'H', name: 'Hallow', translation: 'Purify', effectType: 'heal', cardType: 'boost', basePower: 7 },
-    { letter: 'I', name: 'Ignis', translation: 'Ignite', effectType: 'damage', cardType: 'base', basePower: 9 },
-    { letter: 'J', name: 'Jinx', translation: 'Curse', effectType: 'debuff', cardType: 'unique', basePower: 6 },
-    { letter: 'K', name: 'Kael', translation: 'Fortify', effectType: 'defense', cardType: 'base', basePower: 8 },
-    { letter: 'L', name: 'Lux', translation: 'Light', effectType: 'heal', cardType: 'boost', basePower: 6 },
-    { letter: 'M', name: 'Morth', translation: 'Decay', effectType: 'debuff', cardType: 'unique', basePower: 7 },
-    { letter: 'N', name: 'Nyx', translation: 'Shadow', effectType: 'damage', cardType: 'base', basePower: 11 },
-    { letter: 'O', name: 'Orin', translation: 'Amplify', effectType: 'buff', cardType: 'boost', basePower: 0 },
-    { letter: 'P', name: 'Prism', translation: 'Reflect', effectType: 'defense', cardType: 'unique', basePower: 5 },
-    { letter: 'Q', name: 'Quell', translation: 'Silence', effectType: 'debuff', cardType: 'unique', basePower: 3 },
-    { letter: 'R', name: 'Rime', translation: 'Freeze', effectType: 'damage', cardType: 'base', basePower: 7 },
-    { letter: 'S', name: 'Sigil', translation: 'Seal', effectType: 'utility', cardType: 'unique', basePower: 0 },
-    { letter: 'T', name: 'Thorn', translation: 'Retaliate', effectType: 'defense', cardType: 'base', basePower: 9 },
-    { letter: 'U', name: 'Umbra', translation: 'Veil', effectType: 'buff', cardType: 'boost', basePower: 4 },
-    { letter: 'V', name: 'Vox', translation: 'Command', effectType: 'buff', cardType: 'boost', basePower: 5 },
-    { letter: 'W', name: 'Wyrd', translation: 'Fate', effectType: 'utility', cardType: 'unique', basePower: 0 },
-    { letter: 'X', name: 'Xael', translation: 'Shatter', effectType: 'damage', cardType: 'base', basePower: 14 },
-    { letter: 'Y', name: 'Ymir', translation: 'Endure', effectType: 'defense', cardType: 'unique', basePower: 10 },
-    { letter: 'Z', name: 'Zeph', translation: 'Windstrike', effectType: 'damage', cardType: 'base', basePower: 13 }
+    { letter: 'A', name: 'Aether', translation: 'Strength', effectType: 'damage', cardType: 'base', basePower: 8, description: "Recovered from the crumbling pillars of the High Settlement, Aether represents raw, unbridled power. Scholars of old believed invoking this rune would grant the strength of titans to the wielder." },
+    { letter: 'B', name: 'Basalt', translation: 'Shield', effectType: 'defense', cardType: 'base', basePower: 6, description: "Carved into the impenetrable gates of the lost city of Oakhaven, Basalt embodies unyielding protection. It was traditionally used by vanguard knights to turn away even the fiercest of blows." },
+    { letter: 'C', name: 'Cipher', translation: 'Pierce', effectType: 'damage', cardType: 'base', basePower: 10, description: "Discovered on the obsidian spearheads of the desert nomads, Cipher represents the ability to strike through any defense. It is said its true meaning translates to 'the unavoidable truth'." },
+    { letter: 'D', name: 'Dusk', translation: 'Drain', effectType: 'heal', cardType: 'boost', basePower: 5, description: "Forbidden by the elders of the Lumina Sect, Dusk draws the life force from one vessel to another. Ancient cults used it under the eclipse to siphon energy from the earth itself." },
+    { letter: 'E', name: 'Echo', translation: 'Repeat', effectType: 'utility', cardType: 'boost', basePower: 0, description: "Found etched within the whispering caves of the Hollow Peaks. Echo signifies eternity through repetition, allowing skilled casters to mirror their own actions across time." },
+    { letter: 'F', name: 'Fyre', translation: 'Burn', effectType: 'damage', cardType: 'base', basePower: 12, description: "The primordial spark. Fyre was revered by the first men who survived the Great Winter. When channeled, it ignites the air itself, bringing the wrath of ancient volcanoes." },
+    { letter: 'G', name: 'Glyph', translation: 'Mark', effectType: 'debuff', cardType: 'boost', basePower: 4, description: "Used by the royal assassins of the Silver Throne, Glyph was a death sentence. To be marked by this rune meant your soul was already tethered to the abyss." },
+    { letter: 'H', name: 'Hallow', translation: 'Purify', effectType: 'heal', cardType: 'boost', basePower: 7, description: "Blessed by the High Priestesses of the Sun Altar. Hallow washes away corruption and decay, returning the flesh and spirit to its most pristine, untainted state." },
+    { letter: 'I', name: 'Ignis', translation: 'Ignite', effectType: 'damage', cardType: 'base', basePower: 9, description: "Distinct from raw fire, Ignis represents the sudden, violent birth of a spark. Found on the anvils of the legendary dwarven smiths, it forces a target to combust from within." },
+    { letter: 'J', name: 'Jinx', translation: 'Curse', effectType: 'debuff', cardType: 'unique', basePower: 6, description: "Unearthed from the cursed catacombs of the Usurper King. Jinx twists probability and fate, ensuring misfortune plagues anyone who dares stand against its invoker." },
+    { letter: 'K', name: 'Kael', translation: 'Fortify', effectType: 'defense', cardType: 'base', basePower: 8, description: "The foundational stone of the Great Bastion. Kael goes beyond physical shields; it reinforces the very spirit and resolve of an ally, making them immovable objects." },
+    { letter: 'L', name: 'Lux', translation: 'Light', effectType: 'heal', cardType: 'boost', basePower: 6, description: "A beacon in the dark age. Lux is said to be a crystallized fragment of a falling star, offering warmth, clarity, and mending to those lost in the shadow." },
+    { letter: 'M', name: 'Morth', translation: 'Decay', effectType: 'debuff', cardType: 'unique', basePower: 7, description: "A taboo rune banished from all grand libraries. Morth symbolizes the inevitable end of all things. It accelerates time locally, causing weapons to rust and flesh to rot." },
+    { letter: 'N', name: 'Nyx', translation: 'Shadow', effectType: 'damage', cardType: 'base', basePower: 11, description: "Worshipped by the veiled brotherhood, Nyx is the embodiment of the void. It swallows light and hope alike, striking enemies from places the eye cannot see." },
+    { letter: 'O', name: 'Orin', translation: 'Amplify', effectType: 'buff', cardType: 'boost', basePower: 0, description: "The rune of the grand choir. Orin does not create, it multiplies. Found inscribed inside ancient amplifying horns, it pushes any action taken to its absolute limit." },
+    { letter: 'P', name: 'Prism', translation: 'Reflect', effectType: 'defense', cardType: 'unique', basePower: 5, description: "Crafted by the glass-weavers of the crystal coast. Prism teaches that the greatest defense is turning the enemy's strength against them, shattering their intentions." },
+    { letter: 'Q', name: 'Quell', translation: 'Silence', effectType: 'debuff', cardType: 'unique', basePower: 3, description: "The peacemaker's last resort. Quell stifles sound, magic, and willpower. Used to bind rogue sorcerers, it creates an absolute void where no spells can be cast." },
+    { letter: 'R', name: 'Rime', translation: 'Freeze', effectType: 'damage', cardType: 'base', basePower: 7, description: "Born from the heart of the eternal glacier. Rime halts the flow of life and time. Victims hit by this rune often feel a cold so deep it stops their heart entirely." },
+    { letter: 'S', name: 'Sigil', translation: 'Seal', effectType: 'utility', cardType: 'unique', basePower: 0, description: "The warden's key. Sigil was used to lock away ancient evils beneath the earth. It binds physical and magical properties, locking an enemy's potential away." },
+    { letter: 'T', name: 'Thorn', translation: 'Retaliate', effectType: 'defense', cardType: 'base', basePower: 9, description: "A testament to nature's vengeance. Thorn ensures that pain given is pain received. It was the crest of the Briar Knights, who welcomed strikes only to reflect the agony." },
+    { letter: 'U', name: 'Umbra', translation: 'Veil', effectType: 'buff', cardType: 'boost', basePower: 4, description: "The trickster's cloak. Umbra hides the truth from the world, obscuring the caster in a shroud of mystery. It protects by making one simply cease to exist to the naked eye." },
+    { letter: 'V', name: 'Vox', translation: 'Command', effectType: 'buff', cardType: 'boost', basePower: 5, description: "The word of the sovereign. Vox enforces absolute authority over lesser beings. Uttering this rune bends the will of the weak and bolsters the courage of the loyal." },
+    { letter: 'W', name: 'Wyrd', translation: 'Fate', effectType: 'utility', cardType: 'unique', basePower: 0, description: "Interpreted by the blind seers of the oracle pool. Wyrd acknowledges that all paths are pre-written. It manipulates destiny slightly, shifting luck entirely in your favor." },
+    { letter: 'X', name: 'Xael', translation: 'Shatter', effectType: 'damage', cardType: 'base', basePower: 14, description: "The breaker of chains. Xael represents pure destructive resonance. It was used in siege warfare to turn impenetrable fortress walls into dust with a single strike." },
+    { letter: 'Y', name: 'Ymir', translation: 'Endure', effectType: 'defense', cardType: 'unique', basePower: 10, description: "The rune of the lone survivor. Ymir demands that life persists against all odds. It grants an unnatural resilience, allowing one to stand firm long after they should have fallen." }
 ];
+
+export const SUMMIT_RUNE: RuneDefinition = {
+    letter: 'Z',
+    name: 'Zeph',
+    translation: 'Hidden by God',
+    effectType: 'utility',
+    cardType: 'unique',
+    basePower: 0,
+    description: "The forbidden coordinate. Zeph was stricken from the grand archives. It is said to mark the exact location of the Summit, a place entirely hidden from the eyes of the divine."
+};
 
 const COMBO_NAMES_2: Record<string, string[]> = {
     'base+boost': ['Enhanced', 'Empowered', 'Infused', 'Charged', 'Awakened'],
