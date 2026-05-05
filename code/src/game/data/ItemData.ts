@@ -94,7 +94,7 @@ const ITEMS: ItemDefinition[] = [
     },
     {
         id: 9,
-        name: "T.D.F.W.",
+        name: "Fog of War",
         ability: "Absolute Swag",
         effectDescription: "Enemies have a 5% chance to skip their turn in sheer awe of your presence.",
         lore: "A lit cigar paired with pixelated black glasses. Wearing them grants unparalleled confidence and an irresistible urge to drop the bass.",
