@@ -13,6 +13,54 @@ export class GlossaryUI extends Scene {
     private contentContainer!: GameObjects.Container;
     private detailsContainer!: GameObjects.Container;
     private runeDefs = RuneData.getAllDefinitions();
+    private currentBestiaryPage: number = 0;
+
+    private playScrambleAnimation(texts: Phaser.GameObjects.Text[], finalTexts: string[], onComplete?: () => void) {
+        let iterations = 0;
+        const maxIterations = 20;
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+
+        this.time.addEvent({
+            delay: 40,
+            repeat: maxIterations - 1,
+            callback: () => {
+                iterations++;
+                const isMidway = iterations > maxIterations / 2;
+                
+                texts.forEach((textObj, index) => {
+                    const targetText = finalTexts[index];
+                    
+                    if (isMidway && textObj.style.fontFamily !== FONT_FAMILY) {
+                        textObj.setFontFamily(FONT_FAMILY);
+                        textObj.setStroke('', 0);
+                    }
+                    
+                    let scrambled = '';
+                    for (let i = 0; i < targetText.length; i++) {
+                        if (targetText[i] === ' ' || targetText[i] === '\n' || targetText[i] === ':') {
+                            scrambled += targetText[i];
+                        } else {
+                            if (isMidway && Math.random() < (iterations - maxIterations / 2) / (maxIterations / 2)) {
+                                scrambled += targetText[i];
+                            } else {
+                                scrambled += chars.charAt(Math.floor(Math.random() * chars.length));
+                            }
+                        }
+                    }
+                    textObj.setText(scrambled);
+                });
+
+                if (iterations === maxIterations) {
+                    texts.forEach((textObj, index) => {
+                        textObj.setText(finalTexts[index]);
+                        textObj.setFontFamily(FONT_FAMILY);
+                        textObj.setStroke('', 0);
+                    });
+                    if (onComplete) onComplete();
+                }
+            }
+        });
+    }
 
     constructor() {
         super({ key: 'GlossaryUI' });
@@ -167,6 +215,8 @@ export class GlossaryUI extends Scene {
         this.contentContainer.add(this.detailsContainer);
 
         const isUnlocked = RuneData.getInstance().isDiscovered(def.letter);
+        const isViewed = RuneData.getInstance().isViewed(def.letter);
+        const useRunic = !isUnlocked || (isUnlocked && !isViewed);
         const isFirefox = navigator.userAgent.includes("Firefox");
 
         const letter = this.add.text(10, isFirefox ? 120 : 135, def.letter, {
@@ -181,43 +231,43 @@ export class GlossaryUI extends Scene {
 
         const textCenterX = 210;
 
-        const displayName = isUnlocked ? def.name : '???';
-
-        const title = this.add.text(textCenterX, 65, displayName, {
-            fontFamily: FONT_FAMILY,
+        const displayNameStr = def.name;
+        const title = this.add.text(textCenterX, 65, useRunic ? this.convertToRunicWords(displayNameStr) : displayNameStr, {
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '32px',
             color: '#000000'
         }).setOrigin(0.5).setAlpha(0.7);
 
-        const typeText = this.add.text(textCenterX, 110, `Type: ${isUnlocked ? def.cardType.toUpperCase() : '???'}`, {
-            fontFamily: FONT_FAMILY,
+        const typeStr = `Type: ${def.cardType.toUpperCase()}`;
+        const typeText = this.add.text(textCenterX, 110, useRunic ? this.convertToRunicWords(typeStr) : typeStr, {
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '20px',
             color: '#000000'
         }).setOrigin(0.5).setAlpha(0.7);
 
-        const effectText = this.add.text(textCenterX, 140, `Effect: ${isUnlocked ? def.effectType.toUpperCase() : '???'}`, {
-            fontFamily: FONT_FAMILY,
+        const effectStr = `Effect: ${def.effectType.toUpperCase()}`;
+        const effectText = this.add.text(textCenterX, 140, useRunic ? this.convertToRunicWords(effectStr) : effectStr, {
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '20px',
             color: '#000000'
         }).setOrigin(0.5).setAlpha(0.7);
 
-        const powerText = this.add.text(textCenterX, 170, `Base Power: ${isUnlocked ? def.basePower : '???'}`, {
-            fontFamily: FONT_FAMILY,
+        const powerStr = `Base Power: ${def.basePower}`;
+        const powerText = this.add.text(textCenterX, 170, useRunic ? this.convertToRunicWords(powerStr) : powerStr, {
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '20px',
             color: '#000000'
         }).setOrigin(0.5).setAlpha(0.7);
 
-        let explanationText = def.description;
-        if (!isUnlocked) {
-            explanationText = this.convertToRunicWords(explanationText);
-        }
+        const explanationOriginal = def.description;
+        const explanationText = useRunic ? this.convertToRunicWords(explanationOriginal) : explanationOriginal;
 
         const descLayout = this.add.image(-90, 200, 'book-layout-3')
             .setOrigin(0)
             .setAlpha(0.5);
 
         const explanation = this.add.text(210, 400, explanationText, {
-            fontFamily: isUnlocked ? FONT_FAMILY : RUNE_FONT,
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '22px',
             color: '#000000',
             wordWrap: { width: 480 },
@@ -225,11 +275,35 @@ export class GlossaryUI extends Scene {
             align: 'center'
         }).setOrigin(0.5).setAlpha(0.7);
 
-        if (!isUnlocked) {
+        if (useRunic) {
             explanation.setStroke('#000000', 1);
         }
 
         this.detailsContainer.add([infoLayout, descLayout, letter, title, typeText, effectText, powerText, explanation]);
+
+        if (isUnlocked && !isViewed) {
+            letter.setInteractive({ useHandCursor: true });
+            
+            const tween = this.tweens.add({
+                targets: letter,
+                alpha: 1,
+                yoyo: true,
+                repeat: -1,
+                duration: 800
+            });
+
+            letter.once('pointerdown', () => {
+                tween.stop();
+                letter.setAlpha(0.7);
+                this.playScrambleAnimation(
+                    [title, typeText, effectText, powerText, explanation],
+                    [displayNameStr, typeStr, effectStr, powerStr, explanationOriginal],
+                    () => {
+                        RuneData.getInstance().markViewed(def.letter);
+                    }
+                );
+            });
+        }
     }
 
     private renderItemsSection() {
@@ -291,6 +365,8 @@ export class GlossaryUI extends Scene {
         this.contentContainer.add(this.detailsContainer);
 
         const isUnlocked = ItemData.getInstance().isDiscovered(def.id);
+        const isViewed = ItemData.getInstance().isViewed(def.id);
+        const useRunic = !isUnlocked || (isUnlocked && !isViewed);
 
         const frame = ItemData.getItemFrame(def.id, isUnlocked);
         const itemIcon = this.add.sprite(10, 120, 'items', frame)
@@ -308,43 +384,43 @@ export class GlossaryUI extends Scene {
 
         const textCenterX = 210;
 
-        const displayName = isUnlocked ? def.name : '???';
-
-        const title = this.add.text(textCenterX, 65, displayName, {
-            fontFamily: FONT_FAMILY,
+        const displayNameStr = def.name;
+        const title = this.add.text(textCenterX, 65, useRunic ? this.convertToRunicWords(displayNameStr) : displayNameStr, {
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '32px',
             color: '#000000'
         }).setOrigin(0.5).setAlpha(0.7);
 
-        const abilityText = this.add.text(textCenterX, 110, `Ability: ${isUnlocked ? def.ability : '???'}`, {
-            fontFamily: FONT_FAMILY,
+        const abilityStr = `Ability: ${def.ability}`;
+        const abilityText = this.add.text(textCenterX, 110, useRunic ? this.convertToRunicWords(abilityStr) : abilityStr, {
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '20px',
             color: '#000000'
         }).setOrigin(0.5).setAlpha(0.7);
 
-        const rarityText = this.add.text(textCenterX, 140, `Rarity: ${isUnlocked ? def.rarity : '???'}`, {
-            fontFamily: FONT_FAMILY,
+        const rarityStr = `Rarity: ${def.rarity}`;
+        const rarityText = this.add.text(textCenterX, 140, useRunic ? this.convertToRunicWords(rarityStr) : rarityStr, {
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '20px',
             color: '#000000'
         }).setOrigin(0.5).setAlpha(0.7);
 
-        const costText = this.add.text(textCenterX, 170, `Cost: ${isUnlocked ? def.cost : '???'}`, {
-            fontFamily: FONT_FAMILY,
+        const costStr = `Cost: ${def.cost}`;
+        const costText = this.add.text(textCenterX, 170, useRunic ? this.convertToRunicWords(costStr) : costStr, {
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '20px',
             color: '#000000'
         }).setOrigin(0.5).setAlpha(0.7);
 
-        let explanationText = `${def.effectDescription}\n\n"${def.lore}"`;
-        if (!isUnlocked) {
-            explanationText = this.convertToRunicWords(explanationText);
-        }
+        const explanationOriginal = `${def.effectDescription}\n\n"${def.lore}"`;
+        const explanationText = useRunic ? this.convertToRunicWords(explanationOriginal) : explanationOriginal;
 
         const descLayout = this.add.image(-90, 200, 'book-layout-3')
             .setOrigin(0)
             .setAlpha(0.5);
 
         const explanation = this.add.text(210, 400, explanationText, {
-            fontFamily: isUnlocked ? FONT_FAMILY : RUNE_FONT,
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '22px',
             color: '#000000',
             wordWrap: { width: 480 },
@@ -352,24 +428,43 @@ export class GlossaryUI extends Scene {
             align: 'center'
         }).setOrigin(0.5).setAlpha(0.7);
 
-        if (!isUnlocked) {
+        if (useRunic) {
             explanation.setStroke('#000000', 1);
         }
 
         this.detailsContainer.add([infoLayout, descLayout, itemIcon, title, abilityText, rarityText, costText, explanation]);
+        
+        if (isUnlocked && !isViewed) {
+            itemIcon.setInteractive({ useHandCursor: true });
+            
+            const tween = this.tweens.add({
+                targets: itemIcon,
+                alpha: 1,
+                yoyo: true,
+                repeat: -1,
+                duration: 800
+            });
+
+            itemIcon.once('pointerdown', () => {
+                tween.stop();
+                itemIcon.setAlpha(0.9);
+                this.playScrambleAnimation(
+                    [title, abilityText, rarityText, costText, explanation],
+                    [displayNameStr, abilityStr, rarityStr, costStr, explanationOriginal],
+                    () => {
+                        ItemData.getInstance().markViewed(def.id);
+                    }
+                );
+            });
+        }
     }
 
     private convertToRunicWords(text: string): string {
-        return text
-            .replace(/404/g, 'four hundred four')
-            .replace(/50%/g, 'fifty percent')
-            .replace(/30%/g, 'thirty percent')
-            .replace(/20%/g, 'twenty percent')
-            .replace(/15%/g, 'fifteen percent')
-            .replace(/10%/g, 'ten percent')
-            .replace(/5%/g, 'five percent')
-            .replace(/\b1\b/g, 'one')
-            .replace(/\b3\b/g, 'three')
+        return text.toString()
+            .replace(/[0-9]/g, (match) => {
+                const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+                return words[parseInt(match)];
+            })
             .replace(/%/g, ' percent');
     }
 
@@ -381,84 +476,70 @@ export class GlossaryUI extends Scene {
 
         const locData = LocationData.getInstance();
 
-
-        SETTLEMENTS.forEach((def, index) => {
+        const createLocationEntry = (def: LocationDefinition, index: number, x: number, isBoss: boolean) => {
             const y = startY + index * 190;
             const isUnlocked = locData.isDiscovered(def.id);
+            const isViewed = locData.isViewed(def.id);
+            const useRunic = !isUnlocked || (isUnlocked && !isViewed);
 
-            const box = this.add.image(leftPageX, y, 'book-layout-4')
+            const box = this.add.image(x, y, 'book-layout-4')
                 .setOrigin(0)
                 .setAlpha(0.5);
 
-            const mapIcon = this.add.sprite(leftPageX + 110, y + 100, 'map-outlines', def.frame)
+            const mapIcon = this.add.sprite(x + 110, y + 100, isBoss ? 'map-boss-outlines' : 'map-outlines', def.frame)
                 .setOrigin(0.5)
                 .setAlpha(isUnlocked ? 0.9 : 0.6);
+            if (isBoss) mapIcon.setScale(1.5);
 
             if (!isUnlocked) {
                 mapIcon.setTint(0x000000);
             }
 
-            const title = this.add.text(leftPageX + 230, y + 30, isUnlocked ? def.name : '???', {
-                fontFamily: FONT_FAMILY,
+            const titleStr = def.name;
+            const title = this.add.text(x + 230, y + 30, useRunic ? this.convertToRunicWords(titleStr) : titleStr, {
+                fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
                 fontSize: '24px',
                 color: '#000000'
             }).setAlpha(0.7);
 
-            let descText = def.description;
-            if (!isUnlocked) descText = this.convertToRunicWords(descText);
+            const explanationStr = def.description;
+            const descText = useRunic ? this.convertToRunicWords(explanationStr) : explanationStr;
 
-            const explanation = this.add.text(leftPageX + 230, y + 70, descText, {
-                fontFamily: isUnlocked ? FONT_FAMILY : RUNE_FONT,
+            const explanation = this.add.text(x + 230, y + 70, descText, {
+                fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
                 fontSize: '20px',
                 color: '#000000',
                 wordWrap: { width: 290 },
                 lineSpacing: 5
             }).setAlpha(0.7);
 
-            if (!isUnlocked) explanation.setStroke('#000000', 1);
+            if (useRunic) explanation.setStroke('#000000', 1);
 
             this.contentContainer.add([box, mapIcon, title, explanation]);
-        });
 
-
-        BOSSES.forEach((def, index) => {
-            const y = startY + index * 190;
-            const isUnlocked = locData.isDiscovered(def.id);
-
-            const box = this.add.image(rightPageX, y, 'book-layout-4')
-                .setOrigin(0)
-                .setAlpha(0.5);
-
-            const mapIcon = this.add.sprite(rightPageX + 110, y + 100, 'map-boss-outlines', def.frame)
-                .setOrigin(0.5)
-                .setScale(1.5)
-                .setAlpha(isUnlocked ? 0.9 : 0.6);
-
-            if (!isUnlocked) {
-                mapIcon.setTint(0x000000);
+            if (isUnlocked && !isViewed) {
+                mapIcon.setInteractive({ useHandCursor: true });
+                const tween = this.tweens.add({
+                    targets: mapIcon,
+                    alpha: 1,
+                    yoyo: true,
+                    repeat: -1,
+                    duration: 800
+                });
+                mapIcon.once('pointerdown', () => {
+                    tween.stop();
+                    mapIcon.setAlpha(0.9);
+                    this.playScrambleAnimation(
+                        [title, explanation],
+                        [titleStr, explanationStr],
+                        () => locData.markViewed(def.id)
+                    );
+                });
             }
+        };
 
-            const title = this.add.text(rightPageX + 230, y + 30, isUnlocked ? def.name : '???', {
-                fontFamily: FONT_FAMILY,
-                fontSize: '24px',
-                color: '#000000'
-            }).setAlpha(0.7);
-
-            let descText = def.description;
-            if (!isUnlocked) descText = this.convertToRunicWords(descText);
-
-            const explanation = this.add.text(rightPageX + 230, y + 70, descText, {
-                fontFamily: isUnlocked ? FONT_FAMILY : RUNE_FONT,
-                fontSize: '20px',
-                color: '#000000',
-                wordWrap: { width: 290 },
-                lineSpacing: 5
-            }).setAlpha(0.7);
-
-            if (!isUnlocked) explanation.setStroke('#000000', 1);
-
-            this.contentContainer.add([box, mapIcon, title, explanation]);
-        });
+        SETTLEMENTS.forEach((def, index) => createLocationEntry(def, index, leftPageX, false));
+        BOSSES.forEach((def, index) => createLocationEntry(def, index, rightPageX, true));
     }
 
     private renderBestiarySection() {
@@ -521,6 +602,8 @@ export class GlossaryUI extends Scene {
         this.contentContainer.add(this.detailsContainer);
 
         const isUnlocked = BestiaryData.getInstance().isDiscovered(def.id);
+        const isViewed = BestiaryData.getInstance().isViewed(def.id);
+        const useRunic = !isUnlocked || (isUnlocked && !isViewed);
 
         const sprite = this.add.sprite(10, 120, def.texture, def.frame)
             .setOrigin(0.5)
@@ -537,39 +620,31 @@ export class GlossaryUI extends Scene {
 
         const textCenterX = 210;
 
-        const displayName = isUnlocked ? def.name : '???';
-
-        const title = this.add.text(textCenterX, 65, displayName, {
-            fontFamily: FONT_FAMILY,
+        const displayNameStr = def.name;
+        const title = this.add.text(textCenterX, 65, useRunic ? this.convertToRunicWords(displayNameStr) : displayNameStr, {
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '32px',
             color: '#000000'
         }).setOrigin(0.5).setAlpha(0.7);
 
-        const rarityVal = isUnlocked ? def.rarity : '???';
-        const hpVal = isUnlocked ? def.hp : '???';
-        const dmgVal = isUnlocked ? def.baseDamage : '???';
-
-        const statsStr = `Rarity: ${rarityVal}\nHP: ${hpVal}\nDMG: ${dmgVal}`;
-
-        const statsText = this.add.text(textCenterX, 140, statsStr, {
-            fontFamily: FONT_FAMILY,
+        const statsStr = `Rarity: ${def.rarity}\nHP: ${def.hp}\nDMG: ${def.baseDamage}`;
+        const statsText = this.add.text(textCenterX, 140, useRunic ? this.convertToRunicWords(statsStr) : statsStr, {
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '20px',
             color: '#000000',
             align: 'center',
             lineSpacing: 5
         }).setOrigin(0.5).setAlpha(0.6);
 
-        let explanationText = def.description;
-        if (!isUnlocked) {
-            explanationText = this.convertToRunicWords(explanationText);
-        }
+        const explanationOriginal = def.description;
+        const explanationText = useRunic ? this.convertToRunicWords(explanationOriginal) : explanationOriginal;
 
         const descLayout = this.add.image(-90, 200, 'book-layout-3')
             .setOrigin(0)
             .setAlpha(0.5);
 
         const explanation = this.add.text(210, 400, explanationText, {
-            fontFamily: isUnlocked ? FONT_FAMILY : RUNE_FONT,
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY,
             fontSize: '22px',
             color: '#000000',
             wordWrap: { width: 480 },
@@ -577,11 +652,35 @@ export class GlossaryUI extends Scene {
             align: 'center'
         }).setOrigin(0.5).setAlpha(0.7);
 
-        if (!isUnlocked) {
+        if (useRunic) {
             explanation.setStroke('#000000', 1);
         }
 
         this.detailsContainer.add([infoLayout, descLayout, sprite, title, statsText, explanation]);
+        
+        if (isUnlocked && !isViewed) {
+            sprite.setInteractive({ useHandCursor: true });
+            
+            const tween = this.tweens.add({
+                targets: sprite,
+                alpha: 1,
+                yoyo: true,
+                repeat: -1,
+                duration: 800
+            });
+
+            sprite.once('pointerdown', () => {
+                tween.stop();
+                sprite.setAlpha(0.9);
+                this.playScrambleAnimation(
+                    [title, statsText, explanation],
+                    [displayNameStr, statsStr, explanationOriginal],
+                    () => {
+                        BestiaryData.getInstance().markViewed(def.id);
+                    }
+                );
+            });
+        }
 
         const isV1 = def.id.endsWith('_1');
         const isV2 = def.id.endsWith('_2');

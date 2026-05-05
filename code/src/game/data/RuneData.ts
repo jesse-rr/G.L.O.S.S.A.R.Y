@@ -144,6 +144,7 @@ function resolveCombo(chain: string[]): ChainCombo | null {
 
 export class RuneData {
     private discoveredRunes: Set<string> = new Set();
+    private viewedRunes: Set<string> = new Set();
     private static instance: RuneData;
 
     static getInstance(): RuneData {
@@ -200,6 +201,7 @@ export class RuneData {
 
     save(): void {
         localStorage.setItem('glossary_rune_discoveries', JSON.stringify(Array.from(this.discoveredRunes)));
+        localStorage.setItem('glossary_rune_viewed', JSON.stringify(Array.from(this.viewedRunes)));
     }
 
     load(): void {
@@ -212,10 +214,30 @@ export class RuneData {
                 this.discoveredRunes = new Set();
             }
         }
+
+        const viewedData = localStorage.getItem('glossary_rune_viewed');
+        if (viewedData) {
+            try {
+                const arr = JSON.parse(viewedData) as string[];
+                this.viewedRunes = new Set(arr);
+            } catch (e) {
+                this.viewedRunes = new Set();
+            }
+        }
     }
 
     reset(): void {
         this.discoveredRunes.clear();
+        this.viewedRunes.clear();
+        this.save();
+    }
+
+    isViewed(letter: string): boolean {
+        return this.viewedRunes.has(letter.toUpperCase());
+    }
+
+    markViewed(letter: string): void {
+        this.viewedRunes.add(letter.toUpperCase());
         this.save();
     }
 }

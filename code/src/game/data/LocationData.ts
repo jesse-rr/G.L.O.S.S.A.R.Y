@@ -57,6 +57,7 @@ export const BOSSES: LocationDefinition[] = [
 export class LocationData {
     private static instance: LocationData;
     private discoveredLocations: Set<string> = new Set();
+    private viewedLocations: Set<string> = new Set();
 
     private constructor() {
         const settlements = ['settlement_abandoned', 'settlement_mechanic', 'settlement_desert'];
@@ -88,5 +89,13 @@ export class LocationData {
 
     public discoverLocation(id: string): void {
         this.discoveredLocations.add(id);
+    }
+
+    public isViewed(id: string): boolean {
+        return this.viewedLocations.has(id);
+    }
+
+    public markViewed(id: string): void {
+        this.viewedLocations.add(id);
     }
 }

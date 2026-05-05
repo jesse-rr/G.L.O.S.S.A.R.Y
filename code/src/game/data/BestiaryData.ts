@@ -115,6 +115,7 @@ export const BESTIARY: BestiaryDefinition[] = [
 export class BestiaryData {
     private static instance: BestiaryData;
     private discoveredEntities: Set<string> = new Set();
+    private viewedEntities: Set<string> = new Set();
 
     private constructor() {
         // Unlock 3 random entities for debugging
@@ -141,6 +142,14 @@ export class BestiaryData {
 
     public discoverEntity(id: string) {
         this.discoveredEntities.add(id);
+    }
+
+    public isViewed(id: string): boolean {
+        return this.viewedEntities.has(id);
+    }
+
+    public markViewed(id: string): void {
+        this.viewedEntities.add(id);
     }
 
     public getDiscoveredCount(): number {

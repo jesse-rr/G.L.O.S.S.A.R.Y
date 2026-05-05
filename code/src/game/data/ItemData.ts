@@ -58,7 +58,7 @@ const ITEMS: ItemDefinition[] = [
     },
     {
         id: 5,
-        name: "404: Location Not Found",
+        name: "404: Not Found",
         ability: "Evasion",
         effectDescription: "Grants a flat 10% chance to completely dodge any incoming attack.",
         lore: "A map depicting a realm that simply does not exist. Looking at it too long makes you feel like you've misplaced your own coordinates.",
@@ -124,6 +124,7 @@ const ITEMS: ItemDefinition[] = [
 export class ItemData {
     private static instance: ItemData;
     private discoveredItems: Set<number> = new Set();
+    private viewedItems: Set<number> = new Set();
 
     private constructor() {
         const itemIds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
@@ -157,6 +158,14 @@ export class ItemData {
 
     public discoverItem(id: number): void {
         this.discoveredItems.add(id);
+    }
+
+    public isViewed(id: number): boolean {
+        return this.viewedItems.has(id);
+    }
+
+    public markViewed(id: number): void {
+        this.viewedItems.add(id);
     }
 
     public static getItemFrame(id: number): number {
