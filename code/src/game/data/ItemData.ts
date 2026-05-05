@@ -127,14 +127,18 @@ export class ItemData {
     private viewedItems: Set<number> = new Set();
 
     private constructor() {
-        const itemIds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-        for (let i = itemIds.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [itemIds[i], itemIds[j]] = [itemIds[j], itemIds[i]];
+        this.load();
+        if (this.discoveredItems.size === 0) {
+            const itemIds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+            for (let i = itemIds.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [itemIds[i], itemIds[j]] = [itemIds[j], itemIds[i]];
+            }
+            this.discoveredItems.add(itemIds[0]);
+            this.discoveredItems.add(itemIds[1]);
+            this.discoveredItems.add(itemIds[2]);
+            this.save();
         }
-        this.discoveredItems.add(itemIds[0]);
-        this.discoveredItems.add(itemIds[1]);
-        this.discoveredItems.add(itemIds[2]);
     }
 
     public static getInstance(): ItemData {
@@ -157,7 +161,9 @@ export class ItemData {
     }
 
     public discoverItem(id: number): void {
+        if (this.discoveredItems.has(id)) return;
         this.discoveredItems.add(id);
+        this.save();
     }
 
     public isViewed(id: number): boolean {
@@ -165,10 +171,49 @@ export class ItemData {
     }
 
     public markViewed(id: number): void {
+        if (this.viewedItems.has(id)) return;
         this.viewedItems.add(id);
+        this.save();
     }
 
     public static getItemFrame(id: number): number {
         return id;
+    }
+
+    public getDiscoveredItems(): number[] {
+        return Array.from(this.discoveredItems);
+    }
+
+    public save(): void {
+        localStorage.setItem('items_discovered', JSON.stringify(Array.from(this.discoveredItems)));
+        localStorage.setItem('items_viewed', JSON.stringify(Array.from(this.viewedItems)));
+    }
+
+    public load(): void {
+        const discoveredData = localStorage.getItem('items_discovered');
+        if (discoveredData) {
+            try {
+                const arr = JSON.parse(discoveredData) as number[];
+                this.discoveredItems = new Set(arr);
+            } catch (e) {
+                this.discoveredItems = new Set();
+            }
+        }
+
+        const viewedData = localStorage.getItem('items_viewed');
+        if (viewedData) {
+            try {
+                const arr = JSON.parse(viewedData) as number[];
+                this.viewedItems = new Set(arr);
+            } catch (e) {
+                this.viewedItems = new Set();
+            }
+        }
+    }
+
+    public reset(): void {
+        this.discoveredItems.clear();
+        this.viewedItems.clear();
+        this.save();
     }
 }

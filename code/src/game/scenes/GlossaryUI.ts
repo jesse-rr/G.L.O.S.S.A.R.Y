@@ -40,18 +40,18 @@ export class GlossaryUI extends Scene {
 
                     const targetText = finalTexts[index];
 
-                    if (easedProgress > 0.5) {
+                    if (easedProgress > 0.3) {
                         textObj.setFontFamily(FONT_FAMILY);
                         textObj.setStroke('#000000', 0);
                     }
+
+                    const revealProgress = easedProgress;
 
                     let scrambled = '';
                     for (let i = 0; i < targetText.length; i++) {
                         if (targetText[i] === ' ' || targetText[i] === '\n' || targetText[i] === ':') {
                             scrambled += targetText[i];
                         } else {
-                            const revealThreshold = 0.7;
-                            const revealProgress = Math.max(0, (easedProgress - revealThreshold) / (1 - revealThreshold));
                             if (Math.random() < revealProgress) {
                                 scrambled += targetText[i];
                             } else {
@@ -215,8 +215,7 @@ export class GlossaryUI extends Scene {
             this.contentContainer.add(box);
 
             const isUnlocked = RuneData.getInstance().isDiscovered(def.letter);
-            const isFirefox = navigator.userAgent.includes("Firefox");
-            const runeText = this.add.text(x, isFirefox ? y : y + 5, def.letter, {
+            const runeText = this.add.text(x, y + 8, def.letter, {
                 fontFamily: RUNE_FONT,
                 fontSize: '76px',
                 color: '#000000'
@@ -252,9 +251,8 @@ export class GlossaryUI extends Scene {
         const isUnlocked = RuneData.getInstance().isDiscovered(def.letter);
         const isViewed = RuneData.getInstance().isViewed(def.letter);
         const useRunic = !isUnlocked || (isUnlocked && !isViewed);
-        const isFirefox = navigator.userAgent.includes("Firefox");
 
-        const letter = this.add.text(10, isFirefox ? 120 : 135, def.letter, {
+        const letter = this.add.text(10, 130, def.letter, {
             fontFamily: RUNE_FONT,
             fontSize: '96px',
             color: '#000000'

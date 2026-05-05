@@ -11,7 +11,7 @@ export const SETTLEMENTS: LocationDefinition[] = [
         id: 'settlement_abandoned',
         name: 'Abandoned Settlement',
         type: 'settlement',
-        description: 'A drowned ruin slowly sinking into the muck. Murky waters hide whatever still lurks beneath the surface.',
+        description: 'A drowned ruin sinking into the muck. Murky waters hide what lurks beneath.',
         frame: 0
     },
     {
@@ -35,7 +35,7 @@ export const BOSSES: LocationDefinition[] = [
         id: 'boss_abandoned',
         name: 'The Usurper',
         type: 'boss',
-        description: 'A swollen abomination reigning over a drowned court. It drags its victims into the suffocating mire.',
+        description: 'A swollen abomination reigning over a drowned court. It drags victims into the suffocating mire.',
         frame: 2
     },
     {
@@ -60,20 +60,16 @@ export class LocationData {
     private viewedLocations: Set<string> = new Set();
 
     private constructor() {
-        const settlements = ['settlement_abandoned', 'settlement_mechanic', 'settlement_desert'];
-        const bosses = ['boss_abandoned', 'boss_mechanic', 'boss_desert'];
-
-        for (let i = settlements.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [settlements[i], settlements[j]] = [settlements[j], settlements[i]];
+        this.load();
+        if (this.discoveredLocations.size === 0) {
+            const settlements = ['settlement_abandoned', 'settlement_mechanic', 'settlement_desert'];
+            const randomIndex = Math.floor(Math.random() * settlements.length);
+            const chosenSettlement = settlements[randomIndex];
+            const chosenBoss = chosenSettlement.replace('settlement', 'boss');
+            this.discoveredLocations.add(chosenSettlement);
+            this.discoveredLocations.add(chosenBoss);
+            this.save();
         }
-        for (let i = bosses.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [bosses[i], bosses[j]] = [bosses[j], bosses[i]];
-        }
-
-        this.discoveredLocations.add(settlements[0]);
-        this.discoveredLocations.add(bosses[0]);
     }
 
     public static getInstance(): LocationData {
@@ -88,7 +84,9 @@ export class LocationData {
     }
 
     public discoverLocation(id: string): void {
+        if (this.discoveredLocations.has(id)) return;
         this.discoveredLocations.add(id);
+        this.save();
     }
 
     public isViewed(id: string): boolean {
@@ -96,6 +94,45 @@ export class LocationData {
     }
 
     public markViewed(id: string): void {
+        if (this.viewedLocations.has(id)) return;
         this.viewedLocations.add(id);
+        this.save();
+    }
+
+    public getDiscoveredLocations(): string[] {
+        return Array.from(this.discoveredLocations);
+    }
+
+    public save(): void {
+        localStorage.setItem('locations_discovered', JSON.stringify(Array.from(this.discoveredLocations)));
+        localStorage.setItem('locations_viewed', JSON.stringify(Array.from(this.viewedLocations)));
+    }
+
+    public load(): void {
+        const discoveredData = localStorage.getItem('locations_discovered');
+        if (discoveredData) {
+            try {
+                const arr = JSON.parse(discoveredData) as string[];
+                this.discoveredLocations = new Set(arr);
+            } catch (e) {
+                this.discoveredLocations = new Set();
+            }
+        }
+
+        const viewedData = localStorage.getItem('locations_viewed');
+        if (viewedData) {
+            try {
+                const arr = JSON.parse(viewedData) as string[];
+                this.viewedLocations = new Set(arr);
+            } catch (e) {
+                this.viewedLocations = new Set();
+            }
+        }
+    }
+
+    public reset(): void {
+        this.discoveredLocations.clear();
+        this.viewedLocations.clear();
+        this.save();
     }
 }

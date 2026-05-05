@@ -118,15 +118,18 @@ export class BestiaryData {
     private viewedEntities: Set<string> = new Set();
 
     private constructor() {
-        // Unlock 3 random entities for debugging
-        const ids = BESTIARY.map(e => e.id);
-        for (let i = ids.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [ids[i], ids[j]] = [ids[j], ids[i]];
+        this.load();
+        if (this.discoveredEntities.size === 0) {
+            const ids = BESTIARY.map(e => e.id);
+            for (let i = ids.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [ids[i], ids[j]] = [ids[j], ids[i]];
+            }
+            this.discoveredEntities.add(ids[0]);
+            this.discoveredEntities.add(ids[1]);
+            this.discoveredEntities.add(ids[2]);
+            this.save();
         }
-        this.discoveredEntities.add(ids[0]);
-        this.discoveredEntities.add(ids[1]);
-        this.discoveredEntities.add(ids[2]);
     }
 
     public static getInstance(): BestiaryData {
@@ -140,8 +143,10 @@ export class BestiaryData {
         return this.discoveredEntities.has(id);
     }
 
-    public discoverEntity(id: string) {
+    public discoverEntity(id: string): void {
+        if (this.discoveredEntities.has(id)) return;
         this.discoveredEntities.add(id);
+        this.save();
     }
 
     public isViewed(id: string): boolean {
@@ -149,10 +154,49 @@ export class BestiaryData {
     }
 
     public markViewed(id: string): void {
+        if (this.viewedEntities.has(id)) return;
         this.viewedEntities.add(id);
+        this.save();
     }
 
     public getDiscoveredCount(): number {
         return this.discoveredEntities.size;
+    }
+
+    public getDiscoveredEntities(): string[] {
+        return Array.from(this.discoveredEntities);
+    }
+
+    public save(): void {
+        localStorage.setItem('bestiary_discovered', JSON.stringify(Array.from(this.discoveredEntities)));
+        localStorage.setItem('bestiary_viewed', JSON.stringify(Array.from(this.viewedEntities)));
+    }
+
+    public load(): void {
+        const discoveredData = localStorage.getItem('bestiary_discovered');
+        if (discoveredData) {
+            try {
+                const arr = JSON.parse(discoveredData) as string[];
+                this.discoveredEntities = new Set(arr);
+            } catch (e) {
+                this.discoveredEntities = new Set();
+            }
+        }
+
+        const viewedData = localStorage.getItem('bestiary_viewed');
+        if (viewedData) {
+            try {
+                const arr = JSON.parse(viewedData) as string[];
+                this.viewedEntities = new Set(arr);
+            } catch (e) {
+                this.viewedEntities = new Set();
+            }
+        }
+    }
+
+    public reset(): void {
+        this.discoveredEntities.clear();
+        this.viewedEntities.clear();
+        this.save();
     }
 }
