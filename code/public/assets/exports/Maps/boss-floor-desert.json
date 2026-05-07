@@ -591,7 +591,7 @@
          "startx":-16,
          "starty":0,
          "type":"tilelayer",
-         "visible":false,
+         "visible":true,
          "width":32,
          "x":0,
          "y":0
@@ -649,7 +649,7 @@
          "startx":-16,
          "starty":-16,
          "type":"tilelayer",
-         "visible":true,
+         "visible":false,
          "width":32,
          "x":0,
          "y":0
@@ -751,7 +751,7 @@
          "startx":-16,
          "starty":-16,
          "type":"tilelayer",
-         "visible":false,
+         "visible":true,
          "width":32,
          "x":0,
          "y":0
@@ -1718,6 +1718,29 @@
          "name":"Pillar",
          "opacity":1,
          "type":"group",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":35,
+         "name":"portals",
+         "objects":[
+                {
+                 "height":64,
+                 "id":152,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":64,
+                 "x":-32,
+                 "y":352
+                }],
+         "opacity":1,
+         "type":"objectgroup",
          "visible":true,
          "x":0,
          "y":0
@@ -3241,8 +3264,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":34,
- "nextobjectid":151,
+ "nextlayerid":36,
+ "nextobjectid":153,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",

@@ -215,7 +215,7 @@ export class GlossaryUI extends Scene {
             this.contentContainer.add(box);
 
             const isUnlocked = RuneData.getInstance().isDiscovered(def.letter);
-            const runeText = this.add.text(x, y + 8, def.letter, {
+            const runeText = this.add.text(x, y, def.letter, {
                 fontFamily: RUNE_FONT,
                 fontSize: '76px',
                 color: '#000000'

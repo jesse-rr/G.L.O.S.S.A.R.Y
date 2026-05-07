@@ -5,6 +5,4 @@
 5. Music
 6. Finish Maps
 7. More Monsters
-8. Text Translation Animation - From Runic Language to Common Language
 9. Unique atack animations - Particles for damage, gemstones etc...
-10 Indicator of new unlocked item.

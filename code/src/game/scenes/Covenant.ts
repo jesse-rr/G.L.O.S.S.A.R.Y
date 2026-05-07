@@ -327,13 +327,10 @@ export class Covenant extends Phaser.Scene {
         let uniqueRune = '';
 
         if (covenant === 'dragon') {
-            mapKey = 'mechanic-settlement';
             uniqueRune = 'P';
         } else if (covenant === 'phoenix') {
-            mapKey = 'desert-settlement';
             uniqueRune = 'I';
         } else if (covenant === 'snake') {
-            mapKey = 'abandoned-settlement';
             uniqueRune = 'E';
         }
 

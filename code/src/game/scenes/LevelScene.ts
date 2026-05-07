@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { createVignette } from '../utils/Vignette';
+import { PlayerData } from '../data/PlayerData';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -23,8 +24,11 @@ export class LevelScene extends Phaser.Scene {
         super('LevelScene');
     }
 
-    init(data: { mapKey?: string }) {
+    private previousMap: string = '';
+
+    init(data: { mapKey?: string, previousMap?: string }) {
         this.mapKey = data?.mapKey || 'hub';
+        this.previousMap = data?.previousMap || '';
         this.isTeleporting = false;
     }
 
@@ -35,6 +39,7 @@ export class LevelScene extends Phaser.Scene {
         this.load.image('Objects.png', 'assets/exports/tileset/Objects.png');
         this.load.image('Summit-Floor.png', 'assets/exports/tileset/Summit-Floor.png');
 
+        this.load.tilemapTiledJSON('central-hub', 'assets/exports/Maps/central-hub.json');
         this.load.tilemapTiledJSON('boss-floor-abandoned', 'assets/exports/Maps/boss-floor-abandoned.json');
         this.load.tilemapTiledJSON('boss-floor-desert', 'assets/exports/Maps/boss-floor-desert.json');
         this.load.tilemapTiledJSON('boss-floor-mechanic', 'assets/exports/Maps/boss-floor-mechanic.json');
@@ -101,8 +106,8 @@ export class LevelScene extends Phaser.Scene {
 
         this.returnPortalGroup = this.add.group();
 
-        if (this.mapKey === 'hub') {
-            this.createHub();
+        if (this.mapKey === 'hub' || this.mapKey === 'central-hub') {
+            this.createMap('central-hub');
         } else {
             this.createMap(this.mapKey);
         }
@@ -209,32 +214,7 @@ export class LevelScene extends Phaser.Scene {
         }
     }
 
-    private createHub() {
-        this.targetSlowFactor = 1;
-        this.currentSlowFactor = 1;
-        const width = 1200;
-        const height = 800;
 
-        this.matter.world.setBounds(-2000, -2000, 4000, 4000);
-        this.cameras.main.setZoom(2);
-
-        this.createPortal(width / 2, height / 2 - 150, 'boss-floor-abandoned', 0x00aa00, 'Abandoned Swamp');
-        this.createPortal(width / 2 - 300, height / 2 + 100, 'boss-floor-mechanic', 0xaaaa00, 'Mechanic Island');
-        this.createPortal(width / 2 + 300, height / 2 + 100, 'boss-floor-desert', 0xdd8800, 'Desert City');
-        this.createPortal(width / 2, height / 2 + 150, 'abandoned-settlement', 0x44aa44, 'Abandoned Settlement');
-        this.createPortal(width / 2 - 300, height / 2 - 100, 'desert-settlement', 0xcc8833, 'Desert Settlement');
-        this.createPortal(width / 2 + 300, height / 2 - 100, 'mechanic-settlement', 0xaaaa00, 'Mechanic Settlement');
-
-        const walls = [
-            this.add.rectangle(width / 2, height / 2 - 200, 800, 20, 0x000000),
-            this.add.rectangle(width / 2, height / 2 + 200, 800, 20, 0x000000),
-            this.add.rectangle(width / 2 - 400, height / 2, 20, 400, 0x000000),
-            this.add.rectangle(width / 2 + 400, height / 2, 20, 400, 0x000000)
-        ];
-        walls.forEach(w => this.matter.add.gameObject(w, { isStatic: true }));
-
-        this.spawnPlayer(width / 2, height / 2);
-    }
 
     private createPortal(x: number, y: number, targetMap: string, color: number, label: string, width: number = 60, height: number = 60) {
         const portal = this.add.rectangle(x, y, width, height, color);
@@ -454,29 +434,88 @@ export class LevelScene extends Phaser.Scene {
             });
         }
 
-        let spawnX = 0, spawnY = 0, portalX = 0, portalY = 0;
-        if (mapKey === 'boss-floor-abandoned') {
-            spawnX = 32; spawnY = 380; portalX = 32; portalY = 430;
-        } else if (mapKey === 'boss-floor-desert') {
-            spawnX = 0; spawnY = 380; portalX = 0; portalY = 430;
-        } else if (mapKey === 'boss-floor-mechanic') {
-            spawnX = 416; spawnY = 795; portalX = 416; portalY = 845;
-        } else if (mapKey === 'abandoned-settlement') {
-            spawnX = 650; spawnY = -353; portalX = 700; portalY = -353;
-        } else if (mapKey === 'desert-settlement') {
-            spawnX = 50; spawnY = -1000; portalX = 50; portalY = -1100;        } else if (mapKey === 'mechanic-settlement') {
-            spawnX = 0; spawnY = 0; portalX = 50; portalY = -100;        }
+        const portalsLayer = map.objects.find(layer => layer.name.toLowerCase() === 'portals');
+        if (portalsLayer) {
+            portalsLayer.objects.forEach(obj => {
+                const x = obj.x || 0;
+                const y = obj.y || 0;
+                const width = obj.width || 60;
+                const height = obj.height || 60;
+                const cx = x + width / 2;
+                const cy = y + height / 2;
 
-        let portalWidth = 60;
-        let portalHeight = 60;
-        if (mapKey === 'desert-settlement') {
-            portalWidth = 120;
-            portalHeight = 120;
+                let targetMap = '';
+                let label = '';
+                let color = 0x00ff00;
+
+                if (mapKey === 'central-hub') {
+                    const covenant = PlayerData.getInstance().covenant;
+                    if (y < -500) {
+                        targetMap = covenant === 'dragon' ? 'boss-floor-mechanic' :
+                            covenant === 'phoenix' ? 'boss-floor-desert' : 'boss-floor-abandoned';
+                        label = 'Boss Fight';
+                        color = 0xff0000;
+                    } else if (x < -100) {
+                        targetMap = covenant === 'dragon' ? 'mechanic-settlement' :
+                            covenant === 'phoenix' ? 'desert-settlement' : 'abandoned-settlement';
+                        label = 'Settlement';
+                        color = 0x00ff00;
+                    } else {
+                        return;
+                    }
+                } else {
+                    targetMap = 'hub';
+                    label = 'Return to Hub';
+                    color = 0x0000ff;
+                }
+
+                if (targetMap) {
+                    this.createPortal(cx, cy, targetMap, color, label, width, height);
+                }
+            });
+        }
+
+        let spawnX = 0, spawnY = 0;
+        const SPACING = 80;
+
+        if (mapKey === 'central-hub') {
+            if (this.previousMap.includes('boss-')) {
+                const topPortal = portalsLayer?.objects.find(o => (o.y || 0) < -500);
+                if (topPortal) {
+                    spawnX = (topPortal.x || 0) + (topPortal.width || 60) / 2;
+                    spawnY = (topPortal.y || 0) + (topPortal.height || 60) / 2 + SPACING;
+                }
+            } else if (this.previousMap.includes('-settlement')) {
+                const leftPortal = portalsLayer?.objects.find(o => (o.x || 0) < -100 && (o.y || 0) > -500);
+                if (leftPortal) {
+                    spawnX = (leftPortal.x || 0) + (leftPortal.width || 60) / 2 + SPACING;
+                    spawnY = (leftPortal.y || 0) + (leftPortal.height || 60) / 2;
+                }
+            } else {
+                spawnX = 0;
+                spawnY = -10;
+            }
+        } else {
+            const returnPortal = portalsLayer?.objects[0];
+            if (returnPortal) {
+                const px = (returnPortal.x || 0) + (returnPortal.width || 60) / 2;
+                const py = (returnPortal.y || 0) + (returnPortal.height || 60) / 2;
+
+                if (mapKey.includes('boss-')) {
+                    spawnX = px;
+                    spawnY = py - SPACING;
+                } else if (mapKey.includes('-settlement')) {
+                    spawnX = px - SPACING;
+                    spawnY = py;
+                } else {
+                    spawnX = px;
+                    spawnY = py;
+                }
+            }
         }
 
         this.spawnPlayer(spawnX, spawnY);
         this.player.setDepth(this.getPlayerDepth(mapKey));
-        this.createPortal(portalX, portalY, 'hub', 0xff0000, 'Return to Hub', portalWidth, portalHeight);
 
         this.matter.world.on('collisionstart', (event: any) => {
             event.pairs.forEach((pair: any) => {
@@ -508,7 +547,7 @@ export class LevelScene extends Phaser.Scene {
         const targetMap = portal.getData('target');
         if (targetMap) {
             this.isTeleporting = true;
-            this.scene.restart({ mapKey: targetMap });
+            this.scene.restart({ mapKey: targetMap, previousMap: this.mapKey });
         }
     }
 

@@ -20,6 +20,7 @@ export class CombatScene extends Phaser.Scene {
     private runeData: RuneData | null = null;
     private combatTimer: number = 0;
     private timerText: Phaser.GameObjects.Text | null = null;
+    private currentTurn: Number = 1;
     private combatSystem: CombatSystem | null = null;
     private playerPanelContainer: Phaser.GameObjects.Container | null = null;
     private tooltipContainer: Phaser.GameObjects.Container | null = null;
@@ -146,7 +147,7 @@ export class CombatScene extends Phaser.Scene {
             fontFamily: FONT_FAMILY
         }).setOrigin(0, 0.5).setScrollFactor(0);
 
-        this.timerText = this.add.text(centerX, 22, '00:00', {
+        this.timerText = this.add.text(centerX, 22, '00:00' + " - " + this.currentTurn, {
             fontSize: '20px',
             color: '#FFFFFF',
             fontFamily: FONT_FAMILY,
@@ -812,7 +813,7 @@ export class CombatScene extends Phaser.Scene {
         const timerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
         if (this.timerText) {
-            this.timerText.setText(timerText);
+            this.timerText.setText(timerText + " - " + this.currentTurn);
         }
     }
 
