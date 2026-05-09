@@ -130,17 +130,13 @@ export class UserData {
     checkCompletionist(): void {
         if (!this.completedGame) return;
 
-        // Check if all other 5 achievements are unlocked
         const otherAchievements = this.achievements.filter(a => a.id !== 'completionist');
         if (otherAchievements.some(a => !a.unlocked)) return;
 
-        // Check if all items are discovered (12 items)
         if (this.itemsDiscovered.length < 12) return;
 
-        // Check if all runes are discovered (26 runes)
         if (this.runesDiscovered.length < 26) return;
 
-        // Check if all enemies are discovered (10 enemies)
         if (BestiaryData.getInstance().getDiscoveredCount() < 10) return;
 
         this.unlockAchievement('completionist');

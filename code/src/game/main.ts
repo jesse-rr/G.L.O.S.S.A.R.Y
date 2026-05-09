@@ -1,20 +1,20 @@
-import { Boot } from './scenes/Boot';
-import { MainMenu } from './scenes/MainMenu';
+import { Boot } from './scenes/menu/Boot';
+import { MainMenu } from './scenes/menu/MainMenu';
 import { AUTO, Game, Scale } from 'phaser';
-import { Help } from './scenes/Help';
-import { Settings } from './scenes/Settings';
-import { SettingsUI } from './scenes/SettingsUI';
-import { Achievements } from './scenes/Achievements';
-import { AchievementsUI } from './scenes/AchievementsUI';
-import { Covenant } from './scenes/Covenant';
-import { CombatScene } from './scenes/CombatScene';
+import { Help } from './scenes/ui/Help';
+import { Settings } from './scenes/ui/Settings';
+import { SettingsUI } from './scenes/ui/SettingsUI';
+import { Achievements } from './scenes/ui/Achievements';
+import { AchievementsUI } from './scenes/ui/AchievementsUI';
+import { Covenant } from './scenes/menu/Covenant';
+import { CombatScene } from './scenes/combat/CombatScene';
 import { Cat } from './utils/Cat';
-import { Multiplayer } from './scenes/Multiplayer';
-import { ControlsUI } from './scenes/ControlsUI';
-import { LevelScene } from './scenes/LevelScene';
-import { TransitionScene } from './scenes/TransitionScene';
-import { GlossaryUI } from './scenes/GlossaryUI';
-import { NotificationOverlay } from './scenes/NotificationOverlay';
+import { Multiplayer } from './scenes/menu/Multiplayer';
+import { ControlsUI } from './scenes/ui/ControlsUI';
+import { LevelScene } from './scenes/world/LevelScene';
+import { TransitionScene } from './scenes/world/TransitionScene';
+import { GlossaryUI } from './scenes/ui/GlossaryUI';
+import { NotificationOverlay } from './scenes/ui/NotificationOverlay';
 
 let useVsync = true;
 try {
@@ -41,7 +41,7 @@ const config: Phaser.Types.Core.GameConfig = {
         target: useVsync ? 60 : 144
     },
     scale: {
-        mode: Scale.NONE,
+        mode: Scale.FIT,
         autoCenter: Scale.CENTER_BOTH,
     },
     physics: {

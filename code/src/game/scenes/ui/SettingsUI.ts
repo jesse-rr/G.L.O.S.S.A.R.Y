@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { UserData } from '../data/UserData';
+import { UserData } from '../../data/UserData';
 
-import { FONT_FAMILY } from '../constants';
+import { FONT_FAMILY } from '../../constants';
 
 export class SettingsUI extends Phaser.Scene {
 

@@ -1,6 +1,6 @@
 import { Scene } from 'phaser';
-import { UserData } from '../data/UserData';
-import { PlayerData } from '../data/PlayerData';
+import { UserData } from '../../data/UserData';
+import { PlayerData } from '../../data/PlayerData';
 
 export class Boot extends Scene {
     constructor() {
@@ -8,7 +8,6 @@ export class Boot extends Scene {
     }
 
     preload() {
-        // 7680×360 → 12 frames of 640×360
         this.load.spritesheet('homeAnim', 'assets/exports/UI/Homescreen-BG-Sheet.png', {
             frameWidth: 640,
             frameHeight: 360,

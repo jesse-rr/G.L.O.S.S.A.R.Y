@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { EventBus } from '../EventBus';
-import { FONT_FAMILY } from '../constants';
+import { EventBus } from '../../EventBus';
+import { FONT_FAMILY } from '../../constants';
 
 const NOTIFICATION_DURATION = 3000;
 const FADE_DURATION = 400;
@@ -53,7 +53,6 @@ export class NotificationOverlay extends Phaser.Scene {
             .setDepth(200)
             .setAlpha(0);
 
-        // Center the text based on the background width and height
         const labelX = x - bg.width / 2;
         const labelY = y - bg.height / 2;
 
@@ -68,14 +67,12 @@ export class NotificationOverlay extends Phaser.Scene {
             .setDepth(201)
             .setAlpha(0);
 
-        // Fade in
         this.tweens.add({
             targets: [bg, label],
             alpha: 1,
             duration: FADE_DURATION,
             ease: 'Quad.easeOut',
             onComplete: () => {
-                // Wait and fade out
                 this.time.delayedCall(NOTIFICATION_DURATION, () => {
                     this.tweens.add({
                         targets: [bg, label],

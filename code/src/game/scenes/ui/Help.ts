@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 
-import { FONT_FAMILY } from '../constants';
+import { FONT_FAMILY } from '../../constants';
 
 export class Help extends Phaser.Scene {
     private scrollY = 0;

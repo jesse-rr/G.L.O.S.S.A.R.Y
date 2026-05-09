@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
-import { UserData } from '../data/UserData';
+import { UserData } from '../../data/UserData';
 
 const CUBE_SIZE = 50.5;
-import { FONT_FAMILY } from '../constants';
+import { FONT_FAMILY } from '../../constants';
 
 const CUBE_POSITIONS = [
     { x: 246, y: 107.5 },

@@ -1,9 +1,12 @@
 import * as Phaser from 'phaser';
 
-const VIGNETTE_KEY = '__vignette__';
+export function createVignette(scene: Phaser.Scene, depth: number = 90, isDark: boolean = false): Phaser.GameObjects.Image {
+    const name = isDark ? 'vignette_dark' : 'vignette';
+    const textureKey = isDark ? '__vignette_dark__' : '__vignette__';
+    const edgeSize = isDark ? 0.15 : 0.075;
+    const alphaStr = isDark ? '0.30' : '0.10';
 
-export function createVignette(scene: Phaser.Scene, depth: number = 90): Phaser.GameObjects.Image {
-    const existing = scene.children.getByName('vignette') as Phaser.GameObjects.Image;
+    const existing = scene.children.getByName(name) as Phaser.GameObjects.Image;
     if (existing) {
         return existing;
     }
@@ -11,31 +14,30 @@ export function createVignette(scene: Phaser.Scene, depth: number = 90): Phaser.
     const w = Number(scene.game.config.width);
     const h = Number(scene.game.config.height);
 
-    if (!scene.textures.exists(VIGNETTE_KEY)) {
-        const canvas = scene.textures.createCanvas(VIGNETTE_KEY, w, h);
+    if (!scene.textures.exists(textureKey)) {
+        const canvas = scene.textures.createCanvas(textureKey, w, h);
         const ctx = canvas!.context;
-        const edgeSize = 0.075;
 
         const top = ctx.createLinearGradient(0, 0, 0, h * edgeSize);
-        top.addColorStop(0, 'rgba(0, 0, 0, 0.10)');
+        top.addColorStop(0, `rgba(0, 0, 0, ${alphaStr})`);
         top.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = top;
         ctx.fillRect(0, 0, w, h * edgeSize);
 
         const bottom = ctx.createLinearGradient(0, h, 0, h - h * edgeSize);
-        bottom.addColorStop(0, 'rgba(0, 0, 0, 0.10)');
+        bottom.addColorStop(0, `rgba(0, 0, 0, ${alphaStr})`);
         bottom.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = bottom;
         ctx.fillRect(0, h - h * edgeSize, w, h * edgeSize);
 
         const left = ctx.createLinearGradient(0, 0, w * edgeSize, 0);
-        left.addColorStop(0, 'rgba(0, 0, 0, 0.10)');
+        left.addColorStop(0, `rgba(0, 0, 0, ${alphaStr})`);
         left.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = left;
         ctx.fillRect(0, 0, w * edgeSize, h);
 
         const right = ctx.createLinearGradient(w, 0, w - w * edgeSize, 0);
-        right.addColorStop(0, 'rgba(0, 0, 0, 0.10)');
+        right.addColorStop(0, `rgba(0, 0, 0, ${alphaStr})`);
         right.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = right;
         ctx.fillRect(w - w * edgeSize, 0, w * edgeSize, h);
@@ -44,12 +46,12 @@ export function createVignette(scene: Phaser.Scene, depth: number = 90): Phaser.
     }
 
     const zoom = scene.cameras.main.zoom || 1;
-    const vignette = scene.add.image(w / 2, h / 2, VIGNETTE_KEY);
+    const vignette = scene.add.image(w / 2, h / 2, textureKey);
     vignette.setOrigin(0.5, 0.5);
     vignette.setScrollFactor(0);
     vignette.setScale(1 / zoom);
     vignette.setDepth(depth);
-    vignette.setName('vignette');
+    vignette.setName(name);
 
     return vignette;
 }

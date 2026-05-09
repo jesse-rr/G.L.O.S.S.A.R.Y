@@ -119,7 +119,6 @@ export class MainMenu extends Phaser.Scene {
                 break;
             case BUTTONS[3].label:
                 this.scene.launch('TransitionScene', { targetScene: 'CombatScene', currentScene: 'MainMenu' });
-                // this.game.destroy(true, true);
                 break;
         }
     }

@@ -1,11 +1,16 @@
 import { Scene } from 'phaser';
 
 export class TransitionScene extends Scene {
+    private static isPlaying = false;
+
     constructor() {
         super({ key: 'TransitionScene' });
     }
 
     create(data: { targetScene: string; targetData?: any; currentScene: string }) {
+        if (TransitionScene.isPlaying) return;
+        TransitionScene.isPlaying = true;
+
         this.scene.bringToTop();
 
         const centerX = this.scale.width / 2;
@@ -51,6 +56,7 @@ export class TransitionScene extends Scene {
                     delay: holdDelay,
                     ease: 'Sine.easeInOut',
                     onComplete: () => {
+                        TransitionScene.isPlaying = false;
                         this.scene.stop();
                     }
                 });

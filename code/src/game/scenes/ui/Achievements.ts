@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { createVignette } from '../utils/Vignette';
+import { createVignette } from '../../utils/Vignette';
 
 export class Achievements extends Phaser.Scene {
 

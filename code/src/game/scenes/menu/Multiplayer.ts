@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
-import { MultiplayerData, RoomData } from '../data/MultiplayerData';
-import { RuneData } from '../data/RuneData';
-import { NetworkManager } from '../NetworkManager';
-import { EventBus } from '../EventBus';
+import { MultiplayerData, RoomData } from '../../data/MultiplayerData';
+import { RuneData } from '../../data/RuneData';
+import { NetworkManager } from '../../NetworkManager';
+import { EventBus, GameEvents } from '../../EventBus';
 
-import { FONT_FAMILY } from '../constants';
+import { FONT_FAMILY } from '../../constants';
 
 export class Multiplayer extends Phaser.Scene {
 
@@ -67,8 +67,6 @@ export class Multiplayer extends Phaser.Scene {
         const listHeight = 340;
 
         const md = MultiplayerData.getInstance();
-
-        // Mocks removed
 
         let selectedRoom: RoomData | null = null;
         let typedPasscode: string = '';
@@ -424,9 +422,9 @@ export class Multiplayer extends Phaser.Scene {
             }
         };
 
-        EventBus.on('network-data-received', onNetworkData, this);
-        EventBus.on('peer-connected', onPeerConnected, this);
-        EventBus.on('peer-disconnected', onPeerDisconnected, this);
+        EventBus.on(GameEvents.NETWORK_DATA_RECEIVED, onNetworkData, this);
+        EventBus.on(GameEvents.PEER_CONNECTED, onPeerConnected, this);
+        EventBus.on(GameEvents.PEER_DISCONNECTED, onPeerDisconnected, this);
 
         const fetchInterval = setInterval(async () => {
             if (md.myRoom) {
@@ -438,9 +436,9 @@ export class Multiplayer extends Phaser.Scene {
         }, 1000);
 
         this.events.on('shutdown', () => {
-            EventBus.off('network-data-received', onNetworkData, this);
-            EventBus.off('peer-connected', onPeerConnected, this);
-            EventBus.off('peer-disconnected', onPeerDisconnected, this);
+            EventBus.off(GameEvents.NETWORK_DATA_RECEIVED, onNetworkData, this);
+            EventBus.off(GameEvents.PEER_CONNECTED, onPeerConnected, this);
+            EventBus.off(GameEvents.PEER_DISCONNECTED, onPeerDisconnected, this);
             clearInterval(fetchInterval);
         });
     }

@@ -18,6 +18,7 @@ export class PlayerData {
     maxHp: number = 100;
     items: ItemData[] = [];
     runes: PlayerRuneEntry[] = [];
+    hubDoorOpened: boolean = false;
 
     private static instance: PlayerData;
 
@@ -128,6 +129,7 @@ export class PlayerData {
         this.hp = this.maxHp;
         this.items = [];
         this.runes = [];
+        this.hubDoorOpened = false;
     }
     toJSON(): object {
         return {

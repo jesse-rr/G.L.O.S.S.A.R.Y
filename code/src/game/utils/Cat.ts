@@ -64,7 +64,6 @@ export class Cat extends Phaser.Scene {
     this.events.on(Phaser.Scenes.Events.DESTROY, this.cleanup, this);
   }
   
-  // NO SWITCHB CUS FUCK OFF
   private startSequence() {
     this.time.delayedCall(3000, () => {
       this.beginSpin(1000, 5);

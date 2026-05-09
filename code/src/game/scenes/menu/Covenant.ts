@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
-import { PlayerData } from '../data/PlayerData';
-import { UserData } from '../data/UserData';
-import { MultiplayerData } from '../data/MultiplayerData';
-import { RuneData } from '../data/RuneData';
-import { NetworkManager } from '../NetworkManager';
-import { EventBus } from '../EventBus';
+import { PlayerData } from '../../data/PlayerData';
+import { UserData } from '../../data/UserData';
+import { MultiplayerData } from '../../data/MultiplayerData';
+import { RuneData } from '../../data/RuneData';
+import { NetworkManager } from '../../NetworkManager';
+import { EventBus } from '../../EventBus';
 
 const BG_FRAME_RATE = 8;
 const CARD_FRAME_RATE = 8;

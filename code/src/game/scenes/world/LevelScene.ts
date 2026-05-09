@@ -1,6 +1,8 @@
 import * as Phaser from 'phaser';
-import { createVignette } from '../utils/Vignette';
-import { PlayerData } from '../data/PlayerData';
+import { createVignette } from '../../utils/Vignette';
+import { PlayerData } from '../../data/PlayerData';
+import { parseCollisionObjects, parseStairObjects } from '../../systems/CollisionParser';
+import { DoorState, createDoors, handleDoorInteraction } from '../../systems/DoorSystem';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -9,6 +11,7 @@ export class LevelScene extends Phaser.Scene {
     private mapKey!: string;
     private returnPortalGroup!: Phaser.GameObjects.Group;
     private isTeleporting = false;
+    private teleportDirection: { x: number, y: number } = { x: 0, y: 0 };
 
     private slowZones!: Phaser.GameObjects.Group;
     private targetSlowFactor = 1;
@@ -19,17 +22,27 @@ export class LevelScene extends Phaser.Scene {
     private inReverseZone = false;
 
     private activeStairZones: Set<number> = new Set();
+    private doors: DoorState[] = [];
+    private interactKey!: Phaser.Input.Keyboard.Key;
+    private isCinematic = false;
 
     constructor() {
         super('LevelScene');
     }
 
     private previousMap: string = '';
+    private entryDirX: number = 0;
+    private entryDirY: number = 0;
+    private isEntering = false;
 
-    init(data: { mapKey?: string, previousMap?: string }) {
+    init(data: { mapKey?: string, previousMap?: string, entryDirX?: number, entryDirY?: number }) {
         this.mapKey = data?.mapKey || 'hub';
         this.previousMap = data?.previousMap || '';
+        this.entryDirX = data?.entryDirX || 0;
+        this.entryDirY = data?.entryDirY || 0;
         this.isTeleporting = false;
+        this.isEntering = false;
+        this.isCinematic = false;
     }
 
     preload() {
@@ -48,6 +61,15 @@ export class LevelScene extends Phaser.Scene {
         this.load.tilemapTiledJSON('desert-settlement', 'assets/exports/Maps/desert-settlement.json');
         this.load.tilemapTiledJSON('mechanic-settlement', 'assets/exports/Maps/mechanic-settlement.json');
 
+        this.load.spritesheet('door-sheet', 'assets/exports/Animations/Door-Sheet.png', {
+            frameWidth: 64,
+            frameHeight: 96
+        });
+        this.load.spritesheet('door-symbol', 'assets/exports/Animations/Door-Symbol.png', {
+            frameWidth: 64,
+            frameHeight: 96
+        });
+
         this.load.spritesheet('protagonist', 'assets/exports/Boss/Protagonist-Sheet.png', {
             frameWidth: 32,
             frameHeight: 32
@@ -62,6 +84,7 @@ export class LevelScene extends Phaser.Scene {
         this.targetSlowFactor = 1;
         this.currentSlowFactor = 1;
         this.activeStairZones.clear();
+        this.doors = [];
 
         if (this.scene.isActive('CombatScene')) {
             this.scene.stop('CombatScene');
@@ -135,6 +158,21 @@ export class LevelScene extends Phaser.Scene {
 
         this.cursors = this.input.keyboard!.createCursorKeys();
         this.keys = this.input.keyboard!.addKeys('W,A,S,D') as any;
+        this.interactKey = this.input.keyboard!.addKey('X');
+
+        if (!this.anims.exists('door-open')) {
+            const baseDuration = 60;
+            const frames = [];
+            for (let i = 0; i <= 13; i++) {
+                const t = i / 13;
+                frames.push({ key: 'door-sheet', frame: i, duration: baseDuration + t * t * 200 });
+            }
+            this.anims.create({
+                key: 'door-open',
+                frames,
+                repeat: 0
+            });
+        }
 
         this.input.keyboard!.on('keydown-Q', () => {
             if (!this.scene.isPaused()) {
@@ -214,8 +252,6 @@ export class LevelScene extends Phaser.Scene {
         }
     }
 
-
-
     private createPortal(x: number, y: number, targetMap: string, color: number, label: string, width: number = 60, height: number = 60) {
         const portal = this.add.rectangle(x, y, width, height, color);
         this.matter.add.gameObject(portal, { isStatic: true, isSensor: true });
@@ -225,79 +261,6 @@ export class LevelScene extends Phaser.Scene {
             portal.setAlpha(0);
         }
         this.add.text(x, y - 40, label, { fontSize: '16px', color: '#ffffff' }).setOrigin(0.5);
-    }
-
-    private ensureClockwise(vertices: { x: number, y: number }[]): { x: number, y: number }[] {
-        let sum = 0;
-        for (let i = 0; i < vertices.length; i++) {
-            const p1 = vertices[i];
-            const p2 = vertices[(i + 1) % vertices.length];
-            sum += (p2.x - p1.x) * (p2.y + p1.y);
-        }
-        if (sum > 0) {
-            vertices.reverse();
-        }
-        return vertices;
-    }
-
-    private removeDuplicatePoints(vertices: { x: number, y: number }[]): { x: number, y: number }[] {
-        const unique: { x: number, y: number }[] = [];
-        for (let i = 0; i < vertices.length; i++) {
-            const v = vertices[i];
-            let isDuplicate = false;
-            for (let j = 0; j < unique.length; j++) {
-                if (Math.abs(unique[j].x - v.x) < 0.01 && Math.abs(unique[j].y - v.y) < 0.01) {
-                    isDuplicate = true;
-                    break;
-                }
-            }
-            if (!isDuplicate) unique.push(v);
-        }
-        return unique;
-    }
-
-    private createPolygonSensorBody(x: number, y: number, localPoints: { x: number, y: number }[], angle: number) {
-        const MatterLib = (Phaser.Physics.Matter as any).Matter;
-        const worldPoints = localPoints.map(p => {
-            let px = p.x, py = p.y;
-            if (angle !== 0) {
-                const r = Phaser.Math.RotateAround({ x: px, y: py }, 0, 0, angle);
-                px = r.x; py = r.y;
-            }
-            return new Phaser.Math.Vector2(x + px, y + py);
-        });
-        let vertices = worldPoints.map(p => ({ x: p.x, y: p.y }));
-        vertices = this.removeDuplicatePoints(vertices);
-        if (vertices.length < 3) {
-            const minX = Math.min(...worldPoints.map(p => p.x));
-            const minY = Math.min(...worldPoints.map(p => p.y));
-            const maxX = Math.max(...worldPoints.map(p => p.x));
-            const maxY = Math.max(...worldPoints.map(p => p.y));
-            const width = maxX - minX;
-            const height = maxY - minY;
-            const cx = minX + width / 2;
-            const cy = minY + height / 2;
-            return MatterLib.Bodies.rectangle(cx, cy, width, height, { isStatic: true, isSensor: true });
-        }
-        vertices = this.ensureClockwise(vertices);
-        const matterVerts = vertices.map(v => MatterLib.Vector.create(v.x, v.y));
-        try {
-            const hull = MatterLib.Vertices.hull(matterVerts);
-            const centroid = MatterLib.Vertices.centre(hull);
-            const bodies = MatterLib.Bodies.fromVertices(centroid.x, centroid.y, [hull], { isStatic: true, isSensor: true });
-            if (bodies && bodies.length > 0) {
-                return bodies[0];
-            }
-        } catch (e) { }
-        const minX = Math.min(...worldPoints.map(p => p.x));
-        const minY = Math.min(...worldPoints.map(p => p.y));
-        const maxX = Math.max(...worldPoints.map(p => p.x));
-        const maxY = Math.max(...worldPoints.map(p => p.y));
-        const width = maxX - minX;
-        const height = maxY - minY;
-        const cx = minX + width / 2;
-        const cy = minY + height / 2;
-        return MatterLib.Bodies.rectangle(cx, cy, width, height, { isStatic: true, isSensor: true });
     }
 
     private createMap(mapKey: string) {
@@ -317,121 +280,11 @@ export class LevelScene extends Phaser.Scene {
         this.cameras.main.setZoom(2);
         this.matter.world.setBounds(-2000, -2000, 4000, 4000);
 
-        map.objects.forEach(layer => {
-            if (layer.name.toLowerCase().includes('collision')) {
-                layer.objects.forEach(obj => {
-                    const x = obj.x || 0;
-                    const y = obj.y || 0;
-                    const rotation = obj.rotation || 0;
-                    const angle = Phaser.Math.DegToRad(rotation);
-
-                    if (obj.polygon || obj.polyline) {
-                        const points = (obj.polygon || obj.polyline) as any[];
-                        if (!points || points.length < 2) return;
-                        const vertices = points.map(p => {
-                            let px = p.x, py = p.y;
-                            if (rotation !== 0) {
-                                const r = Phaser.Math.RotateAround({ x: px, y: py }, 0, 0, angle);
-                                px = r.x; py = r.y;
-                            }
-                            return { x: x + px, y: y + py };
-                        });
-                        if (obj.polygon) {
-                            try {
-                                const MatterLib = (Phaser.Physics.Matter as any).Matter;
-                                const centroid = MatterLib.Vertices.centre(vertices);
-                                const body = MatterLib.Bodies.fromVertices(centroid.x, centroid.y, [vertices], { isStatic: true });
-                                if (body) {
-                                    this.matter.world.add(body);
-                                    const bounds = body.bounds;
-                                    const dx = (Math.min(...vertices.map(v => v.x)) + Math.max(...vertices.map(v => v.x))) / 2 - (bounds.min.x + bounds.max.x) / 2;
-                                    const dy = (Math.min(...vertices.map(v => v.y)) + Math.max(...vertices.map(v => v.y))) / 2 - (bounds.min.y + bounds.max.y) / 2;
-                                    MatterLib.Body.setPosition(body, { x: body.position.x + dx, y: body.position.y + dy });
-                                } else {
-                                    const rw = obj.width || 32, rh = obj.height || 32;
-                                    this.matter.add.rectangle(x + rw / 2, y + rh / 2, rw, rh, { isStatic: true });
-                                }
-                            } catch (e) { }
-                        } else {
-                            for (let i = 0; i < vertices.length - 1; i++) {
-                                const p1 = vertices[i], p2 = vertices[i + 1];
-                                const minX = Math.min(p1.x, p2.x), minY = Math.min(p1.y, p2.y), maxX = Math.max(p1.x, p2.x), maxY = Math.max(p1.y, p2.y);
-                                const rectW = Math.max(maxX - minX, 6), rectH = Math.max(maxY - minY, 6);
-                                const rectX = minX + (maxX - minX) / 2, rectY = minY + (maxY - minY) / 2;
-                                this.matter.add.rectangle(rectX, rectY, rectW, rectH, { isStatic: true });
-                            }
-                        }
-                    } else if (obj.ellipse) {
-                        const rw = obj.width || 16, rh = obj.height || 16, radius = rw / 2;
-                        const cx = x + radius, cy = y + radius;
-                        const pos = rotation !== 0 ? Phaser.Math.RotateAround({ x: cx, y: cy }, x, y, angle) : { x: cx, y: cy };
-                        this.matter.add.circle(pos.x, pos.y, radius, { isStatic: true, angle: angle });
-                    } else if (obj.rectangle || (obj.width && obj.height)) {
-                        const rw = obj.width || 16, rh = obj.height || 16;
-                        const cx = x + rw / 2, cy = y + rh / 2;
-                        const pos = rotation !== 0 ? Phaser.Math.RotateAround({ x: cx, y: cy }, x, y, angle) : { x: cx, y: cy };
-                        this.matter.add.rectangle(pos.x, pos.y, rw, rh, { isStatic: true, angle: angle });
-                    }
-                });
-            }
-        });
+        parseCollisionObjects(this, map.objects as any);
 
         const stairsLayer = map.objects.find(layer => layer.name.toLowerCase() === 'stairs');
         if (stairsLayer) {
-            stairsLayer.objects.forEach((obj, index) => {
-                const x = obj.x || 0;
-                const y = obj.y || 0;
-                const rotation = obj.rotation || 0;
-                const angle = Phaser.Math.DegToRad(rotation);
-                const MatterLib = (Phaser.Physics.Matter as any).Matter;
-                let body: MatterJS.BodyType | null = null;
-                let visual: Phaser.GameObjects.GameObject;
-
-                const isReverse = obj.name && obj.name.toLowerCase() === 'no-affect';
-
-                if (!isReverse) {
-                    const axisProp = obj.properties?.find((p: any) => p.name === 'axis');
-                    if (!axisProp) return;
-                    const axis = axisProp.value;
-                    if (axis !== 'horizontal' && axis !== 'vertical') return;
-                }
-
-                if (obj.polygon && obj.polygon.length >= 3) {
-                    const localPoints = obj.polygon.map((p: any) => ({ x: p.x, y: p.y }));
-                    body = this.createPolygonSensorBody(x, y, localPoints, angle);
-                    visual = this.add.polygon(x, y, localPoints, isReverse ? 0xff0000 : 0x00ff00, 0);
-                    visual.setOrigin(0, 0);
-                    if (rotation !== 0) visual.setRotation(angle);
-                } else {
-                    const width = obj.width || 32;
-                    const height = obj.height || 32;
-                    const cx = x + width / 2;
-                    const cy = y + height / 2;
-                    const pos = rotation !== 0 ? Phaser.Math.RotateAround({ x: cx, y: cy }, x, y, angle) : { x: cx, y: cy };
-                    body = MatterLib.Bodies.rectangle(pos.x, pos.y, width, height, { isStatic: true, isSensor: true, angle: angle });
-                    this.matter.world.add(body);
-                    visual = this.add.rectangle(pos.x, pos.y, width, height, isReverse ? 0xff0000 : 0x00ff00, 0);
-                    visual.setOrigin(0.5, 0.5);
-                    if (rotation !== 0) visual.setRotation(angle);
-                }
-
-                if (body) {
-                    if (!this.matter.world.engine.world.bodies.includes(body)) {
-                        this.matter.world.add(body);
-                    }
-                    body.gameObject = visual;
-                    const uniqueStairId = index;
-                    if (isReverse) {
-                        visual.setData('reverseSlow', true);
-                    } else {
-                        const axisProp = obj.properties?.find((p: any) => p.name === 'axis');
-                        const axis = axisProp ? axisProp.value : 'unknown';
-                        visual.setData('isStair', true);
-                        visual.setData('stairId', uniqueStairId);
-                    }
-                    this.stairZones.add(visual);
-                }
-            });
+            parseStairObjects(this, stairsLayer as any, this.stairZones);
         }
 
         const portalsLayer = map.objects.find(layer => layer.name.toLowerCase() === 'portals');
@@ -475,37 +328,48 @@ export class LevelScene extends Phaser.Scene {
             });
         }
 
+        const doorLayer = map.objects.find(layer => layer.name.toLowerCase() === 'door');
+        if (doorLayer) {
+            this.doors = createDoors(this, doorLayer as any);
+        }
+
         let spawnX = 0, spawnY = 0;
-        const SPACING = 80;
+        const OFFSET = 54;
 
         if (mapKey === 'central-hub') {
             if (this.previousMap.includes('boss-')) {
                 const topPortal = portalsLayer?.objects.find(o => (o.y || 0) < -500);
                 if (topPortal) {
-                    spawnX = (topPortal.x || 0) + (topPortal.width || 60) / 2;
-                    spawnY = (topPortal.y || 0) + (topPortal.height || 60) / 2 + SPACING;
+                    const pw = topPortal.width || 60;
+                    const ph = topPortal.height || 60;
+                    spawnX = (topPortal.x || 0) + pw / 2;
+                    spawnY = (topPortal.y || 0) + ph / 2 + OFFSET;
                 }
             } else if (this.previousMap.includes('-settlement')) {
                 const leftPortal = portalsLayer?.objects.find(o => (o.x || 0) < -100 && (o.y || 0) > -500);
                 if (leftPortal) {
-                    spawnX = (leftPortal.x || 0) + (leftPortal.width || 60) / 2 + SPACING;
-                    spawnY = (leftPortal.y || 0) + (leftPortal.height || 60) / 2;
+                    const pw = leftPortal.width || 60;
+                    const ph = leftPortal.height || 60;
+                    spawnX = (leftPortal.x || 0) + pw / 2 + OFFSET;
+                    spawnY = (leftPortal.y || 0) + ph / 2;
                 }
             } else {
                 spawnX = 0;
-                spawnY = -10;
+                spawnY = -30;
             }
         } else {
             const returnPortal = portalsLayer?.objects[0];
             if (returnPortal) {
-                const px = (returnPortal.x || 0) + (returnPortal.width || 60) / 2;
-                const py = (returnPortal.y || 0) + (returnPortal.height || 60) / 2;
+                const pw = returnPortal.width || 60;
+                const ph = returnPortal.height || 60;
+                const px = (returnPortal.x || 0) + pw / 2;
+                const py = (returnPortal.y || 0) + ph / 2;
 
                 if (mapKey.includes('boss-')) {
                     spawnX = px;
-                    spawnY = py - SPACING;
+                    spawnY = py - OFFSET;
                 } else if (mapKey.includes('-settlement')) {
-                    spawnX = px - SPACING;
+                    spawnX = px - OFFSET;
                     spawnY = py;
                 } else {
                     spawnX = px;
@@ -527,6 +391,18 @@ export class LevelScene extends Phaser.Scene {
                 }
             });
         });
+
+        this.cameras.main.fadeIn(800, 0, 0, 0);
+
+        if (this.entryDirX !== 0 || this.entryDirY !== 0) {
+            this.isEntering = true;
+            if (this.entryDirX < 0) this.player.setFlipX(true);
+            else if (this.entryDirX > 0) this.player.setFlipX(false);
+
+            this.time.delayedCall(400, () => {
+                this.isEntering = false;
+            });
+        }
     }
 
     private spawnPlayer(x: number, y: number) {
@@ -547,20 +423,65 @@ export class LevelScene extends Phaser.Scene {
         const targetMap = portal.getData('target');
         if (targetMap) {
             this.isTeleporting = true;
-            this.scene.restart({ mapKey: targetMap, previousMap: this.mapKey });
+
+            const px = (portal as Phaser.GameObjects.Rectangle).x;
+            const py = (portal as Phaser.GameObjects.Rectangle).y;
+
+            let dirX = 0; let dirY = 0;
+            if (Math.abs(this.player.x - px) > Math.abs(this.player.y - py)) {
+                dirX = this.player.x < px ? 1 : -1;
+            } else {
+                dirY = this.player.y < py ? 1 : -1;
+            }
+            this.teleportDirection = { x: dirX, y: dirY };
+
+            this.time.delayedCall(100, () => {
+                this.cameras.main.fadeOut(400, 0, 0, 0);
+            });
+
+            this.time.delayedCall(500, () => {
+                this.scene.restart({ mapKey: targetMap, previousMap: this.mapKey, entryDirX: dirX, entryDirY: dirY });
+            });
         }
     }
 
-    update() {
+    update(time: number, delta: number) {
+        handleDoorInteraction(
+            this,
+            this.doors,
+            this.player,
+            this.interactKey.isDown,
+            delta,
+            this.isCinematic,
+            this.isTeleporting,
+            this.isEntering,
+            (val) => { this.isCinematic = val; }
+        );
+
         this.currentSlowFactor = Phaser.Math.Linear(this.currentSlowFactor, this.targetSlowFactor, 0.05);
         const speed = 3 * this.currentSlowFactor;
         const body = this.player.body as MatterJS.BodyType;
 
         let moveX = 0, moveY = 0, moving = false;
-        if (this.cursors.left.isDown || this.keys.A.isDown) { moveX = -1; this.player.setFlipX(true); moving = true; }
-        else if (this.cursors.right.isDown || this.keys.D.isDown) { moveX = 1; this.player.setFlipX(false); moving = true; }
-        if (this.cursors.up.isDown || this.keys.W.isDown) { moveY = -1; moving = true; }
-        else if (this.cursors.down.isDown || this.keys.S.isDown) { moveY = 1; moving = true; }
+
+        if (this.isTeleporting) {
+            moveX = this.teleportDirection.x;
+            moveY = this.teleportDirection.y;
+            moving = true;
+            if (moveX < 0) this.player.setFlipX(true);
+            else if (moveX > 0) this.player.setFlipX(false);
+        } else if (this.isEntering) {
+            moveX = this.entryDirX;
+            moveY = this.entryDirY;
+            moving = true;
+        } else if (this.isCinematic) {
+            moving = false;
+        } else {
+            if (this.cursors.left.isDown || this.keys.A.isDown) { moveX = -1; this.player.setFlipX(true); moving = true; }
+            else if (this.cursors.right.isDown || this.keys.D.isDown) { moveX = 1; this.player.setFlipX(false); moving = true; }
+            if (this.cursors.up.isDown || this.keys.W.isDown) { moveY = -1; moving = true; }
+            else if (this.cursors.down.isDown || this.keys.S.isDown) { moveY = 1; moving = true; }
+        }
 
         if (moving) {
             const inputVelocity = new Phaser.Math.Vector2(moveX, moveY).normalize().scale(speed);
