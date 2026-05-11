@@ -56,17 +56,14 @@ export class ControlsUI extends Phaser.Scene {
         makeKey(rightX, actionsYStart, 'G');
         this.container.add(this.add.text(rightX + 45, actionsYStart, '- Glossary / Book', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
 
-        makeKey(rightX, actionsYStart + actSpacing, 'V');
-        this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing, '- View Players Info', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
+        makeKey(rightX, actionsYStart + actSpacing, 'X');
+        this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing, '- Interact', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
 
-        makeKey(rightX, actionsYStart + actSpacing * 2, 'X');
-        this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing * 2, '- Interact', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
+        makeKey(rightX, actionsYStart + actSpacing * 2, 'Q');
+        this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing * 2, '- Settings', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
 
-        makeKey(rightX, actionsYStart + actSpacing * 3, 'Q');
-        this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing * 3, '- Settings', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
-
-        makeKey(rightX, actionsYStart + actSpacing * 4, 'Esc');
-        this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing * 4, '- Go Back', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
+        makeKey(rightX, actionsYStart + actSpacing * 3, 'Esc');
+        this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing * 3, '- Go Back', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
 
         this.input.on('wheel', (_: any, __: any, ___: number, dy: number) => {
             const parent = this.parentScene as any;

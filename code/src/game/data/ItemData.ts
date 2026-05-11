@@ -13,7 +13,7 @@ export interface ItemDefinition {
 const ITEMS: ItemDefinition[] = [
     {
         id: 0,
-        name: "Namaste?",
+        name: "Namaste",
         ability: "Inner Peace",
         effectDescription: "Heals for 20% of Max HP and clears all debuffs at the start of combat.",
         lore: "A string of ancient monk beads. They vibrate with a bizarrely calm energy, whispering 'chill bro' into the mind of the holder.",

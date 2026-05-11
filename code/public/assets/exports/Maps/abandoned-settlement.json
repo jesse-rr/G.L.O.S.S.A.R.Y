@@ -1760,6 +1760,45 @@
         }, 
         {
          "draworder":"topdown",
+         "id":41,
+         "name":"chests",
+         "objects":[
+                {
+                 "height":32,
+                 "id":347,
+                 "name":"",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"inverted",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"sideways",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"type",
+                         "type":"string",
+                         "value":"big"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":32,
+                 "x":-288,
+                 "y":-160
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
          "id":40,
          "name":"portals",
          "objects":[
@@ -4559,8 +4598,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":41,
- "nextobjectid":343,
+ "nextlayerid":42,
+ "nextobjectid":348,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",

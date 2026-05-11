@@ -15,6 +15,7 @@ import { LevelScene } from './scenes/world/LevelScene';
 import { TransitionScene } from './scenes/world/TransitionScene';
 import { GlossaryUI } from './scenes/ui/GlossaryUI';
 import { NotificationOverlay } from './scenes/ui/NotificationOverlay';
+import { ItemModal } from './scenes/ui/ItemModal';
 
 let useVsync = true;
 try {
@@ -41,7 +42,7 @@ const config: Phaser.Types.Core.GameConfig = {
         target: useVsync ? 60 : 144
     },
     scale: {
-        mode: Scale.FIT,
+        mode: Scale.NONE,
         autoCenter: Scale.CENTER_BOTH,
     },
     physics: {
@@ -67,7 +68,8 @@ const config: Phaser.Types.Core.GameConfig = {
         LevelScene,
         TransitionScene,
         GlossaryUI,
-        NotificationOverlay
+        NotificationOverlay,
+        ItemModal
     ]
 };
 

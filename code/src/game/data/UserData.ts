@@ -88,7 +88,6 @@ export class UserData {
     discoverItem(item: string): void {
         if (!this.itemsDiscovered.includes(item)) {
             this.itemsDiscovered.push(item);
-            EventBus.emit('show-notification', `Item Discovered: ${item}`);
             this.checkCompletionist();
         }
     }
@@ -96,7 +95,6 @@ export class UserData {
     discoverRune(rune: string): void {
         if (!this.runesDiscovered.includes(rune)) {
             this.runesDiscovered.push(rune);
-            EventBus.emit('show-notification', `Rune Discovered: ${rune}`);
             if (this.runesDiscovered.length >= 26) {
                 this.unlockAchievement('greedy');
             }
@@ -107,7 +105,6 @@ export class UserData {
     discoverCovenant(covenant: string): void {
         if (!this.covenantsDiscovered.includes(covenant)) {
             this.covenantsDiscovered.push(covenant);
-            EventBus.emit('show-notification', `Covenant Discovered: ${covenant.toUpperCase()}`);
         }
         if (this.covenantsDiscovered.length >= 3) {
             this.unlockAchievement('ritualist');

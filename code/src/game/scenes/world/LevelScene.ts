@@ -1,8 +1,11 @@
 import * as Phaser from 'phaser';
 import { createVignette } from '../../utils/Vignette';
 import { PlayerData } from '../../data/PlayerData';
+import { LocationData } from '../../data/LocationData';
 import { parseCollisionObjects, parseStairObjects } from '../../systems/CollisionParser';
 import { DoorState, createDoors, handleDoorInteraction } from '../../systems/DoorSystem';
+import { BossButtonState, createBossButtons, handleBossButtonInteraction } from '../../systems/BossButtonSystem';
+import { ChestState, createChests, handleChestInteraction } from '../../systems/ChestSystem';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -23,8 +26,11 @@ export class LevelScene extends Phaser.Scene {
 
     private activeStairZones: Set<number> = new Set();
     private doors: DoorState[] = [];
+    private bossButtons: BossButtonState[] = [];
+    private chests: ChestState[] = [];
     private interactKey!: Phaser.Input.Keyboard.Key;
     private isCinematic = false;
+    private glossaryBtn!: Phaser.GameObjects.Sprite;
 
     constructor() {
         super('LevelScene');
@@ -74,6 +80,29 @@ export class LevelScene extends Phaser.Scene {
             frameWidth: 32,
             frameHeight: 32
         });
+
+        this.load.spritesheet('btn-boss', 'assets/exports/Animations/Btn-Boss.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+        this.load.spritesheet('btn-boss-symbol', 'assets/exports/Animations/Btn-Boss-Symbol.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+
+        this.load.spritesheet('chests', 'assets/exports/Animations/Chests.png', {
+            frameWidth: 32,
+            frameHeight: 48
+        });
+
+        this.load.spritesheet('items', 'assets/exports/Objects/Items.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+
+        this.load.image('continue-btn', 'assets/exports/UI/Continue-Btn-UI.png');
+
+        this.load.image('achievement-ui', 'assets/exports/UI/Achievement-UI.png');
     }
 
     create() {
@@ -85,6 +114,8 @@ export class LevelScene extends Phaser.Scene {
         this.currentSlowFactor = 1;
         this.activeStairZones.clear();
         this.doors = [];
+        this.bossButtons = [];
+        this.chests = [];
 
         if (this.scene.isActive('CombatScene')) {
             this.scene.stop('CombatScene');
@@ -92,47 +123,24 @@ export class LevelScene extends Phaser.Scene {
 
         this.cameras.main.setBackgroundColor('#111111');
 
-        const cam = this.cameras.main;
-        const originalPreRender = cam.preRender.bind(cam);
-        cam.preRender = function () {
-            originalPreRender();
-            const subPixel = 1 / this.zoom;
-            const rx = Math.round(this.scrollX / subPixel) * subPixel;
-            const ry = Math.round(this.scrollY / subPixel) * subPixel;
-            const midX = rx + this.width * 0.5;
-            const midY = ry + this.height * 0.5;
-            this.midPoint.set(midX, midY);
-            const displayWidth = this.width / this.zoomX;
-            const displayHeight = this.height / this.zoomY;
-            this.worldView.setTo(
-                midX - displayWidth / 2,
-                midY - displayHeight / 2,
-                displayWidth,
-                displayHeight
-            );
-            const originX = this.width * this.originX;
-            const originY = this.height * this.originY;
-            if (this.isObjectInversion) {
-                this.matrix.loadIdentity();
-                this.matrix.translate(originX, originY);
-                this.matrix.scale(this.zoomX, this.zoomY);
-                this.matrix.rotate(this.rotation);
-                this.matrix.translate(-rx - originX, -ry - originY);
-            } else {
-                this.matrix.applyITRS(originX, originY, this.rotation, this.zoomX, this.zoomY);
-                this.matrix.translate(-rx - originX, -ry - originY);
-            }
-            this.matrixExternal.applyITRS(this.x, this.y, 0, 1, 1);
-            this.shakeEffect.preRender();
-            this.matrixExternal.multiply(this.matrix, this.matrixCombined);
-        };
-
         this.returnPortalGroup = this.add.group();
 
         if (this.mapKey === 'hub' || this.mapKey === 'central-hub') {
             this.createMap('central-hub');
         } else {
             this.createMap(this.mapKey);
+        }
+
+        let locId: string | null = null;
+        if (this.mapKey === 'abandoned-settlement') locId = 'settlement_abandoned';
+        else if (this.mapKey === 'desert-settlement') locId = 'settlement_desert';
+        else if (this.mapKey === 'mechanic-settlement') locId = 'settlement_mechanic';
+        else if (this.mapKey === 'boss-floor-abandoned') locId = 'boss_abandoned';
+        else if (this.mapKey === 'boss-floor-desert') locId = 'boss_desert';
+        else if (this.mapKey === 'boss-floor-mechanic') locId = 'boss_mechanic';
+
+        if (locId) {
+            LocationData.getInstance().discoverLocation(locId);
         }
 
         if (!this.anims.exists('idle')) {
@@ -178,6 +186,35 @@ export class LevelScene extends Phaser.Scene {
             if (!this.scene.isPaused()) {
                 this.scene.pause();
                 this.scene.launch('Help', { previousScene: 'LevelScene' });
+            }
+        });
+
+        // Glossary button - positioned in screen-space accounting for camera zoom
+        const w = this.scale.width;
+        const h = this.scale.height;
+        const camZoom = 2;
+        // Convert desired screen position (15px from left, 15px from bottom) to world-space for zoom
+        const glossaryScreenX = (15 - w / 2) / camZoom + w / 2;
+        const glossaryScreenY = (h - 15 - h / 2) / camZoom + h / 2;
+
+        this.glossaryBtn = this.add.sprite(glossaryScreenX, glossaryScreenY, 'glossary', 0)
+            .setOrigin(0, 1)
+            .setScrollFactor(0)
+            .setDepth(200)
+            .setScale(2 / camZoom)
+            .setInteractive({ useHandCursor: true });
+
+        this.glossaryBtn.on('pointerdown', () => {
+            if (!this.scene.isActive('GlossaryUI')) {
+                this.scene.pause();
+                this.scene.launch('GlossaryUI', { previousScene: 'LevelScene', isPaused: true });
+            }
+        });
+
+        this.input.keyboard!.on('keydown-G', () => {
+            if (!this.scene.isActive('GlossaryUI')) {
+                this.scene.pause();
+                this.scene.launch('GlossaryUI', { previousScene: 'LevelScene', isPaused: true });
             }
         });
 
@@ -252,15 +289,11 @@ export class LevelScene extends Phaser.Scene {
         }
     }
 
-    private createPortal(x: number, y: number, targetMap: string, color: number, label: string, width: number = 60, height: number = 60) {
-        const portal = this.add.rectangle(x, y, width, height, color);
+    private createPortal(x: number, y: number, targetMap: string, width: number = 60, height: number = 60) {
+        const portal = this.add.rectangle(x, y, width, height, 0x000000, 0);
         this.matter.add.gameObject(portal, { isStatic: true, isSensor: true });
         this.returnPortalGroup.add(portal);
         portal.setData('target', targetMap);
-        if (targetMap === 'hub') {
-            portal.setAlpha(0);
-        }
-        this.add.text(x, y - 40, label, { fontSize: '16px', color: '#ffffff' }).setOrigin(0.5);
     }
 
     private createMap(mapKey: string) {
@@ -298,32 +331,24 @@ export class LevelScene extends Phaser.Scene {
                 const cy = y + height / 2;
 
                 let targetMap = '';
-                let label = '';
-                let color = 0x00ff00;
 
                 if (mapKey === 'central-hub') {
                     const covenant = PlayerData.getInstance().covenant;
                     if (y < -500) {
                         targetMap = covenant === 'dragon' ? 'boss-floor-mechanic' :
                             covenant === 'phoenix' ? 'boss-floor-desert' : 'boss-floor-abandoned';
-                        label = 'Boss Fight';
-                        color = 0xff0000;
                     } else if (x < -100) {
                         targetMap = covenant === 'dragon' ? 'mechanic-settlement' :
                             covenant === 'phoenix' ? 'desert-settlement' : 'abandoned-settlement';
-                        label = 'Settlement';
-                        color = 0x00ff00;
                     } else {
                         return;
                     }
                 } else {
                     targetMap = 'hub';
-                    label = 'Return to Hub';
-                    color = 0x0000ff;
                 }
 
                 if (targetMap) {
-                    this.createPortal(cx, cy, targetMap, color, label, width, height);
+                    this.createPortal(cx, cy, targetMap, width, height);
                 }
             });
         }
@@ -331,6 +356,16 @@ export class LevelScene extends Phaser.Scene {
         const doorLayer = map.objects.find(layer => layer.name.toLowerCase() === 'door');
         if (doorLayer) {
             this.doors = createDoors(this, doorLayer as any);
+        }
+
+        const buttonLayer = map.objects.find(layer => layer.name.toLowerCase() === 'button');
+        if (buttonLayer) {
+            this.bossButtons = createBossButtons(this, buttonLayer as any);
+        }
+
+        const chestLayer = map.objects.find(layer => layer.name.toLowerCase() === 'chests');
+        if (chestLayer) {
+            this.chests = createChests(this, chestLayer as any, mapKey);
         }
 
         let spawnX = 0, spawnY = 0;
@@ -414,7 +449,7 @@ export class LevelScene extends Phaser.Scene {
         this.player.setFriction(0);
         this.player.setFrictionStatic(0);
         this.player.setBounce(0);
-        this.cameras.main.startFollow(this.player, false, 0.09, 0.09);
+        this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
         this.player.play('idle');
     }
 
@@ -458,6 +493,28 @@ export class LevelScene extends Phaser.Scene {
             (val) => { this.isCinematic = val; }
         );
 
+        handleBossButtonInteraction(
+            this,
+            this.bossButtons,
+            this.player,
+            this.interactKey.isDown,
+            this.isCinematic,
+            this.isTeleporting,
+            this.isEntering,
+            (val) => { this.isCinematic = val; }
+        );
+
+        handleChestInteraction(
+            this,
+            this.chests,
+            this.player,
+            this.interactKey.isDown,
+            delta,
+            this.isCinematic,
+            this.isTeleporting,
+            this.isEntering
+        );
+
         this.currentSlowFactor = Phaser.Math.Linear(this.currentSlowFactor, this.targetSlowFactor, 0.05);
         const speed = 3 * this.currentSlowFactor;
         const body = this.player.body as MatterJS.BodyType;
@@ -498,7 +555,7 @@ export class LevelScene extends Phaser.Scene {
 
     private getPlayerDepth(mapKey: string): number {
         switch (mapKey) {
-            case 'boss-floor-abandoned': return 8;
+            case 'boss-floor-abandoned': return 9;
             case 'boss-floor-desert': return 12;
             case 'boss-floor-mechanic': return 10;
             case 'abandoned-settlement': return 13;

@@ -3,8 +3,13 @@ import { PlayerData } from '../../data/PlayerData';
 import { UserData } from '../../data/UserData';
 import { MultiplayerData } from '../../data/MultiplayerData';
 import { RuneData } from '../../data/RuneData';
+import { ItemData } from '../../data/ItemData';
+import { LocationData } from '../../data/LocationData';
+import { BestiaryData } from '../../data/BestiaryData';
 import { NetworkManager } from '../../NetworkManager';
 import { EventBus } from '../../EventBus';
+import { COVENANT_TINTS } from '../../types';
+import { resetOpenedChests } from '../../systems/ChestSystem';
 
 const BG_FRAME_RATE = 8;
 const CARD_FRAME_RATE = 8;
@@ -29,6 +34,7 @@ export class Covenant extends Phaser.Scene {
     private targetPositions: Map<string, { x: number, y: number }> = new Map();
     private lockedCovenants: Map<string, string> = new Map();
     private myLock: string | null = null;
+    private inputReady = false;
 
     constructor() {
         super('Covenant');
@@ -60,6 +66,7 @@ export class Covenant extends Phaser.Scene {
         this.targetPositions.clear();
         this.lockedCovenants.clear();
         this.myLock = null;
+        this.inputReady = false;
 
         const centerX = this.scale.width / 2;
         const centerY = this.scale.height / 2;
@@ -91,13 +98,13 @@ export class Covenant extends Phaser.Scene {
             ).setOrigin(0.5).setScale(CARD_BASE_SCALE).setFrame(1).setAlpha(0.88).setInteractive({ useHandCursor: true });
 
             sprite.on('pointerover', () => {
-                if (this.myLock) return;
+                if (!this.inputReady || this.myLock) return;
                 this.setSelectedCard(i);
             });
 
 
             sprite.on('pointerdown', () => {
-                if (this.myLock) return;
+                if (!this.inputReady || this.myLock) return;
                 this.selectCovenant(covenant.key as any);
             });
 
@@ -107,19 +114,21 @@ export class Covenant extends Phaser.Scene {
         this.setSelectedCard(this.selectedCardIndex);
 
         this.input.keyboard!.on('keydown-LEFT', () => {
-            if (this.myLock) return;
+            if (!this.inputReady || this.myLock) return;
             this.setSelectedCard(this.selectedCardIndex - 1);
         });
 
         this.input.keyboard!.on('keydown-ENTER', () => {
-            if (this.myLock) return;
+            if (!this.inputReady || this.myLock) return;
             this.selectCovenant(COVENANTS[this.selectedCardIndex].key as any);
         });
 
         this.input.keyboard!.on('keydown-RIGHT', () => {
-            if (this.myLock) return;
+            if (!this.inputReady || this.myLock) return;
             this.setSelectedCard(this.selectedCardIndex + 1);
         });
+
+        this.time.delayedCall(200, () => { this.inputReady = true; });
 
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
             const nm = NetworkManager.getInstance();
@@ -202,11 +211,6 @@ export class Covenant extends Phaser.Scene {
 
     private updateCardLocks() {
         const nm = NetworkManager.getInstance();
-        const colors: Record<string, number> = {
-            'dragon': 0x450e41,
-            'phoenix': 0x9f2323,
-            'snake': 0x0e453d
-        };
 
         for (let i = 0; i < this.cards.length; i++) {
             const card = this.cards[i];
@@ -222,7 +226,7 @@ export class Covenant extends Phaser.Scene {
                 card.sprite.setFrame(0);
                 this.tweenCardScale(card.sprite, CARD_BASE_SCALE);
             } else if (isMyLock) {
-                card.sprite.setTint(colors[card.key]);
+                card.sprite.setTint(COVENANT_TINTS[card.key as keyof typeof COVENANT_TINTS]);
                 card.sprite.setAlpha(1);
                 card.sprite.play(`${card.key}-anim`, true);
                 this.tweenCardScale(card.sprite, CARD_HOVER_SCALE);
@@ -337,6 +341,11 @@ export class Covenant extends Phaser.Scene {
         const runeData = RuneData.getInstance();
         runeData.reset();
         runeData.discoverRune(uniqueRune);
+
+        ItemData.getInstance().reset();
+        LocationData.getInstance().reset();
+        BestiaryData.getInstance().reset();
+        resetOpenedChests();
 
         const md = MultiplayerData.getInstance();
         if (md.sharedRunes.length === 0) {

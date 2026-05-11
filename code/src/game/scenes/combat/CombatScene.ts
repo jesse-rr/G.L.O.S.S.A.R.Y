@@ -1,9 +1,7 @@
 import * as Phaser from 'phaser';
 import { PlayerData } from '../../data/PlayerData';
-import { RuneData } from '../../data/RuneData';
-import { FONT_FAMILY } from '../../constants';
+import { FONT_FAMILY, COVENANT_COLORS, COVENANT_TINTS } from '../../constants';
 import { createVignette } from '../../utils/Vignette';
-import { showRuneDiscoveryNotification } from '../../utils/AchievementNotification';
 import { CombatSystem, CombatPlayer, CombatEnemy } from '../../combat/CombatSystem';
 import { RunePickerSystem } from '../../systems/RunePickerSystem';
 import { PlayerPanelSystem } from '../../systems/PlayerPanelSystem';
@@ -12,7 +10,6 @@ const RUNE_FONT = 'RuneFont';
 
 export class CombatScene extends Phaser.Scene {
     private playerData: PlayerData | null = null;
-    private runeData: RuneData | null = null;
     private combatTimer: number = 0;
     private timerText: Phaser.GameObjects.Text | null = null;
     private currentTurn: Number = 1;
@@ -47,10 +44,7 @@ export class CombatScene extends Phaser.Scene {
             frameWidth: 17,
             frameHeight: 22
         });
-        this.load.spritesheet('glossary', 'assets/exports/Objects/Glossary.png', {
-            frameWidth: 64,
-            frameHeight: 64
-        });
+
         this.load.spritesheet('attack-selector', 'assets/exports/UI/Combat-Attack-Selector.png', {
             frameWidth: 64,
             frameHeight: 64
@@ -83,7 +77,6 @@ export class CombatScene extends Phaser.Scene {
     create() {
         this.cameras.main.setBackgroundColor('#FFFFFF');
         this.playerData = this.registry.get('playerData') as PlayerData;
-        this.runeData = RuneData.getInstance();
         this.combatTimer = 0;
 
         this.initCombatSystem();
@@ -121,7 +114,7 @@ export class CombatScene extends Phaser.Scene {
             this,
             this.playerData.covenant,
             this.getRuneFrame.bind(this),
-            this.getCovenantColor.bind(this)
+            (cov) => COVENANT_COLORS[cov] ?? COVENANT_COLORS['default']
         );
         this.runePickerSystem.createDimOverlay();
         this.runePickerSystem.createChainSlots();
@@ -279,26 +272,8 @@ export class CombatScene extends Phaser.Scene {
         this.playerPanelSystem = new PlayerPanelSystem(this);
         this.playerPanelSystem.create(
             this.combatSystem.getOtherPlayers(),
-            this.getCovenantTint.bind(this)
+            (cov) => COVENANT_TINTS[cov] ?? COVENANT_TINTS['default']
         );
-    }
-
-    private getCovenantColor(covenant: string): number {
-        switch (covenant) {
-            case 'dragon': return 0x734f7b;
-            case 'phoenix': return 0x9e2e2e;
-            case 'snake': return 0x545f67;
-            default: return 0xaaaaaa;
-        }
-    }
-
-    private getCovenantTint(covenant: string): number {
-        switch (covenant) {
-            case 'dragon': return 0x734f7b;
-            case 'phoenix': return 0x9e2e2e;
-            case 'snake': return 0x545f67;
-            default: return 0xffffff;
-        }
     }
 
     private updateTimer(): void {

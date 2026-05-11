@@ -1,3 +1,5 @@
+import { CovenantType } from './data/PlayerData';
+
 export type { CovenantType } from './data/PlayerData';
 
 export type CardType = 'boost' | 'unique' | 'base';
@@ -53,11 +55,11 @@ export const SPAWN_OFFSET = 54;
 export const COVENANT_COLORS: Record<CovenantType, number> = {
     dragon: 0x734f7b,
     phoenix: 0x9e2e2e,
-    snake: 0x545f67,
+    snake: 0x545f67
 };
 
 export const COVENANT_TINTS: Record<CovenantType, number> = {
-    dragon: 0x734f7b,
-    phoenix: 0x9e2e2e,
-    snake: 0x545f67,
+    dragon: 0x816188,
+    phoenix: 0xa74444,
+    snake: 0x5a7872
 };

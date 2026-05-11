@@ -32,6 +32,7 @@ export class MainMenu extends Phaser.Scene {
     private currentAnim: number = 0;
     private selectedButton: number = 0;
     private stopTimer?: Phaser.Time.TimerEvent;
+    private inputLocked = false;
 
     constructor() {
         super('MainMenu');
@@ -104,9 +105,11 @@ export class MainMenu extends Phaser.Scene {
     }
 
     private onButtonClick(label: string) {
+        if (this.inputLocked) return;
         console.log(`[MainMenu] Button: ${label}`);
         switch (label) {
             case BUTTONS[0].label:
+                this.inputLocked = true;
                 this.scene.launch('TransitionScene', { targetScene: 'Covenant', currentScene: 'MainMenu' });
                 break;
             case BUTTONS[1].label:
@@ -118,6 +121,7 @@ export class MainMenu extends Phaser.Scene {
                 this.scene.launch('Help');
                 break;
             case BUTTONS[3].label:
+                this.inputLocked = true;
                 this.scene.launch('TransitionScene', { targetScene: 'CombatScene', currentScene: 'MainMenu' });
                 break;
         }

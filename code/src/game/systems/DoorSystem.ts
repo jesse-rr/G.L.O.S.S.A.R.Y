@@ -94,7 +94,7 @@ export function handleDoorInteraction(
         for (const door of doors) {
             if (door.opened) continue;
             const dist = Phaser.Math.Distance.Between(player.x, player.y, door.x, door.y);
-            if (dist < 80) {
+            if (dist < 40) {
                 interactingDoor = true;
                 door.interactTimer += delta;
                 if (door.interactTimer >= 1000) {
@@ -109,8 +109,8 @@ export function handleDoorInteraction(
                         if (door.bodyBase) (scene as any).matter.world.remove(door.bodyBase);
 
                         const baseY = door.y + 25;
-                        door.bodyLeft = (scene as any).matter.add.rectangle(door.x - 27, baseY, 10, 10, { isStatic: true });
-                        door.bodyRight = (scene as any).matter.add.rectangle(door.x + 27, baseY, 10, 10, { isStatic: true });
+                        door.bodyLeft = (scene as any).matter.add.rectangle(door.x - 29, baseY, 8, 8, { isStatic: true });
+                        door.bodyRight = (scene as any).matter.add.rectangle(door.x + 29, baseY, 8, 8, { isStatic: true });
 
                         door.sprite.on('animationupdate', (anim: any, frame: any) => {
                             const offset = (frame.index - 1) * 2;

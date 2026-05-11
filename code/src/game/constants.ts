@@ -1,5 +1,19 @@
 export const FONT_FAMILY = 'VCRosdNEUE';
 
+export const COVENANT_COLORS: Record<string, number> = {
+    dragon: 0x734f7b,
+    phoenix: 0x9e2e2e,
+    snake: 0x545f67,
+    default: 0xaaaaaa
+};
+
+export const COVENANT_TINTS: Record<string, number> = {
+    dragon: 0x734f7b,
+    phoenix: 0x9e2e2e,
+    snake: 0x545f67,
+    default: 0xffffff
+};
+
 export const ROOM_FIRST_WORDS: string[] = [
     'Shadow', 'Rune', 'Void', 'Echo', 'Ash', 'Coil', 'Crown', 'Ember', 'Babel', 'Glossary', 
     'Silhouette', 'Fractured', 'Unnamed', 'Hollow', 'Wisp', 'Monolith', 'Sigil', 'Glyph', 

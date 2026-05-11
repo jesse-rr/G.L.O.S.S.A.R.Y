@@ -22,10 +22,19 @@ export class NotificationOverlay extends Phaser.Scene {
 
     create() {
         EventBus.on('show-notification', this.handleShowNotification, this);
+        EventBus.on('network-data-received', this.onNetworkData, this);
 
         this.events.on('shutdown', () => {
             EventBus.off('show-notification', this.handleShowNotification, this);
+            EventBus.off('network-data-received', this.onNetworkData, this);
         });
+    }
+
+    private onNetworkData(payload: any) {
+        const data = payload.data;
+        if (data && data.type === 'ITEM_FOUND') {
+            this.handleShowNotification(`Ally found: ${data.itemName}`);
+        }
     }
 
     private handleShowNotification(text: string) {

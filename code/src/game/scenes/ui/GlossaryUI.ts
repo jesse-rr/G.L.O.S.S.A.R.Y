@@ -20,11 +20,46 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     private detailsContainer!: GameObjects.Container;
     private runeDefs = RuneData.getAllDefinitions();
     private currentBestiaryPage: number = 0;
+    private currentSelectionId: string | number | null = null;
     activeTweens: Phaser.Tweens.Tween[] = [];
     activeScrambleTimers: Phaser.Time.TimerEvent[] = [];
 
     constructor() {
         super({ key: 'GlossaryUI' });
+    }
+
+    preload() {
+        this.load.font(FONT_FAMILY, 'assets/exports/VCRosdNEUE.ttf');
+        this.load.font(RUNE_FONT, 'assets/exports/RUNE.TTF');
+        this.load.image('book-ui', 'assets/exports/UI/Book-UI.png');
+        this.load.image('book-layout', 'assets/exports/UI/Book-Layout-1.png');
+        this.load.image('book-layout-2', 'assets/exports/UI/Book-Layout-2.png');
+        this.load.image('book-layout-3', 'assets/exports/UI/Book-Layout-3.png');
+        this.load.image('book-layout-4', 'assets/exports/UI/Book-Layout-4.png');
+        this.load.spritesheet('rune-overlay', 'assets/exports/UI/Combat-Overlay-Rune.png', {
+            frameWidth: 48, frameHeight: 64
+        });
+        this.load.spritesheet('bookmarks-ui', 'assets/exports/UI/Bookmarks-UI.png', {
+            frameWidth: 17, frameHeight: 22
+        });
+        this.load.spritesheet('items', 'assets/exports/Objects/Items.png', {
+            frameWidth: 64, frameHeight: 64
+        });
+        this.load.spritesheet('glossary', 'assets/exports/Objects/Glossary.png', {
+            frameWidth: 64, frameHeight: 64
+        });
+        this.load.spritesheet('cultist', 'assets/exports/characters/Cultist-Sheet.png', { frameWidth: 57, frameHeight: 67 });
+        this.load.spritesheet('golem', 'assets/exports/characters/Golem-Sheet.png', { frameWidth: 57, frameHeight: 56 });
+        this.load.spritesheet('rationalist', 'assets/exports/characters/Rationalist-Sheet.png', { frameWidth: 59, frameHeight: 73 });
+        this.load.spritesheet('scavenger', 'assets/exports/characters/Scavenger-Sheet.png', { frameWidth: 59, frameHeight: 61 });
+        this.load.spritesheet('slime', 'assets/exports/characters/Slime-Sheet.png', { frameWidth: 32, frameHeight: 27 });
+        this.load.spritesheet('wisp', 'assets/exports/characters/Wisp-Sheet.png', { frameWidth: 27, frameHeight: 51 });
+        this.load.spritesheet('map-outlines', 'assets/exports/Objects/map-outlines.png', {
+            frameWidth: 192, frameHeight: 128
+        });
+        this.load.spritesheet('map-boss-outlines', 'assets/exports/Objects/map-boss-outlines.png', {
+            frameWidth: 64, frameHeight: 128
+        });
     }
 
     create(data: any) {
@@ -101,6 +136,7 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     private switchSection(index: number) {
         cleanupAnimations(this);
         this.activeSection = index;
+        this.currentSelectionId = null;
         this.contentContainer.removeAll(true);
         this.detailsContainer = null as any;
 
@@ -162,6 +198,9 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     }
 
     private showRuneDetails(def: RuneDefinition, x: number, y: number, autoPlay: boolean = false) {
+        if (this.currentSelectionId === def.letter) return;
+        this.currentSelectionId = def.letter;
+
         if (this.detailsContainer) {
             cleanupAnimations(this);
             this.detailsContainer.destroy();
@@ -268,6 +307,9 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     }
 
     private showItemDetails(def: ItemDefinition, x: number, y: number, autoPlay: boolean = false) {
+        if (this.currentSelectionId === def.id) return;
+        this.currentSelectionId = def.id;
+
         if (this.detailsContainer) {
             cleanupAnimations(this);
             this.detailsContainer.destroy();
@@ -375,14 +417,19 @@ export class GlossaryUI extends Scene implements ScrambleContext {
 
             this.contentContainer.add([box, mapIcon, title, explanation]);
 
+            let isAnimating = false;
             const triggerAnimation = () => {
-                if (!isUnlocked || isViewed) return;
+                if (!isUnlocked || locData.isViewed(def.id) || isAnimating) return;
+                isAnimating = true;
                 this.activeTweens.forEach(tween => tween.stop());
                 this.activeTweens = [];
                 playScrambleAnimation(this, this,
                     [title, explanation],
                     [titleStr, explanationStr],
-                    () => locData.markViewed(def.id)
+                    () => {
+                        isAnimating = false;
+                        locData.markViewed(def.id);
+                    }
                 );
             };
 
@@ -435,6 +482,9 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     }
 
     private showBestiaryDetails(def: any, x: number, y: number, autoPlay: boolean = false) {
+        if (this.currentSelectionId === def.id) return;
+        this.currentSelectionId = def.id;
+
         if (this.detailsContainer) {
             cleanupAnimations(this);
             this.detailsContainer.destroy();
