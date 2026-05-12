@@ -81,10 +81,23 @@ export class LevelScene extends Phaser.Scene {
             frameHeight: 32
         });
 
-        this.load.spritesheet('btn-boss', 'assets/exports/Animations/Btn-Boss.png', {
+        this.load.spritesheet('btn-boss-abandoned', 'assets/exports/Animations/Btn-Boss-Abandoned.png', {
             frameWidth: 64,
             frameHeight: 64
         });
+        this.load.spritesheet('btn-boss-desert', 'assets/exports/Animations/Btn-Boss-Desert.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+        this.load.spritesheet('btn-boss-mechanic', 'assets/exports/Animations/Btn-Boss-Mechanic.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+        this.load.spritesheet('btn-boss-summit', 'assets/exports/Animations/Btn-Boss-Summit.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+
         this.load.spritesheet('btn-boss-symbol', 'assets/exports/Animations/Btn-Boss-Symbol.png', {
             frameWidth: 64,
             frameHeight: 64
@@ -101,7 +114,6 @@ export class LevelScene extends Phaser.Scene {
         });
 
         this.load.image('continue-btn', 'assets/exports/UI/Continue-Btn-UI.png');
-
         this.load.image('achievement-ui', 'assets/exports/UI/Achievement-UI.png');
     }
 
@@ -189,11 +201,9 @@ export class LevelScene extends Phaser.Scene {
             }
         });
 
-        // Glossary button - positioned in screen-space accounting for camera zoom
         const w = this.scale.width;
         const h = this.scale.height;
         const camZoom = 2;
-        // Convert desired screen position (15px from left, 15px from bottom) to world-space for zoom
         const glossaryScreenX = (15 - w / 2) / camZoom + w / 2;
         const glossaryScreenY = (h - 15 - h / 2) / camZoom + h / 2;
 
@@ -360,7 +370,7 @@ export class LevelScene extends Phaser.Scene {
 
         const buttonLayer = map.objects.find(layer => layer.name.toLowerCase() === 'button');
         if (buttonLayer) {
-            this.bossButtons = createBossButtons(this, buttonLayer as any);
+            this.bossButtons = createBossButtons(this, buttonLayer as any, mapKey);
         }
 
         const chestLayer = map.objects.find(layer => layer.name.toLowerCase() === 'chests');
@@ -501,7 +511,8 @@ export class LevelScene extends Phaser.Scene {
             this.isCinematic,
             this.isTeleporting,
             this.isEntering,
-            (val) => { this.isCinematic = val; }
+            (val) => { this.isCinematic = val; },
+            this.mapKey
         );
 
         handleChestInteraction(

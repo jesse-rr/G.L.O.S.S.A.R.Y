@@ -21,16 +21,27 @@ export interface BossButtonState {
     pressed: boolean;
 }
 
+function getBossButtonTextureKey(mapKey: string): string {
+    if (mapKey.includes('abandoned')) return 'btn-boss-abandoned';
+    if (mapKey.includes('desert')) return 'btn-boss-desert';
+    if (mapKey.includes('mechanic')) return 'btn-boss-mechanic';
+    if (mapKey.includes('summit')) return 'btn-boss-summit';
+    return 'btn-boss-abandoned';
+}
+
 export function createBossButtons(
     scene: Phaser.Scene,
-    buttonLayer: { objects: any[] }
+    buttonLayer: { objects: any[] },
+    mapKey: string
 ): BossButtonState[] {
     const buttons: BossButtonState[] = [];
+    const textureKey = getBossButtonTextureKey(mapKey);
 
-    if (!scene.anims.exists(BUTTON_PRESS_ANIM_KEY)) {
+    const animKey = `${BUTTON_PRESS_ANIM_KEY}-${mapKey}`;
+    if (!scene.anims.exists(animKey)) {
         scene.anims.create({
-            key: BUTTON_PRESS_ANIM_KEY,
-            frames: scene.anims.generateFrameNumbers('btn-boss', { start: 1, end: 2 }),
+            key: animKey,
+            frames: scene.anims.generateFrameNumbers(textureKey, { start: 1, end: 2 }),
             frameRate: BUTTON_FRAME_RATE,
             repeat: 0
         });
@@ -44,7 +55,7 @@ export function createBossButtons(
         const cx = x + width / 2;
         const cy = y + height / 2;
 
-        const button = scene.add.sprite(cx, cy, 'btn-boss', 0).setOrigin(0.5).setDepth(8);
+        const button = scene.add.sprite(cx, cy, textureKey, 0).setOrigin(0.5).setDepth(8);
 
         const symbol = scene.add.sprite(cx, cy + SYMBOL_Y_OFFSET, 'btn-boss-symbol', 0).setOrigin(0.5).setDepth(8.1);
 
@@ -87,9 +98,12 @@ export function handleBossButtonInteraction(
     isCinematic: boolean,
     isTeleporting: boolean,
     isEntering: boolean,
-    setCinematic: (val: boolean) => void
+    setCinematic: (val: boolean) => void,
+    mapKey: string
 ): void {
     if (!interactKeyDown || isTeleporting || isEntering || isCinematic) return;
+
+    const animKey = `${BUTTON_PRESS_ANIM_KEY}-${mapKey}`;
 
     for (const btn of buttons) {
         if (btn.pressed) continue;
@@ -132,7 +146,7 @@ export function handleBossButtonInteraction(
                             btn.symbolGlow.y = btn.symbolBaseY + frameOffset;
                         });
 
-                        btn.button.play(BUTTON_PRESS_ANIM_KEY);
+                        btn.button.play(animKey);
                         ScreenShake.trigger(scene, SHAKE_DURATION, SHAKE_INTENSITY);
 
                         btn.button.on('animationcomplete', () => {

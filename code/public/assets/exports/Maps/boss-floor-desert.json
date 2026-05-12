@@ -1724,6 +1724,29 @@
         }, 
         {
          "draworder":"topdown",
+         "id":36,
+         "name":"button",
+         "objects":[
+                {
+                 "height":64,
+                 "id":154,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":64,
+                 "x":-32,
+                 "y":-64
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
          "id":35,
          "name":"portals",
          "objects":[
@@ -3264,8 +3287,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":36,
- "nextobjectid":153,
+ "nextlayerid":37,
+ "nextobjectid":155,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",
