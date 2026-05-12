@@ -163,8 +163,14 @@ export class LevelScene extends Phaser.Scene {
                 repeat: -1
             });
             this.anims.create({
-                key: 'run',
+                key: 'run-start',
                 frames: this.anims.generateFrameNumbers('protagonist', { start: 10, end: 16 }),
+                frameRate: 12,
+                repeat: 0
+            });
+            this.anims.create({
+                key: 'run-loop',
+                frames: this.anims.generateFrameNumbers('protagonist', { start: 11, end: 16 }),
                 frameRate: 12,
                 repeat: -1
             });
@@ -555,11 +561,11 @@ export class LevelScene extends Phaser.Scene {
             const inputVelocity = new Phaser.Math.Vector2(moveX, moveY).normalize().scale(speed);
             this.player.setVelocity(inputVelocity.x, inputVelocity.y);
             this.player.anims.timeScale = this.currentSlowFactor;
-            if (this.player.anims.currentAnim?.key !== 'run') this.player.play('run');
+            if (this.player.anims.currentAnim?.key !== 'run-start' && this.player.anims.currentAnim?.key !== 'run-loop') this.player.play('run-start').chain('run-loop');
         } else {
             this.player.setVelocity(body.velocity.x * 0.85, body.velocity.y * 0.85);
             this.player.anims.timeScale = 1;
-            if (this.player.anims.currentAnim?.key === 'run') this.player.play('stop').chain('idle');
+            if (this.player.anims.currentAnim?.key === 'run-start' || this.player.anims.currentAnim?.key === 'run-loop') this.player.play('stop').chain('idle');
             else if (this.player.anims.currentAnim?.key !== 'stop' && this.player.anims.currentAnim?.key !== 'idle') this.player.play('idle');
         }
     }
@@ -572,7 +578,7 @@ export class LevelScene extends Phaser.Scene {
             case 'abandoned-settlement': return 13;
             case 'desert-settlement': return 13;
             case 'mechanic-settlement': return 13;
-            default: return 10;
+            default: return 11;
         }
     }
 }
