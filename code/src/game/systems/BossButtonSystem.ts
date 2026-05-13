@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { ScreenShake } from '../utils/ScreenShake';
 import { createVignette } from '../utils/Vignette';
+import { InteractSystem } from './InteractSystem';
 
 const INTERACT_DISTANCE = 30;
 const SYMBOL_Y_OFFSET = -6;
@@ -19,6 +20,7 @@ export interface BossButtonState {
     y: number;
     symbolBaseY: number;
     pressed: boolean;
+    interactTimer: number;
 }
 
 function getBossButtonTextureKey(mapKey: string): string {
@@ -83,7 +85,8 @@ export function createBossButtons(
             x: cx,
             y: cy,
             symbolBaseY: cy + SYMBOL_Y_OFFSET,
-            pressed: false
+            pressed: false,
+            interactTimer: 0
         });
     });
 
@@ -99,17 +102,26 @@ export function handleBossButtonInteraction(
     isTeleporting: boolean,
     isEntering: boolean,
     setCinematic: (val: boolean) => void,
-    mapKey: string
+    mapKey: string,
+    delta: number
 ): void {
-    if (!interactKeyDown || isTeleporting || isEntering || isCinematic) return;
+    if (isTeleporting || isEntering || isCinematic) return;
 
     const animKey = `${BUTTON_PRESS_ANIM_KEY}-${mapKey}`;
+
+    let interactingButton = false;
 
     for (const btn of buttons) {
         if (btn.pressed) continue;
 
         const dist = Phaser.Math.Distance.Between(player.x, player.y, btn.x, btn.y);
         if (dist > INTERACT_DISTANCE) continue;
+
+        interactingButton = true;
+
+        InteractSystem.getInstance(scene).show(btn.x, btn.y - 45);
+
+        if (!interactKeyDown) continue;
 
         btn.pressed = true;
         setCinematic(true);
@@ -133,7 +145,9 @@ export function handleBossButtonInteraction(
                     onUpdate: () => {
                         const dx = btn.x - player.x;
                         if (Math.abs(dx) > 1) player.setFlipX(dx < 0);
-                        if (player.anims.currentAnim?.key !== 'run') player.play('run');
+                        if (player.anims.currentAnim?.key !== 'run-start' && player.anims.currentAnim?.key !== 'run-loop') {
+                            player.play('run-start').chain('run-loop');
+                        }
                     },
                     onComplete: () => {
                         player.setVelocity(0, 0);
@@ -153,16 +167,7 @@ export function handleBossButtonInteraction(
                             btn.glowTween.stop();
                             btn.symbolGlow.setAlpha(0);
 
-                            (scene as any).tweens.add({
-                                targets: darkVignette,
-                                alpha: 0,
-                                duration: 1000,
-                                ease: 'Linear',
-                                onComplete: () => {
-                                    darkVignette.destroy();
-                                    setCinematic(false);
-                                }
-                            });
+                            scene.scene.launch('TransitionScene', { targetScene: 'CombatScene', currentScene: 'LevelScene' });
                         });
                     }
                 });
@@ -170,5 +175,11 @@ export function handleBossButtonInteraction(
         });
 
         return;
+    }
+
+    if (!interactingButton) {
+        for (const btn of buttons) {
+            if (!btn.pressed) btn.interactTimer = 0;
+        }
     }
 }

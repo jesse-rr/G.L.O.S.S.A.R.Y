@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { createVignette } from '../utils/Vignette';
 import { PlayerData } from '../data/PlayerData';
+import { InteractSystem } from './InteractSystem';
 
 export interface DoorState {
     sprite: Phaser.GameObjects.Sprite;
@@ -90,58 +91,67 @@ export function handleDoorInteraction(
 ): boolean {
     let interactingDoor = false;
 
-    if (interactKeyDown && !isTeleporting && !isEntering && !isCinematic) {
+    if (!isTeleporting && !isEntering && !isCinematic) {
         for (const door of doors) {
             if (door.opened) continue;
             const dist = Phaser.Math.Distance.Between(player.x, player.y, door.x, door.y);
             if (dist < 40) {
                 interactingDoor = true;
-                door.interactTimer += delta;
-                if (door.interactTimer >= 1000) {
-                    door.opened = true;
-                    PlayerData.getInstance().hubDoorOpened = true;
-
-                    setCinematic(true);
-
-                    const startDoorAnimation = () => {
-                        scene.cameras.main.shake(1000, 0.001);
-                        door.sprite.play('door-open');
-                        if (door.bodyBase) (scene as any).matter.world.remove(door.bodyBase);
-
-                        const baseY = door.y + 25;
-                        door.bodyLeft = (scene as any).matter.add.rectangle(door.x - 29, baseY, 8, 8, { isStatic: true });
-                        door.bodyRight = (scene as any).matter.add.rectangle(door.x + 29, baseY, 8, 8, { isStatic: true });
-
-                        door.sprite.on('animationupdate', (anim: any, frame: any) => {
-                            const offset = (frame.index - 1) * 2;
-                            door.symbolLeft.x = door.x - offset;
-                            door.symbolRight.x = door.x + offset;
-                        });
-
-                        door.sprite.on('animationcomplete', () => {
-                            setCinematic(false);
-                        });
-                    };
-
-                    const darkVignette = createVignette(scene, 99, true);
-                    darkVignette.setAlpha(0);
-                    (scene as any).tweens.add({
-                        targets: darkVignette,
-                        alpha: 1,
-                        duration: 500,
-                        ease: 'Linear',
-                        onComplete: () => {
-                            startDoorAnimation();
-                            (scene as any).tweens.add({
-                                targets: darkVignette,
-                                alpha: 0,
-                                duration: 1000,
-                                ease: 'Linear',
-                                onComplete: () => darkVignette.destroy()
-                            });
-                        }
-                    });
+                
+                if (interactKeyDown) {
+                    door.interactTimer += delta;
+                } else {
+                    door.interactTimer = 0;
                 }
+
+                const progress = Math.min(door.interactTimer / 1000, 1);
+                InteractSystem.getInstance(scene).show(door.x, door.y - 45, progress);
+
+                if (door.interactTimer >= 1000) {
+                        door.opened = true;
+                        PlayerData.getInstance().hubDoorOpened = true;
+
+                        setCinematic(true);
+
+                        const startDoorAnimation = () => {
+                            scene.cameras.main.shake(1000, 0.001);
+                            door.sprite.play('door-open');
+                            if (door.bodyBase) (scene as any).matter.world.remove(door.bodyBase);
+
+                            const baseY = door.y + 25;
+                            door.bodyLeft = (scene as any).matter.add.rectangle(door.x - 29, baseY, 8, 8, { isStatic: true });
+                            door.bodyRight = (scene as any).matter.add.rectangle(door.x + 29, baseY, 8, 8, { isStatic: true });
+
+                            door.sprite.on('animationupdate', (anim: any, frame: any) => {
+                                const offset = (frame.index - 1) * 2;
+                                door.symbolLeft.x = door.x - offset;
+                                door.symbolRight.x = door.x + offset;
+                            });
+
+                            door.sprite.on('animationcomplete', () => {
+                                setCinematic(false);
+                            });
+                        };
+
+                        const darkVignette = createVignette(scene, 99, true);
+                        darkVignette.setAlpha(0);
+                        (scene as any).tweens.add({
+                            targets: darkVignette,
+                            alpha: 1,
+                            duration: 500,
+                            ease: 'Linear',
+                            onComplete: () => {
+                                startDoorAnimation();
+                                (scene as any).tweens.add({
+                                    targets: darkVignette,
+                                    alpha: 0,
+                                    duration: 1000,
+                                    ease: 'Linear',
+                                    onComplete: () => darkVignette.destroy()
+                                });
+                            }
+                        });
+                    }
             }
         }
     }

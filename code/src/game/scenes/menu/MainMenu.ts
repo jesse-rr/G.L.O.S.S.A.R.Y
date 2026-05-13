@@ -121,8 +121,8 @@ export class MainMenu extends Phaser.Scene {
                 this.scene.launch('Help');
                 break;
             case BUTTONS[3].label:
-                this.inputLocked = true;
-                this.scene.launch('TransitionScene', { targetScene: 'CombatScene', currentScene: 'MainMenu' });
+                localStorage.clear();
+                window.location.reload();
                 break;
         }
     }

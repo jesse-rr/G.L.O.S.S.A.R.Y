@@ -36,6 +36,7 @@ export class CombatScene extends Phaser.Scene {
             frameHeight: 64
         });
         this.load.image('achievement-ui', 'assets/exports/UI/Achievement-UI.png');
+        this.load.image('settings-btn', 'assets/exports/UI/Settings-Btn.png');
         this.load.spritesheet('chain-link', 'assets/exports/UI/Combat-Overlay-Chains.png', {
             frameWidth: 64,
             frameHeight: 64
@@ -136,6 +137,30 @@ export class CombatScene extends Phaser.Scene {
             }
         });
 
+        const settingsX = this.scale.width - 15;
+        const settingsY = this.scale.height - 15;
+
+        const settingsBtn = this.add.sprite(settingsX, settingsY, 'settings-btn')
+            .setOrigin(1, 1)
+            .setScrollFactor(0)
+            .setScale(1)
+            .setInteractive({ useHandCursor: true });
+
+        settingsBtn.on('pointerover', () => {
+            settingsBtn.setTint(0xaaaaaa);
+        });
+
+        settingsBtn.on('pointerout', () => {
+            settingsBtn.clearTint();
+        });
+
+        settingsBtn.on('pointerdown', () => {
+            if (!this.scene.isActive('Help')) {
+                this.scene.pause();
+                this.scene.launch('Help', { previousScene: 'CombatScene' });
+            }
+        });
+
         this.input.keyboard!.on('keydown-Q', () => {
             if (!this.scene.isPaused()) {
                 this.scene.pause();
@@ -230,30 +255,7 @@ export class CombatScene extends Phaser.Scene {
             isLocal: true
         };
 
-        const otherPlayers: CombatPlayer[] = [
-            {
-                id: 'player-2',
-                name: 'Ally 1',
-                covenant: 'dragon',
-                stats: { hp: 80, maxHp: 100, attack: 12, defense: 4 },
-                gemstones: 25,
-                specialCurrency: 3,
-                currentChain: { runes: ['Strength', 'Pierce'], resolvedValue: 14 },
-                isLocal: false
-            },
-            {
-                id: 'player-3',
-                name: 'Ally 2',
-                covenant: 'snake',
-                stats: { hp: 55, maxHp: 90, attack: 8, defense: 6 },
-                gemstones: 40,
-                specialCurrency: 7,
-                currentChain: { runes: ['Echo', 'Shield', 'Heal'], resolvedValue: 10 },
-                isLocal: false
-            }
-        ];
-
-        const allPlayers = [localPlayer, ...otherPlayers];
+        const allPlayers = [localPlayer];
 
         const enemies: CombatEnemy[] = allPlayers.map((p, i) => ({
             id: `enemy-${i}`,

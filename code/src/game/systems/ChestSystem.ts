@@ -1,6 +1,9 @@
 import * as Phaser from 'phaser';
 import { ItemData } from '../data/ItemData';
 import { UserData } from '../data/UserData';
+import { PlayerData } from '../data/PlayerData';
+import { InteractSystem } from './InteractSystem';
+import { COVENANT_COLORS, FONT_FAMILY } from '../constants';
 
 const INTERACT_DISTANCE = 40;
 const STORAGE_KEY = 'glossary_opened_chests';
@@ -21,7 +24,7 @@ function getOpenedChests(): Set<string> {
     try {
         const data = localStorage.getItem(STORAGE_KEY);
         if (data) return new Set(JSON.parse(data));
-    } catch (e) {}
+    } catch (e) { }
     return new Set();
 }
 
@@ -43,7 +46,8 @@ function getOpenFrame(type: 'big' | 'small', sideways: boolean): number {
 export function createChests(
     scene: Phaser.Scene,
     chestLayer: { objects: any[] },
-    mapKey: string
+    mapKey: string,
+    playerDepth: number = 12
 ): ChestState[] {
     const chests: ChestState[] = [];
     const openedChests = getOpenedChests();
@@ -94,7 +98,7 @@ export function createChests(
             spriteY += 5;
         }
 
-        const sprite = scene.add.sprite(cx, spriteY, 'chests', frame).setOrigin(0.5).setDepth(12);
+        const sprite = scene.add.sprite(cx, spriteY, 'chests', frame).setOrigin(0.5).setDepth(playerDepth);
         if (inverted) {
             sprite.setFlipX(true);
         }
@@ -102,12 +106,15 @@ export function createChests(
         let bodyY = type === 'big' ? cy + 2 : cy + 12;
         if (sideways) {
             bodyY -= 6;
+            if (type === 'big') bodyY -= 5;
+            if (type === 'small') bodyY -= 10;
         } else if (type === 'small') {
             bodyY -= 3
         }
 
         const bodyWidth = (type === 'big' && !sideways) ? width - 10 : width - 14;
-        const body = (scene as any).matter.add.rectangle(cx, bodyY, bodyWidth, 22, { isStatic: true });
+        const bodyHeight = (type === 'big' && sideways) ? 31 : 22;
+        const body = (scene as any).matter.add.rectangle(cx, bodyY, bodyWidth, bodyHeight, { isStatic: true });
 
         chests.push({
             sprite,
@@ -137,35 +144,99 @@ export function handleChestInteraction(
 ): boolean {
     let interactingChest = false;
 
-    if (interactKeyDown && !isTeleporting && !isEntering && !isCinematic) {
+    if (!isTeleporting && !isEntering && !isCinematic) {
         for (const chest of chests) {
             if (chest.opened) continue;
             const dist = Phaser.Math.Distance.Between(player.x, player.y, chest.x, chest.y);
             if (dist < INTERACT_DISTANCE) {
-                interactingChest = true;
-                chest.opened = true;
+                InteractSystem.getInstance(scene).show(chest.x, chest.y - 25);
+                if (interactKeyDown) {
+                    interactingChest = true;
+                    chest.opened = true;
 
-                chest.sprite.setFrame(getOpenFrame(chest.type, chest.sideways));
-                saveOpenedChest(chest.chestId);
+                    chest.sprite.setFrame(getOpenFrame(chest.type, chest.sideways));
+                    saveOpenedChest(chest.chestId);
 
-                let availableItems = ItemData.getAllItems().filter(item => !ItemData.getInstance().isDiscovered(item.id));
-                if (availableItems.length === 0) {
-                    availableItems = ItemData.getAllItems();
+                    let availableItems = ItemData.getAllItems().filter(item => !ItemData.getInstance().isDiscovered(item.id));
+                    if (availableItems.length === 0) {
+                        availableItems = ItemData.getAllItems();
+                    }
+                    const randomItem = availableItems[Phaser.Math.Between(0, availableItems.length - 1)];
+
+                    const gems = Phaser.Math.Between(30, 60);
+                    const specialCur = Phaser.Math.Between(1, 3);
+                    PlayerData.getInstance().gemstones += gems;
+                    PlayerData.getInstance().updateSpecialCurrency(specialCur);
+
+                    showCurrencyPopup(scene, gems, specialCur);
+
+                    ItemData.getInstance().discoverItem(randomItem.id);
+                    UserData.getInstance().discoverItem(randomItem.name);
+
+                    scene.scene.pause('LevelScene');
+                    scene.scene.launch('ItemModal', {
+                        itemKey: 'items',
+                        itemFrame: randomItem.id,
+                        itemName: randomItem.name
+                    });
                 }
-                const randomItem = availableItems[Phaser.Math.Between(0, availableItems.length - 1)];
-
-                ItemData.getInstance().discoverItem(randomItem.id);
-                UserData.getInstance().discoverItem(randomItem.name);
-
-                scene.scene.pause('LevelScene');
-                scene.scene.launch('ItemModal', {
-                    itemKey: 'items',
-                    itemFrame: randomItem.id,
-                    itemName: randomItem.name
-                });
             }
         }
     }
 
     return interactingChest;
 }
+
+function showCurrencyPopup(scene: Phaser.Scene, gems: number, specialCur: number) {
+    const w = scene.scale.width;
+    const h = scene.scale.height;
+    const camZoom = 2;
+
+    const startX = (w - 15 - w / 2) / camZoom + w / 2;
+    const startY = (50 - h / 2) / camZoom + h / 2;
+
+    const covenant = PlayerData.getInstance().covenant;
+    const covColorNum = COVENANT_COLORS[covenant] || 0xffffff;
+    const covColorStr = '#' + covColorNum.toString(16).padStart(6, '0');
+    const scFrame = covenant === 'snake' ? 1 : covenant === 'phoenix' ? 2 : covenant === 'dragon' ? 3 : 1;
+
+    const container = scene.add.container(startX, startY).setDepth(300).setScrollFactor(0);
+
+    const gemText = scene.add.text(0, 0, `+${gems}`, {
+        fontFamily: FONT_FAMILY,
+        fontSize: '24px',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 4
+    }).setOrigin(1, 0.5).setScale(0.5);
+
+    const gemIcon = scene.add.sprite(-gemText.width * 0.5 - 5, 0, 'currency', 4)
+        .setOrigin(1, 0.5)
+        .setScale(1);
+
+    const scText = scene.add.text(0, 20, `+${specialCur}`, {
+        fontFamily: FONT_FAMILY,
+        fontSize: '24px',
+        color: covColorStr,
+        stroke: '#000000',
+        strokeThickness: 4
+    }).setOrigin(1, 0.5).setScale(0.5);
+
+    const scIcon = scene.add.sprite(-scText.width * 0.5 - 5, 20, 'currency', scFrame)
+        .setOrigin(1, 0.5)
+        .setScale(1);
+
+    container.add([gemText, gemIcon, scText, scIcon]);
+
+    scene.tweens.add({
+        targets: container,
+        y: startY - 20,
+        alpha: 0,
+        duration: 3000,
+        ease: 'Power2',
+        onComplete: () => {
+            container.destroy();
+        }
+    });
+}
+

@@ -6,6 +6,7 @@ import { parseCollisionObjects, parseStairObjects } from '../../systems/Collisio
 import { DoorState, createDoors, handleDoorInteraction } from '../../systems/DoorSystem';
 import { BossButtonState, createBossButtons, handleBossButtonInteraction } from '../../systems/BossButtonSystem';
 import { ChestState, createChests, handleChestInteraction } from '../../systems/ChestSystem';
+import { LightSystem } from '../../systems/LightSystem';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -31,6 +32,8 @@ export class LevelScene extends Phaser.Scene {
     private interactKey!: Phaser.Input.Keyboard.Key;
     private isCinematic = false;
     private glossaryBtn!: Phaser.GameObjects.Sprite;
+    private settingsBtn!: Phaser.GameObjects.Sprite;
+    private lightSystem!: LightSystem;
 
     constructor() {
         super('LevelScene');
@@ -66,6 +69,8 @@ export class LevelScene extends Phaser.Scene {
         this.load.tilemapTiledJSON('abandoned-settlement', 'assets/exports/Maps/abandoned-settlement.json');
         this.load.tilemapTiledJSON('desert-settlement', 'assets/exports/Maps/desert-settlement.json');
         this.load.tilemapTiledJSON('mechanic-settlement', 'assets/exports/Maps/mechanic-settlement.json');
+
+        this.load.tilemapTiledJSON('summit-trade', 'assets/exports/Maps/summit-trade.json');
 
         this.load.spritesheet('door-sheet', 'assets/exports/Animations/Door-Sheet.png', {
             frameWidth: 64,
@@ -113,8 +118,13 @@ export class LevelScene extends Phaser.Scene {
             frameHeight: 64
         });
 
-        this.load.image('continue-btn', 'assets/exports/UI/Continue-Btn-UI.png');
+        this.load.image('interact-btn', 'assets/exports/UI/Interact-Btn.png');
         this.load.image('achievement-ui', 'assets/exports/UI/Achievement-UI.png');
+        this.load.image('settings-btn', 'assets/exports/UI/Settings-Btn.png');
+        this.load.spritesheet('currency', 'assets/exports/Objects/Currency.png', {
+            frameWidth: 16,
+            frameHeight: 16
+        });
     }
 
     create() {
@@ -150,6 +160,7 @@ export class LevelScene extends Phaser.Scene {
         else if (this.mapKey === 'boss-floor-abandoned') locId = 'boss_abandoned';
         else if (this.mapKey === 'boss-floor-desert') locId = 'boss_desert';
         else if (this.mapKey === 'boss-floor-mechanic') locId = 'boss_mechanic';
+        else if (this.mapKey === 'summit-trade') locId = 'summit_trade';
 
         if (locId) {
             LocationData.getInstance().discoverLocation(locId);
@@ -234,6 +245,31 @@ export class LevelScene extends Phaser.Scene {
             }
         });
 
+        const settingsScreenX = (w - 15 - w / 2) / camZoom + w / 2;
+        const settingsScreenY = (h - 15 - h / 2) / camZoom + h / 2;
+
+        this.settingsBtn = this.add.sprite(settingsScreenX, settingsScreenY, 'settings-btn')
+            .setOrigin(1, 1)
+            .setScrollFactor(0)
+            .setDepth(200)
+            .setScale(1 / camZoom)
+            .setInteractive({ useHandCursor: true });
+
+        this.settingsBtn.on('pointerover', () => {
+            this.settingsBtn.setTint(0xaaaaaa);
+        });
+
+        this.settingsBtn.on('pointerout', () => {
+            this.settingsBtn.clearTint();
+        });
+
+        this.settingsBtn.on('pointerdown', () => {
+            if (!this.scene.isActive('Help')) {
+                this.scene.pause();
+                this.scene.launch('Help', { previousScene: 'LevelScene' });
+            }
+        });
+
         createVignette(this);
 
         this.matter.world.on('collisionstart', (event: any) => {
@@ -290,6 +326,8 @@ export class LevelScene extends Phaser.Scene {
                 }
             });
         });
+
+        this.lightSystem = new LightSystem(this);
     }
 
     private updateSlowFactor(): void {
@@ -356,6 +394,8 @@ export class LevelScene extends Phaser.Scene {
                     } else if (x < -100) {
                         targetMap = covenant === 'dragon' ? 'mechanic-settlement' :
                             covenant === 'phoenix' ? 'desert-settlement' : 'abandoned-settlement';
+                    } else if (x > 100) {
+                        targetMap = 'summit-trade';
                     } else {
                         return;
                     }
@@ -381,7 +421,7 @@ export class LevelScene extends Phaser.Scene {
 
         const chestLayer = map.objects.find(layer => layer.name.toLowerCase() === 'chests');
         if (chestLayer) {
-            this.chests = createChests(this, chestLayer as any, mapKey);
+            this.chests = createChests(this, chestLayer as any, mapKey, this.getPlayerDepth(mapKey) - 1);
         }
 
         let spawnX = 0, spawnY = 0;
@@ -404,6 +444,14 @@ export class LevelScene extends Phaser.Scene {
                     spawnX = (leftPortal.x || 0) + pw / 2 + OFFSET;
                     spawnY = (leftPortal.y || 0) + ph / 2;
                 }
+            } else if (this.previousMap === 'summit-trade') {
+                const rightPortal = portalsLayer?.objects.find(o => (o.x || 0) > 100);
+                if (rightPortal) {
+                    const pw = rightPortal.width || 60;
+                    const ph = rightPortal.height || 60;
+                    spawnX = (rightPortal.x || 0) + pw / 2 - OFFSET;
+                    spawnY = (rightPortal.y || 0) + ph / 2;
+                }
             } else {
                 spawnX = 0;
                 spawnY = -30;
@@ -421,6 +469,9 @@ export class LevelScene extends Phaser.Scene {
                     spawnY = py - OFFSET;
                 } else if (mapKey.includes('-settlement')) {
                     spawnX = px - OFFSET;
+                    spawnY = py;
+                } else if (mapKey === 'summit-trade') {
+                    spawnX = px + OFFSET;
                     spawnY = py;
                 } else {
                     spawnX = px;
@@ -518,7 +569,8 @@ export class LevelScene extends Phaser.Scene {
             this.isTeleporting,
             this.isEntering,
             (val) => { this.isCinematic = val; },
-            this.mapKey
+            this.mapKey,
+            delta
         );
 
         handleChestInteraction(
@@ -578,6 +630,7 @@ export class LevelScene extends Phaser.Scene {
             case 'abandoned-settlement': return 13;
             case 'desert-settlement': return 13;
             case 'mechanic-settlement': return 13;
+            case 'summit-trade': return 4;
             default: return 11;
         }
     }

@@ -43,16 +43,17 @@ export class Help extends Phaser.Scene {
             .setOrigin(0.5, 0)
             .setScale(scale);
 
-        const helpText =
-            'GLOSSARY is a turn-based combat and exploration game. ' +
-            'Choose a Covenant to define your playstyle and ability, then begin your ascent. ' +
-            'Collect Runes and chain them to craft powerful attacks.\n\n' +
-            'Discover enemies, items, and locations — all cataloged in your Glossary. ' +
-            'Seek the three combat bosses symbols to challenge yourself. ' +
-            'Death is permanent. Explore, grow stronger.\n' +
-            'ASCEND';
+        const HELP_PAGES = [
+            'GLOSSARY is a turn-based combat and exploration game. Choose a Covenant to define your playstyle and ability, then begin your ascent. Collect Runes and chain them to craft powerful attacks.\n\nDiscover enemies, items, and locations — all cataloged in your Glossary. Seek the three combat bosses symbols to challenge yourself. Death is permanent. Explore, grow stronger.',
+            'COMBAT SYSTEM\n\nDuring combat, Runes are drawn to form your hand each turn. To attack, you must chain these runes together. A valid combo requires at least one Base Rune to function.',
+            'RUNE TYPES\n\nCube = Base Rune - Initiates the chain.\nArrow = Boost Rune - Increases stats.\nDiamond = Unique Effect Rune - Applies special conditions.',
+            'FINDING RUNES AND GEMSTONES\n\n- Merchant: Purchase runes and items directly.\n- Chests: Found throughout the map containing various loot.\n- Monoliths: Interacting with these triggers a combat encounter. Winning rewards you with new runes.'
+        ];
 
-        this.add.text(centerX, y + 125, helpText, {
+        let currentPage = 0;
+        const totalPages = HELP_PAGES.length;
+
+        const helpTextObj = this.add.text(centerX, y + 125, HELP_PAGES[0], {
             fontSize: '22px',
             color: '#847E87',
             fontFamily: FONT_FAMILY,
@@ -60,6 +61,44 @@ export class Help extends Phaser.Scene {
             lineSpacing: 6,
             align: 'center'
         }).setOrigin(0.5, 0);
+
+        const paginationY = y + help.displayHeight - 50;
+
+        const prevBtn = this.add.text(centerX - 60, paginationY, '<', { fontSize: '24px', color: '#847E87', fontFamily: FONT_FAMILY })
+            .setOrigin(0.5)
+            .setPadding(20)
+            .setInteractive({ useHandCursor: true });
+
+        const pageTxt = this.add.text(centerX, paginationY, `1/${totalPages}`, { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY })
+            .setOrigin(0.5);
+
+        const nextBtn = this.add.text(centerX + 60, paginationY, '>', { fontSize: '24px', color: '#847E87', fontFamily: FONT_FAMILY })
+            .setOrigin(0.5)
+            .setPadding(20)
+            .setInteractive({ useHandCursor: true });
+
+        const renderPage = () => {
+            helpTextObj.setText(HELP_PAGES[currentPage]);
+            pageTxt.setText(`${currentPage + 1}/${totalPages}`);
+            prevBtn.setAlpha(currentPage > 0 ? 1 : 0.3);
+            nextBtn.setAlpha(currentPage < totalPages - 1 ? 1 : 0.3);
+        };
+
+        renderPage();
+
+        prevBtn.on('pointerdown', () => {
+            if (currentPage > 0) {
+                currentPage--;
+                renderPage();
+            }
+        });
+
+        nextBtn.on('pointerdown', () => {
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                renderPage();
+            }
+        });
 
         y += help.displayHeight + spacing;
 
