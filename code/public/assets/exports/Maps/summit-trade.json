@@ -1205,18 +1205,6 @@
                  "y":-160
                 }, 
                 {
-                 "height":32.9715909090909,
-                 "id":32,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":21.9375,
-                 "x":117,
-                 "y":-245.979403409091
-                }, 
-                {
                  "height":15.9587560386474,
                  "id":35,
                  "name":"",
@@ -1229,18 +1217,6 @@
                  "y":-231.029068538647
                 }, 
                 {
-                 "height":33.0625,
-                 "id":36,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":21.9375,
-                 "x":117,
-                 "y":41.938
-                }, 
-                {
                  "height":15.9375,
                  "id":37,
                  "name":"",
@@ -1251,18 +1227,6 @@
                  "width":3.01717,
                  "x":141,
                  "y":57
-                }, 
-                {
-                 "height":33.2159090909091,
-                 "id":38,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":21.9375,
-                 "x":277,
-                 "y":-86.2154090909091
                 }, 
                 {
                  "height":15.9375,
@@ -1359,8 +1323,7 @@
                  "width":16,
                  "x":64,
                  "y":-256
-                },
-            
+                }, 
                 {
                  "height":3.02424,
                  "id":48,
@@ -1396,7 +1359,8 @@
                  "width":16,
                  "x":272,
                  "y":-192
-                }, 
+                },
+            
                 {
                  "height":3.02424,
                  "id":51,
@@ -1798,8 +1762,7 @@
                  "width":0,
                  "x":291,
                  "y":-9
-                },
-            
+                }, 
                 {
                  "height":0,
                  "id":72,
@@ -2081,7 +2044,8 @@
                  "width":0,
                  "x":163.0937,
                  "y":-201
-                }, 
+                },
+            
                 {
                  "height":0,
                  "id":75,
@@ -2477,9 +2441,56 @@
          "visible":true,
          "x":0,
          "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":12,
+         "name":"trades",
+         "objects":[
+                {
+                 "height":32.9716,
+                 "id":98,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":21.9375,
+                 "x":117,
+                 "y":-246
+                }, 
+                {
+                 "height":33.0625,
+                 "id":99,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":21.9375,
+                 "x":117,
+                 "y":41.917
+                }, 
+                {
+                 "height":33.2159,
+                 "id":100,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":21.9375,
+                 "x":277,
+                 "y":-86.2364
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
         }],
- "nextlayerid":12,
- "nextobjectid":82,
+ "nextlayerid":13,
+ "nextobjectid":101,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",

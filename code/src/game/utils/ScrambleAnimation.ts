@@ -1,8 +1,6 @@
 import * as Phaser from 'phaser';
 import { FONT_FAMILY } from '../constants';
 
-const RUNE_FONT = 'RuneFont';
-
 export function convertToRunicWords(text: string): string {
     return text.toString()
         .replace(/[0-9]/g, (match) => {

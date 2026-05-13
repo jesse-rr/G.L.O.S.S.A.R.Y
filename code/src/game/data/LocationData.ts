@@ -114,7 +114,7 @@ export class LocationData {
             try {
                 const arr = JSON.parse(discoveredData) as string[];
                 this.discoveredLocations = new Set(arr);
-            } catch (e) {
+            } catch {
                 this.discoveredLocations = new Set();
             }
         }
@@ -124,7 +124,7 @@ export class LocationData {
             try {
                 const arr = JSON.parse(viewedData) as string[];
                 this.viewedLocations = new Set(arr);
-            } catch (e) {
+            } catch {
                 this.viewedLocations = new Set();
             }
         }

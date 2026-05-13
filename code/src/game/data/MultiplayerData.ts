@@ -32,7 +32,13 @@ export class MultiplayerData {
         this.sharedRunes.push('A');
 
         const pool = allDefinitions.filter(r => r.letter !== 'A' && r.letter !== 'I' && r.letter !== 'E' && r.letter !== 'P' && r.letter !== 'Z').map(r => r.letter);
-        const shuffled = pool.sort(() => 0.5 - Math.random());
+        const shuffled = [...pool];
+
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
         this.sharedRunes.push(...shuffled.slice(0, 5));
     }
 }

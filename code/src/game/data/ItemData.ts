@@ -191,21 +191,23 @@ export class ItemData {
 
     public load(): void {
         const discoveredData = localStorage.getItem('items_discovered');
+
         if (discoveredData) {
             try {
                 const arr = JSON.parse(discoveredData) as number[];
                 this.discoveredItems = new Set(arr);
-            } catch (e) {
+            } catch {
                 this.discoveredItems = new Set();
             }
         }
 
         const viewedData = localStorage.getItem('items_viewed');
+
         if (viewedData) {
             try {
                 const arr = JSON.parse(viewedData) as number[];
                 this.viewedItems = new Set(arr);
-            } catch (e) {
+            } catch {
                 this.viewedItems = new Set();
             }
         }

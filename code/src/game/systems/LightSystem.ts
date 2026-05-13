@@ -1,5 +1,3 @@
-import * as Phaser from 'phaser';
-
 export class LightSystem {
     private overlay: Phaser.GameObjects.Rectangle;
     private minAlpha: number = 0;
@@ -7,6 +5,10 @@ export class LightSystem {
     private duration: number = 900000;
     private isDarkening: boolean = true;
     private scene: Phaser.Scene;
+    private static globalAlpha: number = 0;
+    private static globalIsDarkening: boolean = true;
+    private static globalTween: Phaser.Tweens.Tween | null = null;
+    private static globalOverlay: Phaser.GameObjects.Rectangle | null = null;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -15,12 +17,19 @@ export class LightSystem {
         const h = scene.scale.height;
         const zoom = scene.cameras.main.zoom || 1;
 
-        this.overlay = scene.add.rectangle(w / 2, h / 2, w, h, 0x0a0a1a)
-            .setScrollFactor(0)
-            .setDepth(150)
-            .setOrigin(0.5)
-            .setAlpha(this.minAlpha)
-            .setScale(1 / zoom);
+        if (LightSystem.globalOverlay && LightSystem.globalOverlay.active) {
+            this.overlay = LightSystem.globalOverlay;
+            this.overlay.setPosition(w / 2, h / 2);
+            this.overlay.setScale(1 / zoom);
+        } else {
+            this.overlay = scene.add.rectangle(w / 2, h / 2, w, h, 0x0a0a1a)
+                .setScrollFactor(0)
+                .setDepth(150)
+                .setOrigin(0.5)
+                .setAlpha(LightSystem.globalAlpha)
+                .setScale(1 / zoom);
+            LightSystem.globalOverlay = this.overlay;
+        }
 
         this.startCycle();
     }
@@ -28,22 +37,30 @@ export class LightSystem {
     private startCycle(): void {
         if (!this.overlay || !this.overlay.active) return;
 
-        this.scene.tweens.add({
+        if (LightSystem.globalTween && LightSystem.globalTween.isActive()) {
+            return;
+        }
+
+        LightSystem.globalTween = this.scene.tweens.add({
             targets: this.overlay,
-            alpha: this.isDarkening ? this.maxAlpha : this.minAlpha,
+            alpha: LightSystem.globalIsDarkening ? this.maxAlpha : this.minAlpha,
             duration: this.duration,
             ease: 'Sine.easeInOut',
+            onUpdate: () => {
+                LightSystem.globalAlpha = this.overlay.alpha;
+            },
             onComplete: () => {
-                this.isDarkening = !this.isDarkening;
+                LightSystem.globalIsDarkening = !LightSystem.globalIsDarkening;
+                LightSystem.globalTween = null;
                 this.startCycle();
             }
         });
     }
 
     public destroy(): void {
-        if (this.overlay && this.overlay.active) {
-            this.scene.tweens.killTweensOf(this.overlay);
-            this.overlay.destroy();
+        if (LightSystem.globalTween) {
+            LightSystem.globalTween.stop();
+            LightSystem.globalTween = null;
         }
     }
 }

@@ -12,7 +12,7 @@ export class CombatScene extends Phaser.Scene {
     private playerData: PlayerData | null = null;
     private combatTimer: number = 0;
     private timerText: Phaser.GameObjects.Text | null = null;
-    private currentTurn: Number = 1;
+    private currentTurn: number = 1;
     private combatSystem: CombatSystem | null = null;
     private runePickerSystem: RunePickerSystem | null = null;
     private playerPanelSystem: PlayerPanelSystem | null = null;

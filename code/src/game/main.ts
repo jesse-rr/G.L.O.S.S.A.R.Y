@@ -18,15 +18,14 @@ import { NotificationOverlay } from './scenes/ui/NotificationOverlay';
 import { ItemModal } from './scenes/ui/ItemModal';
 
 let useVsync = true;
-try {
-    const data = localStorage.getItem('glossary_user_data');
-    if (data) {
-        const parsed = JSON.parse(data);
-        if (parsed?.settings?.vsync !== undefined) {
-            useVsync = parsed.settings.vsync;
-        }
+
+const data = localStorage.getItem('glossary_user_data');
+if (data) {
+    const parsed = JSON.parse(data);
+    if (parsed?.settings?.vsync !== undefined) {
+        useVsync = parsed.settings.vsync;
     }
-} catch (e) { }
+}
 
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,

@@ -210,7 +210,7 @@ export class RuneData {
             try {
                 const arr = JSON.parse(data) as string[];
                 this.discoveredRunes = new Set(arr);
-            } catch (e) {
+            } catch {
                 this.discoveredRunes = new Set();
             }
         }
@@ -220,7 +220,7 @@ export class RuneData {
             try {
                 const arr = JSON.parse(viewedData) as string[];
                 this.viewedRunes = new Set(arr);
-            } catch (e) {
+            } catch {
                 this.viewedRunes = new Set();
             }
         }
