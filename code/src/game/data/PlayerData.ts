@@ -1,3 +1,4 @@
+// PlayerData.ts - Versão corrigida
 export type CovenantType = 'dragon' | 'phoenix' | 'snake';
 
 export interface ItemData {
@@ -26,42 +27,23 @@ export class PlayerData {
         if (!PlayerData.instance) {
             const instance = new PlayerData();
             instance.load();
-
-            const handler = {
-                get(obj: any, prop: any): any {
-                    const val = obj[prop];
-                    if (typeof val === 'object' && val !== null) {
-                        return new Proxy(val, handler);
-                    }
-                    if (typeof val === 'function') {
-                        return function (...args: any[]) {
-                            const res = val.apply(obj, args);
-                            if (typeof prop === 'string' && !['save', 'load', 'loadFromJSON', 'toJSON'].includes(prop)) {
-                                obj.save?.() ?? instance.save();
-                            }
-                            return res;
-                        };
-                    }
-                    return val;
-                },
-                set(obj: any, prop: any, val: any): boolean {
-                    obj[prop] = val;
-                    instance.save();
-                    return true;
-                }
-            };
-
-            PlayerData.instance = new Proxy(instance, handler) as PlayerData;
+            PlayerData.instance = instance;
         }
         return PlayerData.instance;
     }
 
+    static resetInstance(): void {
+        PlayerData.instance = null;
+    }
+
     setCovenantData(covenant: CovenantType): void {
         this.covenant = covenant;
+        this.save();
     }
 
     updateSpecialCurrency(quantity: number): void {
         this.specialCurrency += quantity;
+        this.save();
     }
 
     addItem(itemId: string, quantity: number = 1): void {
@@ -71,6 +53,7 @@ export class PlayerData {
         } else {
             this.items.push({ id: itemId, quantity });
         }
+        this.save();
     }
 
     removeItem(itemId: string, quantity: number = 1): boolean {
@@ -80,6 +63,7 @@ export class PlayerData {
             if (item.quantity === 0) {
                 this.items = this.items.filter(i => i.id !== itemId);
             }
+            this.save();
             return true;
         }
         return false;
@@ -96,6 +80,8 @@ export class PlayerData {
         } else {
             this.runes.push({ id: runeId, quantity });
         }
+        this.save();
+        console.log("[PlayerData] Added rune:", runeId, "Total runes:", this.runes);
     }
 
     removeRune(runeId: string, quantity: number = 1): boolean {
@@ -105,6 +91,7 @@ export class PlayerData {
             if (rune.quantity === 0) {
                 this.runes = this.runes.filter(r => r.id !== runeId);
             }
+            this.save();
             return true;
         }
         return false;
@@ -114,12 +101,18 @@ export class PlayerData {
         return this.runes.find(r => r.id === runeId)?.quantity ?? 0;
     }
 
+    getRunes(): PlayerRuneEntry[] {
+        return this.runes;
+    }
+
     takeDamage(damage: number): void {
         this.hp = Math.max(0, this.hp - damage);
+        this.save();
     }
 
     heal(amount: number): void {
         this.hp = Math.min(this.maxHp, this.hp + amount);
+        this.save();
     }
 
     reset(): void {
@@ -130,7 +123,9 @@ export class PlayerData {
         this.items = [];
         this.runes = [];
         this.hubDoorOpened = false;
+        this.save();
     }
+
     toJSON(): object {
         return {
             covenant: this.covenant,
@@ -139,11 +134,13 @@ export class PlayerData {
             hp: this.hp,
             maxHp: this.maxHp,
             items: this.items,
-            runes: this.runes
+            runes: this.runes,
+            hubDoorOpened: this.hubDoorOpened
         };
     }
 
     loadFromJSON(data: any): void {
+        console.log("[PlayerData] Loading from JSON:", data);
         if (data.covenant) this.covenant = data.covenant;
         if (data.gemstones !== undefined) this.gemstones = data.gemstones;
         if (data.specialCurrency !== undefined) this.specialCurrency = data.specialCurrency;
@@ -151,20 +148,32 @@ export class PlayerData {
         if (data.maxHp !== undefined) this.maxHp = data.maxHp;
         if (data.items) this.items = data.items;
         if (data.runes) this.runes = data.runes;
+        if (data.hubDoorOpened !== undefined) this.hubDoorOpened = data.hubDoorOpened;
+        console.log("[PlayerData] Loaded runes:", this.runes);
     }
 
     save(): void {
-        localStorage.setItem('glossary_player_data', JSON.stringify(this.toJSON()));
+        const data = this.toJSON();
+        localStorage.setItem('glossary_player_data', JSON.stringify(data));
+        console.log("[PlayerData] Saved data:", data);
     }
 
     load(): void {
         const data = localStorage.getItem('glossary_player_data');
+        console.log("[PlayerData] Loading from localStorage:", data);
         if (data) {
             try {
                 this.loadFromJSON(JSON.parse(data));
             } catch (e) {
                 console.error("Failed to load player data", e);
             }
+        } else {
+            console.log("[PlayerData] No saved data found, using defaults");
         }
+    }
+
+    forceReload(): void {
+        console.log("[PlayerData] Forcing reload");
+        this.load();
     }
 }

@@ -10,6 +10,7 @@ import { NetworkManager } from '../../NetworkManager';
 import { EventBus } from '../../EventBus';
 import { COVENANT_TINTS } from '../../types';
 import { resetOpenedChests } from '../../systems/ChestSystem';
+import { resetCompletedTrades } from '../../systems/TradeSystem';
 
 const BG_FRAME_RATE = 8;
 const CARD_FRAME_RATE = 8;
@@ -346,6 +347,7 @@ export class Covenant extends Phaser.Scene {
         LocationData.getInstance().reset();
         BestiaryData.getInstance().reset();
         resetOpenedChests();
+        resetCompletedTrades();
 
         const md = MultiplayerData.getInstance();
         if (md.sharedRunes.length === 0) {

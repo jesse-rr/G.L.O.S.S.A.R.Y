@@ -2435,21 +2435,10 @@
                  "width":0,
                  "x":183.0156,
                  "y":60
-                }],
-         "opacity":1,
-         "type":"objectgroup",
-         "visible":true,
-         "x":0,
-         "y":0
-        }, 
-        {
-         "draworder":"topdown",
-         "id":12,
-         "name":"trades",
-         "objects":[
+                }, 
                 {
                  "height":32.9716,
-                 "id":98,
+                 "id":104,
                  "name":"",
                  "opacity":1,
                  "rotation":0,
@@ -2461,7 +2450,7 @@
                 }, 
                 {
                  "height":33.0625,
-                 "id":99,
+                 "id":105,
                  "name":"",
                  "opacity":1,
                  "rotation":0,
@@ -2473,7 +2462,7 @@
                 }, 
                 {
                  "height":33.2159,
-                 "id":100,
+                 "id":106,
                  "name":"",
                  "opacity":1,
                  "rotation":0,
@@ -2488,9 +2477,56 @@
          "visible":true,
          "x":0,
          "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":12,
+         "name":"trades",
+         "objects":[
+                {
+                 "height":64,
+                 "id":107,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":64,
+                 "x":96,
+                 "y":-256
+                }, 
+                {
+                 "height":64,
+                 "id":108,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":64,
+                 "x":256,
+                 "y":-96
+                }, 
+                {
+                 "height":64,
+                 "id":109,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":64,
+                 "x":96,
+                 "y":32
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
         }],
  "nextlayerid":13,
- "nextobjectid":101,
+ "nextobjectid":110,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",

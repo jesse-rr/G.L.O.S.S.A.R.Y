@@ -1,4 +1,3 @@
-
 import * as Phaser from 'phaser';
 import { createVignette } from '../../utils/Vignette';
 import { PlayerData } from '../../data/PlayerData';
@@ -8,7 +7,7 @@ import { DoorState, createDoors, handleDoorInteraction } from '../../systems/Doo
 import { BossButtonState, createBossButtons, handleBossButtonInteraction } from '../../systems/BossButtonSystem';
 import { ChestState, createChests, handleChestInteraction } from '../../systems/ChestSystem';
 import { LightSystem } from '../../systems/LightSystem';
-import { TradeState, createTrades, handleTradeInteraction } from "../../systems/TradeState";
+import { TradeState, createTrades, handleTradeInteraction } from "../../systems/TradeSystem";
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -32,15 +31,13 @@ export class LevelScene extends Phaser.Scene {
     private bossButtons: BossButtonState[] = [];
     private chests: ChestState[] = [];
     private trades: TradeState[] = [];
+    private trades: TradeState[] = [];
     private interactKey!: Phaser.Input.Keyboard.Key;
     private isCinematic = false;
     private glossaryBtn!: Phaser.GameObjects.Sprite;
     private settingsBtn!: Phaser.GameObjects.Sprite;
     private lightSystem!: LightSystem;
     private wasInteractPressed = { value: false };
-    private selectedRune: string | null = null;
-    private runeSelectionUI!: Phaser.GameObjects.Container;
-    private runeButtons: Phaser.GameObjects.Text[] = [];
 
     constructor() {
         super('LevelScene');
@@ -59,7 +56,6 @@ export class LevelScene extends Phaser.Scene {
         this.isTeleporting = false;
         this.isEntering = false;
         this.isCinematic = false;
-        this.selectedRune = null;
     }
 
     preload() {
@@ -134,9 +130,10 @@ export class LevelScene extends Phaser.Scene {
             frameHeight: 16
         });
         this.load.spritesheet('trade', 'assets/exports/Animations/Trade.png', {
-            frameWidth: 64,
-            frameHeight: 64
+            frameWidth: 160,
+            frameHeight: 190
         });
+
     }
 
     create() {
@@ -285,6 +282,8 @@ export class LevelScene extends Phaser.Scene {
 
         createVignette(this);
 
+
+
         this.matter.world.on('collisionstart', (event: any) => {
             event.pairs.forEach((pair: any) => {
                 const { bodyA, bodyB } = pair;
@@ -340,100 +339,7 @@ export class LevelScene extends Phaser.Scene {
             });
         });
 
-        this.createRuneSelectionUI();
-
         this.lightSystem = new LightSystem(this);
-    }
-
-    private createRuneSelectionUI(): void {
-        const camZoom = 2;
-        const w = this.scale.width;
-        
-        this.runeSelectionUI = this.add.container(w - 20, 100)
-            .setScrollFactor(0)
-            .setDepth(250);
-        
-        const bg = this.add.rectangle(0, 0, 180, 300, 0x000000, 0.8)
-            .setOrigin(1, 0)
-            .setStrokeStyle(2, 0xffffff, 0.5);
-        
-        const title = this.add.text(-10, 10, 'Select Rune', {
-            fontSize: '16px',
-            color: '#ffffff',
-            fontFamily: 'monospace'
-        }).setOrigin(1, 0);
-        
-        this.runeSelectionUI.add([bg, title]);
-        
-        this.runeSelectionUI.setVisible(false);
-        
-        this.input.keyboard!.on('keydown-R', () => {
-            if (this.mapKey === 'summit-trade' && !this.isCinematic && !this.isTeleporting && !this.isEntering) {
-                this.toggleRuneSelection();
-            }
-        });
-    }
-    
-    private toggleRuneSelection(): void {
-        const playerData = PlayerData.getInstance();
-        const runes = playerData.runes;
-        
-        if (runes.length === 0) {
-            return;
-        }
-        
-        if (this.runeSelectionUI.visible) {
-            this.runeSelectionUI.setVisible(false);
-            return;
-        }
-        
-        for (const btn of this.runeButtons) {
-            btn.destroy();
-        }
-        this.runeButtons = [];
-        
-        const startY = 50;
-        
-        for (let i = 0; i < runes.length; i++) {
-            const rune = runes[i];
-            const btn = this.add.text(-10, startY + i * 35, `${rune.id} (x${rune.quantity})`, {
-                fontSize: '14px',
-                color: '#ffcc00',
-                fontFamily: 'monospace'
-            })
-            .setOrigin(1, 0)
-            .setInteractive({ useHandCursor: true });
-            
-            btn.on('pointerover', () => {
-                btn.setColor('#ffffff');
-            });
-            
-            btn.on('pointerout', () => {
-                btn.setColor('#ffcc00');
-            });
-            
-            btn.on('pointerdown', () => {
-                this.selectedRune = rune.id;
-                this.runeSelectionUI.setVisible(false);
-                
-                const msg = this.add.text(this.scale.width / 2, this.scale.height - 100, `Selected: ${this.selectedRune}`, {
-                    fontSize: '18px',
-                    color: '#ffcc00',
-                    fontFamily: 'monospace',
-                    backgroundColor: '#000000',
-                    padding: { x: 10, y: 5 }
-                }).setOrigin(0.5).setScrollFactor(0).setDepth(300);
-                
-                this.time.delayedCall(2000, () => {
-                    msg.destroy();
-                });
-            });
-            
-            this.runeButtons.push(btn);
-            this.runeSelectionUI.add(btn);
-        }
-        
-        this.runeSelectionUI.setVisible(true);
     }
 
     private updateSlowFactor(): void {
@@ -702,21 +608,7 @@ export class LevelScene extends Phaser.Scene {
                 this.player,
                 this.interactKey.isDown,
                 this.wasInteractPressed,
-                this.selectedRune,
-                () => {
-                    this.selectedRune = null;
-                    const msg = this.add.text(this.scale.width / 2, this.scale.height - 100, 'Trade Complete!', {
-                        fontSize: '18px',
-                        color: '#00ff00',
-                        fontFamily: 'monospace',
-                        backgroundColor: '#000000',
-                        padding: { x: 10, y: 5 }
-                    }).setOrigin(0.5).setScrollFactor(0).setDepth(300);
-                    
-                    this.time.delayedCall(2000, () => {
-                        msg.destroy();
-                    });
-                }
+                (val) => { this.isCinematic = val; }
             );
         }
 
