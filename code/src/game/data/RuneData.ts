@@ -187,6 +187,14 @@ export class RuneData {
         return true;
     }
 
+    undiscoverRune(letter: string): boolean {
+        const upper = letter.toUpperCase();
+        if (!this.discoveredRunes.has(upper)) return false;
+        this.discoveredRunes.delete(upper);
+        this.save();
+        return true;
+    }
+
     isDiscovered(letter: string): boolean {
         return this.discoveredRunes.has(letter.toUpperCase());
     }

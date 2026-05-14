@@ -576,11 +576,17 @@ function executeTradeWithAnim(
     }
 
     if (centerRuneContainer) {
-        centerRuneContainer.setAlpha(0.2);
+        centerRuneContainer.setAlpha(0);
     }
 
     const playerData = PlayerData.getInstance();
     playerData.removeRune(runeLetter, 1);
+
+    const runeData = RuneData.getInstance();
+    const remainingCount = playerData.getRuneQuantity(runeLetter);
+    if (remainingCount <= 0) {
+        runeData.undiscoverRune(runeLetter);
+    }
 
     switch (reward.type) {
         case 'gemstone':
