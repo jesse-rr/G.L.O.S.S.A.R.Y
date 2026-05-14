@@ -1,12 +1,10 @@
 import * as Phaser from 'phaser';
 import { PlayerData } from '../../data/PlayerData';
-import { FONT_FAMILY, COVENANT_COLORS, COVENANT_TINTS } from '../../constants';
+import { FONT_FAMILY, COVENANT_COLORS, COVENANT_TINTS, RUNE_FONT } from '../../constants';
 import { createVignette } from '../../utils/Vignette';
 import { CombatSystem, CombatPlayer, CombatEnemy } from '../../combat/CombatSystem';
 import { RunePickerSystem } from '../../systems/RunePickerSystem';
 import { PlayerPanelSystem } from '../../systems/PlayerPanelSystem';
-
-const RUNE_FONT = 'RuneFont';
 
 export class CombatScene extends Phaser.Scene {
     private playerData: PlayerData | null = null;

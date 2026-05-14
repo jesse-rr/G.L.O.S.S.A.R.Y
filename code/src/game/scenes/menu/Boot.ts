@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { UserData } from '../../data/UserData';
 import { PlayerData } from '../../data/PlayerData';
+import { FONT_FAMILY, RUNE_FONT } from '../../constants';
 
 export class Boot extends Scene {
     constructor() {
@@ -24,6 +25,9 @@ export class Boot extends Scene {
             frameWidth: 64,
             frameHeight: 64
         });
+
+        this.load.font(RUNE_FONT, 'assets/exports/RUNE.TTF')
+        this.load.font(FONT_FAMILY, 'assets/exports/VCRosdNEUE.ttf')
 
         this.registry.set('userData', UserData.getInstance());
         this.registry.set('playerData', PlayerData.getInstance());

@@ -3,10 +3,9 @@ import { PlayerData } from "../data/PlayerData";
 import { InteractSystem } from "./InteractSystem";
 import { RuneData } from "../data/RuneData";
 import { ItemData as ItemDataClass } from "../data/ItemData";
-import { FONT_FAMILY, COVENANT_COLORS } from "../constants";
+import { FONT_FAMILY, COVENANT_COLORS, RUNE_FONT } from "../constants";
 
 const TRADE_STORAGE_KEY = 'glossary_completed_trades';
-const RUNE_FONT = 'RuneFont';
 
 let tradeActive = false;
 let tradeCard: Phaser.GameObjects.Sprite | null = null;
@@ -390,7 +389,7 @@ function createCenterRuneDisplay(scene: Phaser.Scene, cardX: number, cardY: numb
 
     const selectedRune = discoveredRunes[selectedRuneIndex % discoveredRunes.length];
 
-    centerRuneText = scene.add.text(0, -8, selectedRune.letter, {
+    centerRuneText = scene.add.text(0, 0, selectedRune.letter, {
         fontFamily: RUNE_FONT,
         fontSize: '70px',
         color: '#cccccc',
@@ -399,7 +398,7 @@ function createCenterRuneDisplay(scene: Phaser.Scene, cardX: number, cardY: numb
     }).setOrigin(0.5, 0.5);
     centerRuneContainer.add(centerRuneText);
 
-    centerRuneNameText = scene.add.text(0, 35, selectedRune.name, {
+    centerRuneNameText = scene.add.text(0, 45, selectedRune.name, {
         fontFamily: FONT_FAMILY,
         fontSize: '8px',
         color: '#cccccc',
@@ -474,48 +473,46 @@ function showRuneTooltip(scene: Phaser.Scene, cardX: number, cardY: number): voi
 
     const covColor = covenantColorHex();
     const tooltipX = cardX - 80;
-    const tooltipY = cardY - 40;
+    const tooltipY = cardY;
 
     tradeTooltip = scene.add.container(tooltipX, tooltipY)
         .setScrollFactor(0)
         .setDepth(350);
 
-    const nameText = scene.add.text(-5, 0, selectedRune.name, {
+    const bgImage = scene.add.image(0, 0, 'trade-ui')
+        .setOrigin(0.5, 0.5)
+        .setScale(1);
+
+    const nameText = scene.add.text(5, -18, selectedRune.name, {
         fontFamily: FONT_FAMILY,
         fontSize: '10px',
         color: covColor,
         resolution: 2
-    }).setOrigin(1, 0.5);
+    }).setOrigin(0.6, 0.4);
 
-    const translationText = scene.add.text(-5, 14, `"${selectedRune.translation}"`, {
+    const translationText = scene.add.text(5, -7, `"${selectedRune.translation}"`, {
         fontFamily: FONT_FAMILY,
         fontSize: '7px',
         color: '#aaaaaa',
         fontStyle: 'italic',
         resolution: 2
-    }).setOrigin(1, 0.5);
+    }).setOrigin(0.6, 0.4);
 
-    const typeText = scene.add.text(-5, 28, selectedRune.effectType.toUpperCase(), {
+    const typeText = scene.add.text(5, 4, selectedRune.effectType.toUpperCase(), {
         fontFamily: FONT_FAMILY,
         fontSize: '7px',
         color: getEffectColor(selectedRune.effectType),
         resolution: 2
-    }).setOrigin(1, 0.5);
+    }).setOrigin(0.6, 0.4);
 
-    const powerText = scene.add.text(-5, 42, `Power: ${selectedRune.basePower}`, {
+    const powerText = scene.add.text(5, 15, `Power: ${selectedRune.basePower}`, {
         fontFamily: FONT_FAMILY,
         fontSize: '7px',
         color: '#cccccc',
         resolution: 2
-    }).setOrigin(1, 0.5);
+    }).setOrigin(0.6, 0.4);
 
-    const maxW = Math.max(nameText.width, translationText.width, typeText.width, powerText.width);
-
-    const bg = scene.add.rectangle(5, 0, maxW + 10, 56, 0x111111, 0.9)
-        .setStrokeStyle(1, 0x444444)
-        .setOrigin(1, 0.5);
-
-    tradeTooltip.add([bg, nameText, translationText, typeText, powerText]);
+    tradeTooltip.add([bgImage, nameText, translationText, typeText, powerText]);
 }
 
 function hideRuneTooltip(): void {
@@ -547,18 +544,40 @@ function executeTradeWithAnim(
     tradeLocked = true;
 
     scene.input.keyboard!.off('keydown-X');
-
-    if (tradeInfoRightContainer) {
-        tradeInfoRightContainer.destroy();
-        tradeInfoRightContainer = null;
-    }
-    if (centerRuneContainer) {
-        centerRuneContainer.destroy();
-        centerRuneContainer = null;
-    }
-
     scene.input.off('pointermove', handleTradePointerMove);
     scene.input.off('pointerdown', handleCardClick);
+
+    if (tradeInfoRightContainer) {
+        scene.tweens.add({
+            targets: tradeInfoRightContainer,
+            alpha: 0,
+            duration: 300,
+            ease: 'Sine.easeOut',
+            onComplete: () => {
+                if (tradeInfoRightContainer) {
+                    tradeInfoRightContainer.destroy();
+                    tradeInfoRightContainer = null;
+                }
+            }
+        });
+    }
+
+    if (tradeTooltip) {
+        hideRuneTooltip();
+    }
+
+    if (tradeOverlay) {
+        scene.tweens.add({
+            targets: tradeOverlay,
+            fillAlpha: 0,
+            duration: 300,
+            ease: 'Sine.easeOut'
+        });
+    }
+
+    if (centerRuneContainer) {
+        centerRuneContainer.setAlpha(0.2);
+    }
 
     const playerData = PlayerData.getInstance();
     playerData.removeRune(runeLetter, 1);
@@ -598,27 +617,27 @@ function executeTradeWithAnim(
         tradeCard.play(animKey);
 
         tradeCard.once('animationcomplete', () => {
-            tradeCard.setFrame(frames.end);
+            if (tradeCard) {
+                tradeCard.setFrame(frames.end);
+            }
+
+            if (centerRuneContainer) {
+                centerRuneContainer.destroy();
+                centerRuneContainer = null;
+            }
 
             showTradeRewardPopup(scene, reward, runeLetter);
 
-            scene.tweens.add({
-                targets: tradeCard,
-                alpha: 0,
-                duration: 500,
-                ease: 'Sine.easeOut',
-                onComplete: () => {
-                    cleanupTrade(scene);
-                    setCinematic(false);
-                }
-            });
-
-            if (tradeOverlay) {
+            if (tradeCard) {
                 scene.tweens.add({
-                    targets: tradeOverlay,
-                    fillAlpha: 0,
+                    targets: tradeCard,
+                    alpha: 0,
                     duration: 500,
-                    ease: 'Sine.easeOut'
+                    ease: 'Sine.easeOut',
+                    onComplete: () => {
+                        cleanupTrade(scene);
+                        setCinematic(false);
+                    }
                 });
             }
         });

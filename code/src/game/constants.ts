@@ -1,4 +1,5 @@
 export const FONT_FAMILY = 'VCRosdNEUE';
+export const RUNE_FONT = 'RuneFont';
 
 export const COVENANT_COLORS: Record<string, number> = {
     dragon: 0x734f7b,

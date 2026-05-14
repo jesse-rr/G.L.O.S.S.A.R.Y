@@ -1,8 +1,7 @@
 import * as Phaser from 'phaser';
 import { RuneData } from '../data/RuneData';
-import { FONT_FAMILY } from '../constants';
+import { FONT_FAMILY, RUNE_FONT } from '../constants';
 
-const RUNE_FONT = 'RuneFont';
 const MAX_CHAIN_RUNES = 3;
 const CHAIN_CARD_SCALE = 3;
 const PICKER_CARD_SCALE = 2;

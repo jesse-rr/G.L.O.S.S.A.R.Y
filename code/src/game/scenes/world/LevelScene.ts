@@ -31,7 +31,6 @@ export class LevelScene extends Phaser.Scene {
     private bossButtons: BossButtonState[] = [];
     private chests: ChestState[] = [];
     private trades: TradeState[] = [];
-    private trades: TradeState[] = [];
     private interactKey!: Phaser.Input.Keyboard.Key;
     private isCinematic = false;
     private glossaryBtn!: Phaser.GameObjects.Sprite;
@@ -133,7 +132,7 @@ export class LevelScene extends Phaser.Scene {
             frameWidth: 160,
             frameHeight: 190
         });
-
+        this.load.image('trade-ui', 'assets/exports/UI/Trade-UI.png');
     }
 
     create() {

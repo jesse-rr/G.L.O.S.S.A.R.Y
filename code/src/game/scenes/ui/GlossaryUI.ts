@@ -3,15 +3,13 @@ import { RuneData, RuneDefinition } from '../../data/RuneData';
 import { ItemData, ItemDefinition } from '../../data/ItemData';
 import { LocationData, SETTLEMENTS, BOSSES } from '../../data/LocationData';
 import { BestiaryData, BESTIARY } from '../../data/BestiaryData';
-import { FONT_FAMILY } from '../../constants';
+import { FONT_FAMILY, RUNE_FONT } from '../../constants';
 import {
     ScrambleContext,
     playScrambleAnimation,
     cleanupAnimations,
     convertToRunicWords
 } from '../../utils/ScrambleAnimation';
-
-const RUNE_FONT = 'RuneFont';
 
 export class GlossaryUI extends Scene implements ScrambleContext {
     private previousScene = 'CombatScene';
