@@ -10,6 +10,7 @@ const SHAKE_DURATION = 300;
 const SHAKE_INTENSITY = 0.002;
 const BUTTON_PRESS_ANIM_KEY = 'btn-boss-press';
 const BUTTON_FRAME_RATE = 6;
+const BOSS_PRESS_STORAGE_KEY = 'glossary_boss_presses';
 
 export interface BossButtonState {
     button: Phaser.GameObjects.Sprite;
@@ -29,6 +30,29 @@ function getBossButtonTextureKey(mapKey: string): string {
     if (mapKey.includes('mechanic')) return 'btn-boss-mechanic';
     if (mapKey.includes('summit')) return 'btn-boss-summit';
     return 'btn-boss-abandoned';
+}
+
+function getBossPressCount(mapKey: string): number {
+    try {
+        const data = localStorage.getItem(BOSS_PRESS_STORAGE_KEY);
+        if (data) {
+            const parsed = JSON.parse(data);
+            return parsed[mapKey] || 0;
+        }
+    } catch {}
+    return 0;
+}
+
+function incrementBossPressCount(mapKey: string): number {
+    let counts: Record<string, number> = {};
+    try {
+        const data = localStorage.getItem(BOSS_PRESS_STORAGE_KEY);
+        if (data) counts = JSON.parse(data);
+    } catch {}
+    const current = (counts[mapKey] || 0) + 1;
+    counts[mapKey] = current;
+    localStorage.setItem(BOSS_PRESS_STORAGE_KEY, JSON.stringify(counts));
+    return current;
 }
 
 export function createBossButtons(
@@ -127,6 +151,8 @@ export function handleBossButtonInteraction(
         setCinematic(true);
         player.setVelocity(0, 0);
 
+        const encounterTier = Math.min(incrementBossPressCount(mapKey), 3);
+
         const darkVignette = createVignette(scene, 99, true);
         darkVignette.setAlpha(0);
 
@@ -167,7 +193,11 @@ export function handleBossButtonInteraction(
                             btn.glowTween.stop();
                             btn.symbolGlow.setAlpha(0);
 
-                            scene.scene.launch('TransitionScene', { targetScene: 'CombatScene', currentScene: 'LevelScene' });
+                            scene.scene.launch('TransitionScene', {
+                                targetScene: 'CombatScene',
+                                currentScene: 'LevelScene',
+                                targetData: { encounterTier, mapKey }
+                            });
                         });
                     }
                 });

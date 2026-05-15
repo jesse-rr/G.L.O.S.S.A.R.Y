@@ -21,17 +21,20 @@ export class RunePickerSystem {
     private getRuneFrame: (cardType: string) => number;
     private getCovenantColor: (covenant: string) => number;
     private covenant: string;
+    private onComboConfirmed: ((chain: string[]) => void) | null = null;
 
     constructor(
         scene: Phaser.Scene,
         covenant: string,
         getRuneFrame: (cardType: string) => number,
-        getCovenantColor: (covenant: string) => number
+        getCovenantColor: (covenant: string) => number,
+        onComboConfirmed?: (chain: string[]) => void
     ) {
         this.scene = scene;
         this.covenant = covenant;
         this.getRuneFrame = getRuneFrame;
         this.getCovenantColor = getCovenantColor;
+        this.onComboConfirmed = onComboConfirmed || null;
     }
 
     createDimOverlay(): void {
@@ -399,6 +402,7 @@ export class RunePickerSystem {
                                     duration: 300,
                                     ease: 'Quad.easeIn',
                                     onComplete: () => {
+                                        const confirmedChain = [...this.selectedChain];
                                         for (const letter of this.selectedChain) {
                                             const pickerCard = this.pickerItems.get(letter);
                                             if (pickerCard) pickerCard.setVisible(true);
@@ -406,6 +410,9 @@ export class RunePickerSystem {
                                         this.selectedChain = [];
                                         this.rebuildChainDisplay(false);
                                         this.repositionPicker();
+                                        if (this.onComboConfirmed) {
+                                            this.onComboConfirmed(confirmedChain);
+                                        }
                                     }
                                 });
                             }

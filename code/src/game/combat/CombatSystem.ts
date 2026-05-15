@@ -28,9 +28,12 @@ export interface CombatEnemy {
     name: string;
     stats: CombatantStats;
     targetPlayerId: string;
+    texture: string;
+    frame: number;
+    damageModifier: number;
 }
 
-export type TurnPhase = 'selection' | 'execution' | 'enemy_turn' | 'resolution';
+export type TurnPhase = 'player_select' | 'player_attack' | 'enemy_attack' | 'resolution' | 'combat_end';
 
 export interface TurnEntry {
     combatantId: string;
@@ -47,7 +50,9 @@ export type CombatEventType =
     | 'enemy_defeated'
     | 'combat_victory'
     | 'combat_defeat'
-    | 'turn_order_set';
+    | 'turn_order_set'
+    | 'ability_used'
+    | 'ability_failed';
 
 export interface CombatEvent {
     type: CombatEventType;
@@ -59,72 +64,47 @@ type CombatEventListener = (event: CombatEvent) => void;
 export class CombatSystem {
     private players: CombatPlayer[] = [];
     private enemies: CombatEnemy[] = [];
-    private turnOrder: TurnEntry[] = [];
-    private currentTurnIndex: number = 0;
     private currentRound: number = 0;
-    private phase: TurnPhase = 'selection';
+    private phase: TurnPhase = 'player_select';
     private isActive: boolean = false;
     private listeners: Map<CombatEventType, CombatEventListener[]> = new Map();
+    private lastEnemyDamage: Map<string, number> = new Map();
+    private intimidateRoundsLeft: number = 0;
+    private phoenixBurnActive: boolean = false;
+    private burnedRuneLetter: string | null = null;
+    private covenantAbilityUsedThisTurn: boolean = false;
 
     initCombat(players: CombatPlayer[], enemies: CombatEnemy[]): void {
         this.players = players;
         this.enemies = enemies;
         this.currentRound = 0;
-        this.currentTurnIndex = 0;
-        this.phase = 'selection';
+        this.phase = 'player_select';
         this.isActive = true;
-
-        this.generateTurnOrder();
-    }
-
-    private generateTurnOrder(): void {
-        const shuffledPlayers = [...this.players].sort(() => Math.random() - 0.5);
-
-        this.turnOrder = [];
-        for (const player of shuffledPlayers) {
-            this.turnOrder.push({ combatantId: player.id, type: 'player' });
-
-            const enemy = this.enemies.find(e => e.targetPlayerId === player.id);
-            if (enemy) {
-                this.turnOrder.push({ combatantId: enemy.id, type: 'enemy' });
-            }
-        }
-
-        this.emit({ type: 'turn_order_set', data: { order: this.turnOrder } });
+        this.lastEnemyDamage.clear();
+        this.intimidateRoundsLeft = 0;
+        this.phoenixBurnActive = false;
+        this.burnedRuneLetter = null;
+        this.covenantAbilityUsedThisTurn = false;
     }
 
     startRound(): void {
         this.currentRound++;
-        this.currentTurnIndex = 0;
-        this.generateTurnOrder();
-        this.phase = 'selection';
+        this.phase = 'player_select';
+        this.covenantAbilityUsedThisTurn = false;
+        this.phoenixBurnActive = false;
+        this.burnedRuneLetter = null;
 
-        this.emit({ type: 'turn_start', data: { round: this.currentRound, turn: this.getCurrentTurn() } });
-    }
-
-    getCurrentTurn(): TurnEntry | null {
-        if (this.currentTurnIndex >= this.turnOrder.length) return null;
-        return this.turnOrder[this.currentTurnIndex];
-    }
-
-    advanceTurn(): void {
-        this.emit({ type: 'turn_end', data: { turn: this.getCurrentTurn() } });
-
-        this.currentTurnIndex++;
-
-        if (this.currentTurnIndex >= this.turnOrder.length) {
-            this.checkCombatEnd();
-            if (this.isActive) {
-                this.startRound();
+        if (this.intimidateRoundsLeft > 0) {
+            this.intimidateRoundsLeft--;
+            if (this.intimidateRoundsLeft <= 0) {
+                for (const enemy of this.enemies) {
+                    enemy.damageModifier = 1.0;
+                }
             }
-            return;
         }
 
-        const nextTurn = this.getCurrentTurn();
-        if (nextTurn) {
-            this.phase = nextTurn.type === 'player' ? 'selection' : 'enemy_turn';
-            this.emit({ type: 'turn_start', data: { round: this.currentRound, turn: nextTurn } });
-        }
+        this.emit({ type: 'turn_start', data: { round: this.currentRound } });
+        this.emit({ type: 'phase_change', data: { phase: this.phase } });
     }
 
     setPhase(phase: TurnPhase): void {
@@ -145,7 +125,12 @@ export class CombatSystem {
 
         if (!player || !enemy || !player.currentChain) return 0;
 
-        const rawDamage = player.currentChain.resolvedValue + player.stats.attack;
+        let rawDamage = player.currentChain.resolvedValue + player.stats.attack;
+
+        if (this.phoenixBurnActive) {
+            rawDamage = Math.floor(rawDamage * 1.5);
+        }
+
         const damage = Math.max(1, rawDamage - enemy.stats.defense);
 
         enemy.stats.hp = Math.max(0, enemy.stats.hp - damage);
@@ -161,14 +146,15 @@ export class CombatSystem {
 
     executeEnemyAttack(enemyId: string): number {
         const enemy = this.getEnemy(enemyId);
-        if (!enemy) return 0;
+        if (!enemy || enemy.stats.hp <= 0) return 0;
 
         const player = this.getPlayer(enemy.targetPlayerId);
         if (!player) return 0;
 
-        const rawDamage = enemy.stats.attack;
+        const rawDamage = Math.floor(enemy.stats.attack * enemy.damageModifier);
         const damage = Math.max(1, rawDamage - player.stats.defense);
 
+        this.lastEnemyDamage.set(enemyId, damage);
         player.stats.hp = Math.max(0, player.stats.hp - damage);
         this.emit({ type: 'player_damaged', data: { playerId: player.id, damage, remainingHp: player.stats.hp } });
 
@@ -179,17 +165,138 @@ export class CombatSystem {
         return damage;
     }
 
-    private checkCombatEnd(): void {
+    useCovenantAbility(playerId: string, abilityData?: any): boolean {
+        const player = this.getPlayer(playerId);
+        if (!player || this.covenantAbilityUsedThisTurn) {
+            this.emit({ type: 'ability_failed', data: { reason: 'already_used' } });
+            return false;
+        }
+
+        switch (player.covenant) {
+            case 'snake':
+                return this.useSnakeRewind(player);
+            case 'phoenix':
+                return this.usePhoenixBurn(player, abilityData?.runeLetter);
+            case 'dragon':
+                return this.useDragonIntimidate(player);
+            default:
+                return false;
+        }
+    }
+
+    private useSnakeRewind(player: CombatPlayer): boolean {
+        if (player.specialCurrency < 2) {
+            this.emit({ type: 'ability_failed', data: { reason: 'not_enough_currency', cost: 2 } });
+            return false;
+        }
+
+        let totalRestored = 0;
+        this.lastEnemyDamage.forEach((damage) => {
+            totalRestored += damage;
+        });
+
+        if (totalRestored === 0) {
+            this.emit({ type: 'ability_failed', data: { reason: 'no_damage_to_rewind' } });
+            return false;
+        }
+
+        player.specialCurrency -= 2;
+        player.stats.hp = Math.min(player.stats.maxHp, player.stats.hp + totalRestored);
+        this.covenantAbilityUsedThisTurn = true;
+
+        this.emit({ type: 'ability_used', data: {
+            ability: 'rewind',
+            covenant: 'snake',
+            hpRestored: totalRestored,
+            newHp: player.stats.hp,
+            cost: 2
+        }});
+
+        return true;
+    }
+
+    private usePhoenixBurn(player: CombatPlayer, runeLetter?: string): boolean {
+        if (player.specialCurrency < 1) {
+            this.emit({ type: 'ability_failed', data: { reason: 'not_enough_currency', cost: 1 } });
+            return false;
+        }
+
+        if (!runeLetter) {
+            this.emit({ type: 'ability_failed', data: { reason: 'no_rune_selected' } });
+            return false;
+        }
+
+        player.specialCurrency -= 1;
+        this.phoenixBurnActive = true;
+        this.burnedRuneLetter = runeLetter;
+        this.covenantAbilityUsedThisTurn = true;
+
+        this.emit({ type: 'ability_used', data: {
+            ability: 'burn',
+            covenant: 'phoenix',
+            burnedRune: runeLetter,
+            cost: 1
+        }});
+
+        return true;
+    }
+
+    private useDragonIntimidate(player: CombatPlayer): boolean {
+        if (player.specialCurrency < 1) {
+            this.emit({ type: 'ability_failed', data: { reason: 'not_enough_currency', cost: 1 } });
+            return false;
+        }
+
+        player.specialCurrency -= 1;
+        this.intimidateRoundsLeft = 3;
+        this.covenantAbilityUsedThisTurn = true;
+
+        for (const enemy of this.enemies) {
+            enemy.damageModifier = 0.75;
+        }
+
+        this.emit({ type: 'ability_used', data: {
+            ability: 'intimidate',
+            covenant: 'dragon',
+            rounds: 3,
+            cost: 1
+        }});
+
+        return true;
+    }
+
+    checkCombatEnd(): boolean {
         const allEnemiesDead = this.enemies.every(e => e.stats.hp <= 0);
         const allPlayersDead = this.players.every(p => p.stats.hp <= 0);
 
         if (allEnemiesDead) {
             this.isActive = false;
+            this.phase = 'combat_end';
             this.emit({ type: 'combat_victory' });
+            return true;
         } else if (allPlayersDead) {
             this.isActive = false;
+            this.phase = 'combat_end';
             this.emit({ type: 'combat_defeat' });
+            return true;
         }
+        return false;
+    }
+
+    getBurnedRune(): string | null {
+        return this.burnedRuneLetter;
+    }
+
+    isPhoenixBurnActive(): boolean {
+        return this.phoenixBurnActive;
+    }
+
+    getIntimidateRoundsLeft(): number {
+        return this.intimidateRoundsLeft;
+    }
+
+    isAbilityUsedThisTurn(): boolean {
+        return this.covenantAbilityUsedThisTurn;
     }
 
     getPlayer(id: string): CombatPlayer | undefined {
@@ -232,10 +339,6 @@ export class CombatSystem {
         return this.isActive;
     }
 
-    getTurnOrder(): TurnEntry[] {
-        return [...this.turnOrder];
-    }
-
     on(type: CombatEventType, listener: CombatEventListener): void {
         if (!this.listeners.has(type)) {
             this.listeners.set(type, []);
@@ -261,7 +364,6 @@ export class CombatSystem {
         this.listeners.clear();
         this.players = [];
         this.enemies = [];
-        this.turnOrder = [];
         this.isActive = false;
     }
 }

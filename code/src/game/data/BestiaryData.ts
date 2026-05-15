@@ -7,6 +7,7 @@ export interface BestiaryDefinition {
     rarity: string;
     hp: number;
     baseDamage: number;
+    tier: number;
 }
 
 export const BESTIARY: BestiaryDefinition[] = [
@@ -18,7 +19,8 @@ export const BESTIARY: BestiaryDefinition[] = [
         frame: 0,
         rarity: 'Rare',
         hp: 150,
-        baseDamage: 25
+        baseDamage: 25,
+        tier: 3
     },
     {
         id: 'cultist_1',
@@ -28,7 +30,8 @@ export const BESTIARY: BestiaryDefinition[] = [
         frame: 0,
         rarity: 'Common',
         hp: 30,
-        baseDamage: 5
+        baseDamage: 5,
+        tier: 1
     },
     {
         id: 'cultist_2',
@@ -38,7 +41,8 @@ export const BESTIARY: BestiaryDefinition[] = [
         frame: 4,
         rarity: 'Rare',
         hp: 135,
-        baseDamage: 18
+        baseDamage: 18,
+        tier: 2
     },
     {
         id: 'scavenger',
@@ -48,7 +52,8 @@ export const BESTIARY: BestiaryDefinition[] = [
         frame: 0,
         rarity: 'Uncommon',
         hp: 45,
-        baseDamage: 8
+        baseDamage: 8,
+        tier: 2
     },
     {
         id: 'slime_1',
@@ -58,7 +63,8 @@ export const BESTIARY: BestiaryDefinition[] = [
         frame: 0,
         rarity: 'Common',
         hp: 20,
-        baseDamage: 3
+        baseDamage: 3,
+        tier: 1
     },
     {
         id: 'slime_2',
@@ -68,7 +74,8 @@ export const BESTIARY: BestiaryDefinition[] = [
         frame: 10,
         rarity: 'Uncommon',
         hp: 60,
-        baseDamage: 6
+        baseDamage: 6,
+        tier: 2
     },
     {
         id: 'wisp_1',
@@ -78,7 +85,8 @@ export const BESTIARY: BestiaryDefinition[] = [
         frame: 0,
         rarity: 'Common',
         hp: 25,
-        baseDamage: 10
+        baseDamage: 10,
+        tier: 1
     },
     {
         id: 'wisp_2',
@@ -88,7 +96,8 @@ export const BESTIARY: BestiaryDefinition[] = [
         frame: 10,
         rarity: 'Rare',
         hp: 80,
-        baseDamage: 18
+        baseDamage: 18,
+        tier: 2
     },
     {
         id: 'golem_1',
@@ -98,7 +107,8 @@ export const BESTIARY: BestiaryDefinition[] = [
         frame: 0,
         rarity: 'Uncommon',
         hp: 120,
-        baseDamage: 15
+        baseDamage: 15,
+        tier: 2
     },
     {
         id: 'golem_2',
@@ -108,7 +118,8 @@ export const BESTIARY: BestiaryDefinition[] = [
         frame: 10,
         rarity: 'Rare',
         hp: 200,
-        baseDamage: 22
+        baseDamage: 22,
+        tier: 3
     }
 ];
 
