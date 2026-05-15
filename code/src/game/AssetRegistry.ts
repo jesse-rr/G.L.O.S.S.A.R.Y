@@ -32,6 +32,8 @@ export const TextureKeys = {
     UI_ITEMS: 'ui-items',
     MAP_OUTLINES: 'map-outlines',
     MAP_BOSS_OUTLINES: 'map-boss-outlines',
+    MAP_CENTRAL_HUB: 'map-central-hub',
+    MAP_TRADE_HUB: 'map-trade-hub',
     CULTIST: 'cultist',
     GOLEM: 'golem',
     RATIONALIST: 'rationalist',

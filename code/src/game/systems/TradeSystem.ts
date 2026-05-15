@@ -74,8 +74,8 @@ function getTradeReward(tradeType: 'gemstone' | 'boost' | 'special'): TradeRewar
 function getCovenantFrames(): { start: number; end: number } {
     const covenant = PlayerData.getInstance().covenant;
     if (covenant === 'snake') return { start: 1, end: 6 };
-    if (covenant === 'dragon') return { start: 7, end: 14 };
-    return { start: 15, end: 21 };
+    if (covenant === 'dragon') return { start: 7, end: 13 };
+    return { start: 15, end: 20 };
 }
 
 function covenantColorHex(): string {
@@ -488,7 +488,7 @@ function showRuneTooltip(scene: Phaser.Scene, cardX: number, cardY: number): voi
         fontSize: '10px',
         color: covColor,
         resolution: 2
-    }).setOrigin(0.6, 0.4);
+    }).setOrigin(0.6, 0.5);
 
     const translationText = scene.add.text(5, -7, `"${selectedRune.translation}"`, {
         fontFamily: FONT_FAMILY,
@@ -496,21 +496,21 @@ function showRuneTooltip(scene: Phaser.Scene, cardX: number, cardY: number): voi
         color: '#aaaaaa',
         fontStyle: 'italic',
         resolution: 2
-    }).setOrigin(0.6, 0.4);
+    }).setOrigin(0.6, 0.5);
 
     const typeText = scene.add.text(5, 4, selectedRune.effectType.toUpperCase(), {
         fontFamily: FONT_FAMILY,
         fontSize: '7px',
         color: getEffectColor(selectedRune.effectType),
         resolution: 2
-    }).setOrigin(0.6, 0.4);
+    }).setOrigin(0.6, 0.5);
 
     const powerText = scene.add.text(5, 15, `Power: ${selectedRune.basePower}`, {
         fontFamily: FONT_FAMILY,
         fontSize: '7px',
         color: '#cccccc',
         resolution: 2
-    }).setOrigin(0.6, 0.4);
+    }).setOrigin(0.6, 0.5);
 
     tradeTooltip.add([bgImage, nameText, translationText, typeText, powerText]);
 }

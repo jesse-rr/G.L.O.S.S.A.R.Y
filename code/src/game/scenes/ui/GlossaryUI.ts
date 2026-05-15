@@ -1,7 +1,7 @@
 import { Scene, GameObjects } from 'phaser';
 import { RuneData, RuneDefinition } from '../../data/RuneData';
 import { ItemData, ItemDefinition } from '../../data/ItemData';
-import { LocationData, SETTLEMENTS, BOSSES } from '../../data/LocationData';
+import { LocationData, LocationDefinition, SETTLEMENTS, BOSSES, HUBS } from '../../data/LocationData';
 import { BestiaryData, BESTIARY } from '../../data/BestiaryData';
 import { FONT_FAMILY, RUNE_FONT } from '../../constants';
 import {
@@ -18,6 +18,7 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     private detailsContainer!: GameObjects.Container;
     private runeDefs = RuneData.getAllDefinitions();
     private currentBestiaryPage: number = 0;
+    private currentLocationsPage: number = 0;
     private currentSelectionId: string | number | null = null;
     activeTweens: Phaser.Tweens.Tween[] = [];
     activeScrambleTimers: Phaser.Time.TimerEvent[] = [];
@@ -58,6 +59,8 @@ export class GlossaryUI extends Scene implements ScrambleContext {
         this.load.spritesheet('map-boss-outlines', 'assets/exports/Objects/map-boss-outlines.png', {
             frameWidth: 64, frameHeight: 128
         });
+        this.load.image('map-central-hub', 'assets/exports/Objects/map-central-hub.png');
+        this.load.image('map-trade-hub', 'assets/exports/Objects/map-trade-hub.png');
     }
 
     create(data: any) {
@@ -146,6 +149,7 @@ export class GlossaryUI extends Scene implements ScrambleContext {
             this.currentBestiaryPage = 0;
             this.renderBestiarySection();
         } else if (index === 3) {
+            this.currentLocationsPage = 0;
             this.renderLocationsSection();
         } else {
             const centerX = this.scale.width / 2;
@@ -441,6 +445,101 @@ export class GlossaryUI extends Scene implements ScrambleContext {
 
         SETTLEMENTS.forEach((def, index) => createLocationEntry(def, index, leftPageX, false));
         BOSSES.forEach((def, index) => createLocationEntry(def, index, rightPageX, true));
+
+        const navY = this.scale.height - 100;
+        const nextBtn = this.add.text(centerX + 550, navY, '>', {
+            fontFamily: FONT_FAMILY, fontSize: '32px', color: '#000000', fontStyle: 'bold'
+        }).setOrigin(0.5).setAlpha(0.6).setInteractive({ useHandCursor: true });
+        nextBtn.on('pointerover', () => nextBtn.setAlpha(1));
+        nextBtn.on('pointerout', () => nextBtn.setAlpha(0.6));
+        nextBtn.on('pointerdown', () => {
+            this.currentLocationsPage = 1;
+            this.contentContainer.removeAll(true);
+            this.renderLocationsPage2();
+        });
+
+        this.contentContainer.add(nextBtn);
+    }
+
+    private renderLocationsPage2() {
+        const centerX = this.scale.width / 2;
+        const leftPageX = centerX - 590;
+        const rightPageX = centerX - 5;
+        const startY = this.scale.height - 660;
+
+        const locData = LocationData.getInstance();
+
+        HUBS.forEach((def, index) => {
+            const isLeft = index % 2 === 0;
+            const x = isLeft ? leftPageX : rightPageX;
+            const row = Math.floor(index / 2);
+            const y = startY + row * 190;
+            const isUnlocked = locData.isDiscovered(def.id);
+            const isViewed = locData.isViewed(def.id);
+            const useRunic = !isUnlocked || (isUnlocked && !isViewed);
+
+            const box = this.add.image(x, y, 'book-layout-4')
+                .setOrigin(0).setAlpha(0.5).setInteractive({ useHandCursor: true });
+
+            const textureKey = def.texture || 'map-outlines';
+            const mapIcon = this.add.image(x + 125, y + 100, textureKey)
+                .setOrigin(0.5).setAlpha(isUnlocked ? 0.9 : 0.6).setScale(1.4);
+            if (!isUnlocked) mapIcon.setTint(0x000000);
+
+            const titleStr = def.name;
+            const explanationStr = def.description;
+
+            const title = this.add.text(x + 230, y + 30, useRunic ? convertToRunicWords(titleStr) : titleStr, {
+                fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '22px', color: '#000000',
+                wordWrap: { width: 270 }, lineSpacing: 3
+            }).setAlpha(0.7);
+
+            const explanation = this.add.text(x + 230, y + 70, useRunic ? convertToRunicWords(explanationStr) : explanationStr, {
+                fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '18px', color: '#000000',
+                wordWrap: { width: 270 }, lineSpacing: 5
+            }).setAlpha(0.7);
+
+            if (useRunic) explanation.setStroke('#000000', 1);
+
+            this.contentContainer.add([box, mapIcon, title, explanation]);
+
+            let isAnimating = false;
+            const triggerAnimation = () => {
+                if (!isUnlocked || locData.isViewed(def.id) || isAnimating) return;
+                isAnimating = true;
+                this.activeTweens.forEach(tween => tween.stop());
+                this.activeTweens = [];
+                playScrambleAnimation(this, this,
+                    [title, explanation],
+                    [titleStr, explanationStr],
+                    () => {
+                        isAnimating = false;
+                        locData.markViewed(def.id);
+                    }
+                );
+            };
+
+            if (isUnlocked && !isViewed) {
+                box.on('pointerover', () => box.setAlpha(1));
+                box.on('pointerout', () => box.setAlpha(0.5));
+                box.on('pointerdown', triggerAnimation);
+                this.time.delayedCall(300 + index * 150, triggerAnimation);
+            }
+        });
+
+        const navY = this.scale.height - 100;
+        const prevBtn = this.add.text(centerX - 550, navY, '<', {
+            fontFamily: FONT_FAMILY, fontSize: '32px', color: '#000000', fontStyle: 'bold'
+        }).setOrigin(0.5).setAlpha(0.6).setInteractive({ useHandCursor: true });
+        prevBtn.on('pointerover', () => prevBtn.setAlpha(1));
+        prevBtn.on('pointerout', () => prevBtn.setAlpha(0.6));
+        prevBtn.on('pointerdown', () => {
+            this.currentLocationsPage = 0;
+            this.contentContainer.removeAll(true);
+            this.renderLocationsSection();
+        });
+
+        this.contentContainer.add(prevBtn);
     }
 
     private renderBestiarySection() {

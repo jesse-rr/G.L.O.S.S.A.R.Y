@@ -1,9 +1,10 @@
 export interface LocationDefinition {
     id: string;
     name: string;
-    type: 'settlement' | 'boss';
+    type: 'settlement' | 'boss' | 'hub';
     description: string;
     frame: number;
+    texture?: string;
 }
 
 export const SETTLEMENTS: LocationDefinition[] = [
@@ -51,6 +52,25 @@ export const BOSSES: LocationDefinition[] = [
         type: 'boss',
         description: 'An ancient terror that swims through the dunes as if they were water. It consumes all.',
         frame: 1
+    }
+];
+
+export const HUBS: LocationDefinition[] = [
+    {
+        id: 'central_hub',
+        name: 'Central Hub',
+        type: 'hub',
+        description: 'The crossroads of all covenants. Every path begins and ends here.',
+        frame: 0,
+        texture: 'map-central-hub'
+    },
+    {
+        id: 'summit_trade',
+        name: 'Trade Hub',
+        type: 'hub',
+        description: 'A summit where merchants gather. Runes and relics exchange hands under watchful eyes.',
+        frame: 0,
+        texture: 'map-trade-hub'
     }
 ];
 

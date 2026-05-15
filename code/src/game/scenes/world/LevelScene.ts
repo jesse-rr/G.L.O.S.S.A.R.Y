@@ -163,7 +163,8 @@ export class LevelScene extends Phaser.Scene {
         }
 
         let locId: string | null = null;
-        if (this.mapKey === 'abandoned-settlement') locId = 'settlement_abandoned';
+        if (this.mapKey === 'hub' || this.mapKey === 'central-hub') locId = 'central_hub';
+        else if (this.mapKey === 'abandoned-settlement') locId = 'settlement_abandoned';
         else if (this.mapKey === 'desert-settlement') locId = 'settlement_desert';
         else if (this.mapKey === 'mechanic-settlement') locId = 'settlement_mechanic';
         else if (this.mapKey === 'boss-floor-abandoned') locId = 'boss_abandoned';
