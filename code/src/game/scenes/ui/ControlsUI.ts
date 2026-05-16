@@ -21,14 +21,12 @@ export class ControlsUI extends Phaser.Scene {
 
         this.container = this.add.container(this.baseX, this.baseY);
 
-        const makeKey = (x: number, y: number, letter: string) => {
-            const bg = this.add.image(x, y, 'ui-items', 2)
+        const makeKey = (x: number, y: number, letter: string, customFrame?: number) => {
+            const frame = customFrame !== undefined ? customFrame : 2;
+            const bg = this.add.image(x, y, 'ui-items', frame)
                 .setScale(4)
                 .setOrigin(0.5);
 
-            if (letter.length > 2) {
-                bg.scaleX = this.imgScale * 2;
-            }
             const txt = this.add.text(x, y, letter, {
                 fontSize: '22px', color: '#ffffff', fontFamily: FONT_FAMILY
             }).setOrigin(0.5);
@@ -64,6 +62,10 @@ export class ControlsUI extends Phaser.Scene {
 
         makeKey(rightX, actionsYStart + actSpacing * 3, 'Esc');
         this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing * 3, '- Go Back', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
+
+        const shiftFrame = this.textures.get('ui-items').frameTotal - 2;
+        makeKey(rightX, actionsYStart + actSpacing * 4, 'Shift', shiftFrame);
+        this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing * 4, '- View Rune Info (While in combat)', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
 
         this.input.on('wheel', (_: any, __: any, ___: number, dy: number) => {
             const parent = this.parentScene as any;

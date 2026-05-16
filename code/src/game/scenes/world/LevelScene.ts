@@ -46,12 +46,16 @@ export class LevelScene extends Phaser.Scene {
     private entryDirX: number = 0;
     private entryDirY: number = 0;
     private isEntering = false;
+    private overrideSpawnX: number | null = null;
+    private overrideSpawnY: number | null = null;
 
-    init(data: { mapKey?: string, previousMap?: string, entryDirX?: number, entryDirY?: number }) {
+    init(data: { mapKey?: string, previousMap?: string, entryDirX?: number, entryDirY?: number, spawnX?: number, spawnY?: number }) {
         this.mapKey = data?.mapKey || 'hub';
         this.previousMap = data?.previousMap || '';
         this.entryDirX = data?.entryDirX || 0;
         this.entryDirY = data?.entryDirY || 0;
+        this.overrideSpawnX = data?.spawnX ?? null;
+        this.overrideSpawnY = data?.spawnY ?? null;
         this.isTeleporting = false;
         this.isEntering = false;
         this.isCinematic = false;
@@ -497,7 +501,9 @@ export class LevelScene extends Phaser.Scene {
             }
         }
 
-        this.spawnPlayer(spawnX, spawnY);
+        this.spawnPlayer(this.overrideSpawnX !== null ? this.overrideSpawnX : spawnX, this.overrideSpawnY !== null ? this.overrideSpawnY : spawnY);
+        this.overrideSpawnX = null;
+        this.overrideSpawnY = null;
         this.player.setDepth(this.getPlayerDepth(mapKey));
 
         this.matter.world.on('collisionstart', (event: any) => {

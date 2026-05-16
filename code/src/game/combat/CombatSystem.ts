@@ -1,10 +1,18 @@
 import { CovenantType } from '../data/PlayerData';
+import { RuneData, RuneStatusEffect } from '../data/RuneData';
 
 export interface CombatantStats {
     hp: number;
     maxHp: number;
     attack: number;
+    attack: number;
     defense: number;
+}
+
+export interface ActiveStatusEffect {
+    effect: RuneStatusEffect;
+    duration: number;
+    stacks?: number;
 }
 
 export interface RuneChain {
@@ -20,7 +28,9 @@ export interface CombatPlayer {
     gemstones: number;
     specialCurrency: number;
     currentChain: RuneChain | null;
+    currentChain: RuneChain | null;
     isLocal: boolean;
+    statusEffects: ActiveStatusEffect[];
 }
 
 export interface CombatEnemy {
@@ -30,7 +40,10 @@ export interface CombatEnemy {
     targetPlayerId: string;
     texture: string;
     frame: number;
+    frame: number;
     damageModifier: number;
+    statusEffects: ActiveStatusEffect[];
+    slowSkipNext: boolean;
 }
 
 export type TurnPhase = 'player_select' | 'player_attack' | 'enemy_attack' | 'resolution' | 'combat_end';
@@ -46,6 +59,8 @@ export type CombatEventType =
     | 'phase_change'
     | 'player_damaged'
     | 'enemy_damaged'
+    | 'status_applied'
+    | 'status_expired'
     | 'player_defeated'
     | 'enemy_defeated'
     | 'combat_victory'
@@ -83,8 +98,14 @@ export class CombatSystem {
         this.lastEnemyDamage.clear();
         this.intimidateRoundsLeft = 0;
         this.phoenixBurnActive = false;
+        this.phoenixBurnActive = false;
         this.burnedRuneLetter = null;
         this.covenantAbilityUsedThisTurn = false;
+        this.players.forEach(p => p.statusEffects = []);
+        this.enemies.forEach(e => {
+            e.statusEffects = [];
+            e.slowSkipNext = false;
+        });
     }
 
     startRound(): void {
@@ -102,6 +123,43 @@ export class CombatSystem {
                 }
             }
         }
+
+
+        for (const enemy of this.enemies) {
+            if (enemy.stats.hp <= 0) continue;
+
+
+            const venom = enemy.statusEffects.find(s => s.effect === 'venom');
+            if (venom) {
+                const dmg = (venom.stacks || 1) * 2;
+                enemy.stats.hp = Math.max(0, enemy.stats.hp - dmg);
+                this.emit({ type: 'enemy_damaged', data: { enemyId: enemy.id, damage: dmg, remainingHp: enemy.stats.hp, isDoT: true, effect: 'venom' } });
+            }
+
+
+            const ignite = enemy.statusEffects.find(s => s.effect === 'ignite');
+            if (ignite) {
+                const dmg = 5;
+                enemy.stats.hp = Math.max(0, enemy.stats.hp - dmg);
+                this.emit({ type: 'enemy_damaged', data: { enemyId: enemy.id, damage: dmg, remainingHp: enemy.stats.hp, isDoT: true, effect: 'ignite' } });
+            }
+
+            if (enemy.stats.hp <= 0) {
+                this.emit({ type: 'enemy_defeated', data: { enemyId: enemy.id, byPlayerId: 'dot' } });
+            }
+
+
+            enemy.statusEffects.forEach(s => s.duration--);
+            enemy.statusEffects = enemy.statusEffects.filter(s => s.duration > 0);
+        }
+
+        for (const player of this.players) {
+            if (player.stats.hp <= 0) continue;
+            player.statusEffects.forEach(s => s.duration--);
+            player.statusEffects = player.statusEffects.filter(s => s.duration > 0);
+        }
+
+        if (this.checkCombatEnd()) return;
 
         this.emit({ type: 'turn_start', data: { round: this.currentRound } });
         this.emit({ type: 'phase_change', data: { phase: this.phase } });
@@ -125,16 +183,39 @@ export class CombatSystem {
 
         if (!player || !enemy || !player.currentChain) return 0;
 
+        this.lastEnemyDamage.clear();
+
         let rawDamage = player.currentChain.resolvedValue + player.stats.attack;
+
+        const overcharge = player.statusEffects.find(s => s.effect === 'overcharge');
+        if (overcharge) {
+            rawDamage = Math.floor(rawDamage * 1.5);
+        }
 
         if (this.phoenixBurnActive) {
             rawDamage = Math.floor(rawDamage * 1.5);
         }
 
-        const damage = Math.max(1, rawDamage - enemy.stats.defense);
+        let enemyDef = enemy.stats.defense;
+        const shatter = enemy.statusEffects.find(s => s.effect === 'shatter');
+        if (shatter) {
+            enemyDef = 0;
+        }
+
+        const damage = Math.max(1, rawDamage - enemyDef);
 
         enemy.stats.hp = Math.max(0, enemy.stats.hp - damage);
         this.emit({ type: 'enemy_damaged', data: { enemyId: enemy.id, damage, remainingHp: enemy.stats.hp } });
+
+
+        const appliedEffects: RuneStatusEffect[] = [];
+        for (const letter of player.currentChain.runes) {
+            const def = RuneData.getDefinition(letter);
+            if (def && def.statusEffect && !appliedEffects.includes(def.statusEffect)) {
+                appliedEffects.push(def.statusEffect);
+                this.applyStatusEffect(def.statusEffect, player, enemy);
+            }
+        }
 
         if (enemy.stats.hp <= 0) {
             this.emit({ type: 'enemy_defeated', data: { enemyId: enemy.id, byPlayerId: playerId } });
@@ -144,14 +225,68 @@ export class CombatSystem {
         return damage;
     }
 
+    private applyStatusEffect(effect: RuneStatusEffect, player: CombatPlayer, enemy: CombatEnemy) {
+        if (effect === 'overcharge') {
+
+            if (player.currentChain && player.currentChain.runes.length === 3) {
+                const existing = player.statusEffects.find(s => s.effect === effect);
+                if (existing) {
+                    existing.duration = 3;
+                } else {
+                    player.statusEffects.push({ effect, duration: 3 });
+                }
+                this.emit({ type: 'status_applied', data: { targetId: player.id, effect } });
+            }
+            return;
+        }
+
+        let duration = 3;
+        if (effect === 'dazed' || effect === 'shatter' || effect === 'weaken') duration = 2;
+
+        const existing = enemy.statusEffects.find(s => s.effect === effect);
+        if (existing) {
+            if (effect === 'venom') {
+                existing.stacks = (existing.stacks || 1) + 1;
+            }
+            existing.duration = duration;
+        } else {
+            enemy.statusEffects.push({ effect, duration, stacks: effect === 'venom' ? 1 : undefined });
+            if (effect === 'slow') enemy.slowSkipNext = true;
+        }
+        this.emit({ type: 'status_applied', data: { targetId: enemy.id, effect } });
+    }
+
     executeEnemyAttack(enemyId: string): number {
         const enemy = this.getEnemy(enemyId);
         if (!enemy || enemy.stats.hp <= 0) return 0;
 
+        const slow = enemy.statusEffects.find(s => s.effect === 'slow');
+        if (slow) {
+            if (enemy.slowSkipNext) {
+                enemy.slowSkipNext = false;
+                this.emit({ type: 'status_applied', data: { targetId: enemy.id, effect: 'slow_skip' } });
+                return 0;
+            } else {
+                enemy.slowSkipNext = true;
+            }
+        }
+
+        const dazed = enemy.statusEffects.find(s => s.effect === 'dazed');
+        if (dazed) {
+            if (Math.random() < 0.5) {
+                this.emit({ type: 'status_applied', data: { targetId: enemy.id, effect: 'dazed_miss' } });
+                return 0;
+            }
+        }
+
         const player = this.getPlayer(enemy.targetPlayerId);
         if (!player) return 0;
 
-        const rawDamage = Math.floor(enemy.stats.attack * enemy.damageModifier);
+        let rawDamage = Math.floor(enemy.stats.attack * enemy.damageModifier);
+        const weaken = enemy.statusEffects.find(s => s.effect === 'weaken');
+        if (weaken) {
+            rawDamage = Math.max(1, Math.floor(rawDamage * 0.5));
+        }
         const damage = Math.max(1, rawDamage - player.stats.defense);
 
         this.lastEnemyDamage.set(enemyId, damage);
@@ -185,8 +320,8 @@ export class CombatSystem {
     }
 
     private useSnakeRewind(player: CombatPlayer): boolean {
-        if (player.specialCurrency < 2) {
-            this.emit({ type: 'ability_failed', data: { reason: 'not_enough_currency', cost: 2 } });
+        if (player.specialCurrency < 3) {
+            this.emit({ type: 'ability_failed', data: { reason: 'not_enough_currency', cost: 3 } });
             return false;
         }
 
@@ -200,24 +335,26 @@ export class CombatSystem {
             return false;
         }
 
-        player.specialCurrency -= 2;
+        player.specialCurrency -= 3;
         player.stats.hp = Math.min(player.stats.maxHp, player.stats.hp + totalRestored);
         this.covenantAbilityUsedThisTurn = true;
 
-        this.emit({ type: 'ability_used', data: {
-            ability: 'rewind',
-            covenant: 'snake',
-            hpRestored: totalRestored,
-            newHp: player.stats.hp,
-            cost: 2
-        }});
+        this.emit({
+            type: 'ability_used', data: {
+                ability: 'rewind',
+                covenant: 'snake',
+                hpRestored: totalRestored,
+                newHp: player.stats.hp,
+                cost: 3
+            }
+        });
 
         return true;
     }
 
     private usePhoenixBurn(player: CombatPlayer, runeLetter?: string): boolean {
-        if (player.specialCurrency < 1) {
-            this.emit({ type: 'ability_failed', data: { reason: 'not_enough_currency', cost: 1 } });
+        if (player.specialCurrency < 3) {
+            this.emit({ type: 'ability_failed', data: { reason: 'not_enough_currency', cost: 3 } });
             return false;
         }
 
@@ -226,28 +363,30 @@ export class CombatSystem {
             return false;
         }
 
-        player.specialCurrency -= 1;
+        player.specialCurrency -= 3;
         this.phoenixBurnActive = true;
         this.burnedRuneLetter = runeLetter;
         this.covenantAbilityUsedThisTurn = true;
 
-        this.emit({ type: 'ability_used', data: {
-            ability: 'burn',
-            covenant: 'phoenix',
-            burnedRune: runeLetter,
-            cost: 1
-        }});
+        this.emit({
+            type: 'ability_used', data: {
+                ability: 'burn',
+                covenant: 'phoenix',
+                burnedRune: runeLetter,
+                cost: 3
+            }
+        });
 
         return true;
     }
 
     private useDragonIntimidate(player: CombatPlayer): boolean {
-        if (player.specialCurrency < 1) {
-            this.emit({ type: 'ability_failed', data: { reason: 'not_enough_currency', cost: 1 } });
+        if (player.specialCurrency < 3) {
+            this.emit({ type: 'ability_failed', data: { reason: 'not_enough_currency', cost: 3 } });
             return false;
         }
 
-        player.specialCurrency -= 1;
+        player.specialCurrency -= 3;
         this.intimidateRoundsLeft = 3;
         this.covenantAbilityUsedThisTurn = true;
 
@@ -255,12 +394,14 @@ export class CombatSystem {
             enemy.damageModifier = 0.75;
         }
 
-        this.emit({ type: 'ability_used', data: {
-            ability: 'intimidate',
-            covenant: 'dragon',
-            rounds: 3,
-            cost: 1
-        }});
+        this.emit({
+            type: 'ability_used', data: {
+                ability: 'intimidate',
+                covenant: 'dragon',
+                rounds: 3,
+                cost: 3
+            }
+        });
 
         return true;
     }

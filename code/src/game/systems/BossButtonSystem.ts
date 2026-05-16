@@ -193,6 +193,9 @@ export function handleBossButtonInteraction(
                             btn.glowTween.stop();
                             btn.symbolGlow.setAlpha(0);
 
+                            localStorage.setItem('glossary_combat_player_x', String(player.x));
+                            localStorage.setItem('glossary_combat_player_y', String(player.y));
+
                             scene.scene.launch('TransitionScene', {
                                 targetScene: 'CombatScene',
                                 currentScene: 'LevelScene',

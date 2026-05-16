@@ -7,6 +7,17 @@ import { RunePickerSystem } from '../../systems/RunePickerSystem';
 import { PlayerPanelSystem } from '../../systems/PlayerPanelSystem';
 import { BESTIARY, BestiaryData } from '../../data/BestiaryData';
 import { RuneData } from '../../data/RuneData';
+import { RuneData } from '../../data/RuneData';
+
+const STATUS_DATA: Record<string, { frame: number, name: string, desc: string }> = {
+    'slow': { frame: 1, name: 'Slow', desc: 'Skips every other attack.' },
+    'venom': { frame: 2, name: 'Venom', desc: 'Stacking damage each turn.' },
+    'ignite': { frame: 3, name: 'Ignite', desc: 'Takes flat fire damage each turn.' },
+    'overcharge': { frame: 4, name: 'Overcharge', desc: '+50% attack power.' },
+    'shatter': { frame: 5, name: 'Shatter', desc: 'Defense reduced to 0.' },
+    'dazed': { frame: 6, name: 'Dazed', desc: '50% chance to miss attacks.' },
+    'weaken': { frame: 7, name: 'Weaken', desc: 'Enemy damage reduced by 50%.' }
+};
 
 export class CombatScene extends Phaser.Scene {
     private playerData: PlayerData | null = null;
@@ -27,6 +38,11 @@ export class CombatScene extends Phaser.Scene {
     private hpHudText: Phaser.GameObjects.Text | null = null;
     private scHudText: Phaser.GameObjects.Text | null = null;
     private overlayContainer: Phaser.GameObjects.Container | null = null;
+    private enemyStatusContainer: Phaser.GameObjects.Container | null = null;
+    private playerStatusContainer: Phaser.GameObjects.Container | null = null;
+    private statusTooltip: Phaser.GameObjects.Container | null = null;
+    private statusTooltipTextTitle: Phaser.GameObjects.Text | null = null;
+    private statusTooltipTextDesc: Phaser.GameObjects.Text | null = null;
 
     constructor() {
         super('CombatScene');
@@ -80,6 +96,9 @@ export class CombatScene extends Phaser.Scene {
         this.load.spritesheet('special-attack-btn', 'assets/exports/UI/Special-Attack-Btn.png', {
             frameWidth: 80, frameHeight: 80
         });
+        this.load.spritesheet('status-btn', 'assets/exports/UI/Status-Btn.png', {
+            frameWidth: 32, frameHeight: 32
+        });
     }
 
     create(data?: any) {
@@ -121,6 +140,7 @@ export class CombatScene extends Phaser.Scene {
         this.createEnemyVisual();
         this.createAbilityButton();
         this.createPlayerPanel();
+        this.createStatusTooltip();
 
         this.runePickerSystem = new RunePickerSystem(
             this,
@@ -147,8 +167,8 @@ export class CombatScene extends Phaser.Scene {
             }
         });
 
-        const settingsX = this.scale.width - 15;
-        const settingsY = this.scale.height - 15;
+        const settingsX = this.scale.width - 24;
+        const settingsY = this.scale.height - 10;
         const settingsBtn = this.add.sprite(settingsX, settingsY, 'settings-btn')
             .setOrigin(1, 1).setScrollFactor(0).setScale(1)
             .setInteractive({ useHandCursor: true });
@@ -165,6 +185,11 @@ export class CombatScene extends Phaser.Scene {
             if (!this.scene.isPaused()) {
                 this.scene.pause();
                 this.scene.launch('Help', { previousScene: 'CombatScene' });
+            }
+        });
+        this.input.keyboard!.on('keydown-ESC', () => {
+            if (!this.scene.isPaused() && this.runePickerSystem) {
+                this.runePickerSystem.clearChain();
             }
         });
         this.input.keyboard!.on('keydown-G', () => {
@@ -264,6 +289,14 @@ export class CombatScene extends Phaser.Scene {
                         : 'Cannot use ability!';
             this.showFloatingText(this.scale.width / 2, 150, msg, '#cc0000');
         });
+
+        this.combatSystem.on('status_applied', () => {
+            this.updateStatusEffects();
+        });
+
+        this.combatSystem.on('turn_start', () => {
+            this.updateStatusEffects();
+        });
     }
 
     private createPlayerVisual(): void {
@@ -273,6 +306,8 @@ export class CombatScene extends Phaser.Scene {
 
         this.playerRect = this.add.rectangle(x, y, 60, 80, covenantColor, 1)
             .setStrokeStyle(3, 0x000000).setScrollFactor(0);
+
+        this.playerStatusContainer = this.add.container(40, 95).setScrollFactor(0);
     }
 
     private createEnemyVisual(): void {
@@ -297,9 +332,11 @@ export class CombatScene extends Phaser.Scene {
             .setScale(2.5).setScrollFactor(0);
         this.enemySprite.play(idleKey);
 
-        this.enemyHpText = this.add.text(x, y + 55, `${enemy.stats.hp}/${enemy.stats.maxHp}`, {
+        this.enemyHpText = this.add.text(x, y - 85, `${enemy.stats.hp}/${enemy.stats.maxHp}`, {
             fontFamily: FONT_FAMILY, fontSize: '14px', color: '#000000'
         }).setOrigin(0.5).setScrollFactor(0);
+
+        this.enemyStatusContainer = this.add.container(this.scale.width - 40, 95).setScrollFactor(0);
     }
 
     private createAbilityButton(): void {
@@ -327,8 +364,7 @@ export class CombatScene extends Phaser.Scene {
         if (this.combatSystem.isAbilityUsedThisTurn()) return false;
         const player = this.combatSystem.getLocalPlayer();
         if (!player) return false;
-        const cost = player.covenant === 'snake' ? 2 : 1;
-        return player.specialCurrency >= cost;
+        return player.specialCurrency >= 3;
     }
 
     private refreshAbilityVisual(): void {
@@ -476,14 +512,39 @@ export class CombatScene extends Phaser.Scene {
             if (damage > 0 && this.enemySprite) {
                 this.enemySprite.setTintFill(0xffffff);
                 this.tweens.add({
-                    targets: this.enemySprite, x: this.enemySprite.x + 10, duration: 50, yoyo: true, repeat: 3,
+                    targets: this.enemySprite,
+                    x: this.enemySprite.x + 10,
+                    duration: 50,
+                    yoyo: true,
+                    repeat: 3,
                     onComplete: () => {
-                        this.time.delayedCall(150, () => this.enemySprite?.clearTint());
+                        this.time.delayedCall(150, () => {
+                            this.enemySprite?.clearTint();
+                        });
                     }
                 });
             }
 
+            const enemy = this.combatSystem!.getAllEnemies()[0];
+            const enemyDead = enemy && enemy.stats.hp <= 0;
+
             this.time.delayedCall(600, () => {
+                if (enemyDead && this.enemySprite) {
+                    this.enemySprite.clearTint();
+                    this.tweens.add({
+                        targets: this.enemySprite,
+                        alpha: 0,
+                        duration: 700,
+                        ease: 'Quad.easeIn',
+                        onComplete: () => {
+                            if (this.enemyHpText) this.enemyHpText.setAlpha(0);
+                            this.combatSystem!.checkCombatEnd();
+                            this.isAnimating = false;
+                        }
+                    });
+                    return;
+                }
+
                 if (this.combatSystem!.checkCombatEnd()) {
                     this.isAnimating = false;
                     return;
@@ -526,12 +587,132 @@ export class CombatScene extends Phaser.Scene {
         this.combatSystem!.startRound();
         this.currentTurn = this.combatSystem!.getCurrentRound();
         this.updateHUD();
+        this.updateStatusEffects();
         this.updateTurnIndicator('YOUR TURN - Select Runes');
         this.updateAbilityButton();
         if (this.abilityBtn) this.abilityBtn.setInteractive({ useHandCursor: true });
     }
 
+    private createStatusTooltip(): void {
+        this.statusTooltip = this.add.container(0, 0).setDepth(1000).setScrollFactor(0).setAlpha(0);
+        const bg = this.add.rectangle(0, 0, 160, 60, 0x000000, 0.8).setOrigin(0, 1);
+        this.statusTooltipTextTitle = this.add.text(10, -50, '', {
+            fontFamily: FONT_FAMILY, fontSize: '14px', color: '#FFD700', fontStyle: 'bold'
+        }).setOrigin(0, 0);
+        this.statusTooltipTextDesc = this.add.text(10, -30, '', {
+            fontFamily: FONT_FAMILY, fontSize: '12px', color: '#FFFFFF', wordWrap: { width: 140 }
+        }).setOrigin(0, 0);
+        this.statusTooltip.add([bg, this.statusTooltipTextTitle, this.statusTooltipTextDesc]);
+    }
+
+    private updateStatusEffects(): void {
+        if (!this.combatSystem || !this.enemyStatusContainer || !this.playerStatusContainer) return;
+
+        const enemy = this.combatSystem.getAllEnemies()[0];
+        const enemyEffects = enemy ? enemy.statusEffects : [];
+        this.syncStatusIcons(enemyEffects, this.enemyStatusContainer);
+
+        const player = this.combatSystem.getLocalPlayer();
+        const playerEffects = player ? player.statusEffects : [];
+        this.syncStatusIcons(playerEffects, this.playerStatusContainer);
+    }
+
+    private syncStatusIcons(effects: any[], container: Phaser.GameObjects.Container): void {
+        const activeEffects = new Set(effects.map(e => e.effect));
+        const isLeftSide = container.x < this.scale.width / 2;
+
+
+        container.each((child: Phaser.GameObjects.GameObject) => {
+            if (child.name && !activeEffects.has(child.name)) {
+                child.name = '';
+                this.tweens.add({
+                    targets: child, scaleX: 0, scaleY: 0, alpha: 0, duration: 300,
+                    onComplete: () => { child.destroy(); }
+                });
+            }
+        });
+
+
+        let index = 0;
+        effects.forEach(eff => {
+            const data = STATUS_DATA[eff.effect];
+            if (!data) return;
+
+            const targetY = index * 34;
+            let iconContainer = container.getByName(eff.effect) as Phaser.GameObjects.Container;
+
+            if (!iconContainer) {
+
+                iconContainer = this.add.container(0, targetY);
+                iconContainer.name = eff.effect;
+
+                const bg = this.add.sprite(0, 0, 'status-btn', 0).setScale(1);
+                const icon = this.add.sprite(0, 0, 'status-btn', data.frame).setScale(1);
+                iconContainer.add([bg, icon]);
+
+                const hitArea = new Phaser.Geom.Rectangle(-16, -16, 32, 32);
+                iconContainer.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+
+                iconContainer.on('pointerout', () => {
+                    if (this.statusTooltip) this.statusTooltip.setAlpha(0);
+                });
+                iconContainer.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+                    if (this.statusTooltip) {
+                        const tooltipX = isLeftSide ? pointer.x + 15 : pointer.x - 175;
+                        this.statusTooltip.setPosition(tooltipX, pointer.y - 10);
+                    }
+                });
+
+                container.add(iconContainer);
+
+
+                iconContainer.setScale(0);
+                iconContainer.setAlpha(0);
+                this.tweens.add({
+                    targets: iconContainer, scaleX: 1, scaleY: 1, alpha: 1, duration: 300, ease: 'Back.easeOut'
+                });
+            } else {
+
+                if (iconContainer.y !== targetY) {
+                    this.tweens.add({
+                        targets: iconContainer, y: targetY, duration: 300, ease: 'Cubic.easeOut'
+                    });
+                }
+            }
+
+
+            iconContainer.off('pointerover');
+            iconContainer.on('pointerover', (pointer: Phaser.Input.Pointer) => {
+                if (this.statusTooltip && this.statusTooltipTextTitle && this.statusTooltipTextDesc) {
+                    let title = data.name;
+                    if (eff.stacks) title += ` (${eff.stacks}x)`;
+                    title += ` - ${eff.duration} TURN`;
+                    this.statusTooltipTextTitle.setText(title);
+                    this.statusTooltipTextDesc.setText(data.desc);
+
+                    const tooltipX = isLeftSide ? pointer.x + 15 : pointer.x - 175;
+                    this.statusTooltip.setPosition(tooltipX, pointer.y - 10);
+                    this.statusTooltip.setAlpha(1);
+                }
+            });
+
+            index++;
+        });
+    }
+
+    private syncPlayerDataFromCombat(): void {
+        if (!this.combatSystem || !this.playerData) return;
+        const combatPlayer = this.combatSystem.getLocalPlayer();
+        if (!combatPlayer) return;
+        this.playerData.hp = this.playerData.maxHp;
+        this.playerData.specialCurrency = combatPlayer.specialCurrency;
+        this.playerData.save();
+        this.registry.set('playerData', this.playerData);
+    }
+
     private showCombatEnd(result: string): void {
+        this.syncPlayerDataFromCombat();
+
         const centerX = this.scale.width / 2;
         const centerY = this.scale.height / 2;
 
@@ -555,8 +736,21 @@ export class CombatScene extends Phaser.Scene {
         bg.setInteractive();
         bg.on('pointerdown', () => {
             const returnMap = this.encounterMapKey || localStorage.getItem('glossary_combat_return_map') || 'hub';
+            const savedX = localStorage.getItem('glossary_combat_player_x');
+            const savedY = localStorage.getItem('glossary_combat_player_y');
             localStorage.removeItem('glossary_combat_return_map');
-            this.scene.start('LevelScene', { mapKey: returnMap });
+            localStorage.removeItem('glossary_combat_player_x');
+            localStorage.removeItem('glossary_combat_player_y');
+            const spawnData: any = { mapKey: returnMap };
+            if (savedX !== null && savedY !== null) {
+                spawnData.spawnX = parseFloat(savedX);
+                spawnData.spawnY = parseFloat(savedY);
+            }
+            this.scene.launch('TransitionScene', {
+                targetScene: 'LevelScene',
+                targetData: spawnData,
+                currentScene: 'CombatScene'
+            });
         });
     }
 

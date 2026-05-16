@@ -23,6 +23,13 @@ export class RunePickerSystem {
     private covenant: string;
     private onComboConfirmed: ((chain: string[]) => void) | null = null;
 
+    private runeTooltip: Phaser.GameObjects.Container | null = null;
+    private runeTooltipTitle: Phaser.GameObjects.Text | null = null;
+    private runeTooltipDesc: Phaser.GameObjects.Text | null = null;
+    private hoveredRuneLetter: string | null = null;
+    private isShiftDown: boolean = false;
+    private lastPointer: Phaser.Input.Pointer | null = null;
+
     constructor(
         scene: Phaser.Scene,
         covenant: string,
@@ -52,7 +59,66 @@ export class RunePickerSystem {
             .setDepth(74);
     }
 
+    private createTooltip(): void {
+        this.runeTooltip = this.scene.add.container(0, 0).setDepth(1000).setScrollFactor(0).setAlpha(0);
+        const bg = this.scene.add.rectangle(0, 0, 320, 110, 0x000000, 0.9).setOrigin(0, 1);
+        this.runeTooltipTitle = this.scene.add.text(10, -95, '', {
+            fontFamily: FONT_FAMILY, fontSize: '16px', color: '#FFD700', fontStyle: 'bold'
+        }).setOrigin(0, 0);
+        this.runeTooltipDesc = this.scene.add.text(10, -70, '', {
+            fontFamily: FONT_FAMILY, fontSize: '12px', color: '#FFFFFF', wordWrap: { width: 300 }
+        }).setOrigin(0, 0);
+        this.runeTooltip.add([bg, this.runeTooltipTitle, this.runeTooltipDesc]);
+
+        this.scene.input.keyboard!.on('keydown-SHIFT', () => {
+            this.isShiftDown = true;
+            this.updateTooltipDisplay();
+        });
+        this.scene.input.keyboard!.on('keyup-SHIFT', () => {
+            this.isShiftDown = false;
+            this.updateTooltipDisplay();
+        });
+        this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            this.lastPointer = pointer;
+            if (this.runeTooltip && this.runeTooltip.alpha > 0) {
+                const x = pointer.x < this.scene.scale.width / 2 ? pointer.x + 15 : pointer.x - 255;
+                this.runeTooltip.setPosition(x, pointer.y - 10);
+            }
+        });
+    }
+
+    private updateTooltipDisplay(): void {
+        if (!this.runeTooltip || !this.runeTooltipTitle || !this.runeTooltipDesc) return;
+        
+        if (this.isShiftDown && this.hoveredRuneLetter) {
+            const def = RuneData.getDefinition(this.hoveredRuneLetter);
+            if (def) {
+                let stats = `Type: ${def.effectType.toUpperCase()} | Pwr: ${def.basePower}`;
+                if (def.statusEffect) stats += ` | Effect: ${def.statusEffect.toUpperCase()}`;
+                
+                let text = stats;
+                const match = def.description.match(/Applies.*/);
+                if (match) {
+                    text += `\n\n${match[0]}`;
+                }
+                
+                this.runeTooltipTitle.setText(`${def.name} (${def.translation})`);
+                this.runeTooltipDesc.setText(text);
+                
+                if (this.lastPointer) {
+                    const x = this.lastPointer.x < this.scene.scale.width / 2 ? this.lastPointer.x + 15 : this.lastPointer.x - 255;
+                    this.runeTooltip.setPosition(x, this.lastPointer.y - 10);
+                }
+                this.runeTooltip.setAlpha(1);
+            }
+        } else {
+            this.runeTooltip.setAlpha(0);
+        }
+    }
+
     createRunePicker(): void {
+        this.createTooltip();
+
         const runeData = RuneData.getInstance();
         const discovered = runeData.getDiscoveredDefinitions();
         if (discovered.length === 0) return;
@@ -92,6 +158,8 @@ export class RunePickerSystem {
             itemContainer.setData('restY', restY);
 
             cardBg.on('pointerover', () => {
+                this.hoveredRuneLetter = runeDef.letter;
+                this.updateTooltipDisplay();
                 restY = itemContainer.getData('restY') as number;
                 this.scene.tweens.add({
                     targets: itemContainer,
@@ -102,6 +170,8 @@ export class RunePickerSystem {
             });
 
             cardBg.on('pointerout', () => {
+                this.hoveredRuneLetter = null;
+                this.updateTooltipDisplay();
                 restY = itemContainer.getData('restY') as number;
                 this.scene.tweens.add({
                     targets: itemContainer,
@@ -112,6 +182,8 @@ export class RunePickerSystem {
             });
 
             cardBg.on('pointerdown', () => {
+                this.hoveredRuneLetter = null;
+                this.updateTooltipDisplay();
                 this.addRuneToChain(runeDef.letter);
             });
         });
@@ -298,16 +370,22 @@ export class RunePickerSystem {
             this.chainCards.push(card);
 
             bg.on('pointerdown', () => {
+                this.hoveredRuneLetter = null;
+                this.updateTooltipDisplay();
                 this.removeRuneFromChain(slotIndex);
             });
 
             bg.on('pointerover', () => {
+                this.hoveredRuneLetter = letter;
+                this.updateTooltipDisplay();
                 bg.setTint(0xdddddd);
                 runeChar.setAlpha(0.5);
                 transLabel.setAlpha(0.5);
             });
 
             bg.on('pointerout', () => {
+                this.hoveredRuneLetter = null;
+                this.updateTooltipDisplay();
                 bg.clearTint();
                 runeChar.setAlpha(1);
                 transLabel.setAlpha(1);
@@ -421,6 +499,21 @@ export class RunePickerSystem {
                 });
             });
         }
+    }
+
+    public clearChain(): void {
+        if (this.selectedChain.length === 0) return;
+
+        for (const letter of this.selectedChain) {
+            const pickerCard = this.pickerItems.get(letter);
+            if (pickerCard) {
+                pickerCard.setVisible(true);
+            }
+        }
+
+        this.selectedChain = [];
+        this.repositionPicker();
+        this.rebuildChainDisplay(false);
     }
 
     reset(): void {
