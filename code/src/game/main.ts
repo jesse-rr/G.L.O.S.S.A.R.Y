@@ -38,7 +38,7 @@ const config: Phaser.Types.Core.GameConfig = {
     antialias: false,
     fps: {
         forceSetTimeOut: !useVsync,
-        target: useVsync ? 60 : 144
+        target: useVsync ? 30 : 144
     },
     scale: {
         mode: Scale.NONE,

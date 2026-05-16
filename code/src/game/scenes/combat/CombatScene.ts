@@ -20,13 +20,12 @@ export class CombatScene extends Phaser.Scene {
     private encounterMapKey: string = '';
     private enemySprite: Phaser.GameObjects.Sprite | null = null;
     private enemyHpText: Phaser.GameObjects.Text | null = null;
-    private enemyNameText: Phaser.GameObjects.Text | null = null;
-    private playerHpText: Phaser.GameObjects.Text | null = null;
     private playerRect: Phaser.GameObjects.Rectangle | null = null;
     private turnIndicator: Phaser.GameObjects.Text | null = null;
-    private abilityBtn: Phaser.GameObjects.Text | null = null;
-    private abilityCostText: Phaser.GameObjects.Text | null = null;
+    private abilityBtnSprite: Phaser.GameObjects.Sprite | null = null;
     private isAnimating: boolean = false;
+    private hpHudText: Phaser.GameObjects.Text | null = null;
+    private scHudText: Phaser.GameObjects.Text | null = null;
     private overlayContainer: Phaser.GameObjects.Container | null = null;
 
     constructor() {
@@ -78,11 +77,17 @@ export class CombatScene extends Phaser.Scene {
         this.load.spritesheet('currency', 'assets/exports/Objects/Currency.png', {
             frameWidth: 16, frameHeight: 16
         });
+        this.load.spritesheet('special-attack-btn', 'assets/exports/UI/Special-Attack-Btn.png', {
+            frameWidth: 80, frameHeight: 80
+        });
     }
 
     create(data?: any) {
         this.encounterTier = data?.encounterTier || 1;
         this.encounterMapKey = data?.mapKey || '';
+        if (this.encounterMapKey) {
+            localStorage.setItem('glossary_combat_return_map', this.encounterMapKey);
+        }
         this.cameras.main.setBackgroundColor('#FFFFFF');
         this.playerData = this.registry.get('playerData') as PlayerData;
         this.combatTimer = 0;
@@ -248,15 +253,15 @@ export class CombatScene extends Phaser.Scene {
             this.updateHUD();
             const msg = e.data.ability === 'rewind' ? `Rewound! +${e.data.hpRestored} HP`
                 : e.data.ability === 'burn' ? `Burned ${e.data.burnedRune}! +50% DMG`
-                : `Intimidate! Enemies -25% DMG`;
+                    : `Intimidate! Enemies -25% DMG`;
             this.showFloatingText(this.scale.width / 2, 150, msg, '#FFD700');
         });
 
         this.combatSystem.on('ability_failed', (e) => {
             const msg = e.data.reason === 'not_enough_currency' ? 'Not enough currency!'
                 : e.data.reason === 'already_used' ? 'Already used this turn!'
-                : e.data.reason === 'no_damage_to_rewind' ? 'No damage to rewind!'
-                : 'Cannot use ability!';
+                    : e.data.reason === 'no_damage_to_rewind' ? 'No damage to rewind!'
+                        : 'Cannot use ability!';
             this.showFloatingText(this.scale.width / 2, 150, msg, '#cc0000');
         });
     }
@@ -268,14 +273,6 @@ export class CombatScene extends Phaser.Scene {
 
         this.playerRect = this.add.rectangle(x, y, 60, 80, covenantColor, 1)
             .setStrokeStyle(3, 0x000000).setScrollFactor(0);
-
-        const label = this.add.text(x, y, 'YOU', {
-            fontFamily: FONT_FAMILY, fontSize: '14px', color: '#FFFFFF'
-        }).setOrigin(0.5).setScrollFactor(0);
-
-        this.playerHpText = this.add.text(x, y + 55, `${this.playerData!.hp}/${this.playerData!.maxHp}`, {
-            fontFamily: FONT_FAMILY, fontSize: '14px', color: '#000000'
-        }).setOrigin(0.5).setScrollFactor(0);
     }
 
     private createEnemyVisual(): void {
@@ -286,12 +283,19 @@ export class CombatScene extends Phaser.Scene {
         const x = this.scale.width - 200;
         const y = 260;
 
-        this.enemySprite = this.add.sprite(x, y, enemy.texture, enemy.frame)
-            .setScale(2.5).setScrollFactor(0).setFlipX(true);
+        const idleKey = `enemy-idle-${enemy.texture}-${enemy.frame}`;
+        if (!this.anims.exists(idleKey)) {
+            this.anims.create({
+                key: idleKey,
+                frames: this.anims.generateFrameNumbers(enemy.texture, { start: enemy.frame, end: enemy.frame + 3 }),
+                frameRate: 6,
+                repeat: -1
+            });
+        }
 
-        this.enemyNameText = this.add.text(x, y - 70, enemy.name, {
-            fontFamily: FONT_FAMILY, fontSize: '16px', color: '#000000'
-        }).setOrigin(0.5).setScrollFactor(0);
+        this.enemySprite = this.add.sprite(x, y, enemy.texture, enemy.frame)
+            .setScale(2.5).setScrollFactor(0);
+        this.enemySprite.play(idleKey);
 
         this.enemyHpText = this.add.text(x, y + 55, `${enemy.stats.hp}/${enemy.stats.maxHp}`, {
             fontFamily: FONT_FAMILY, fontSize: '14px', color: '#000000'
@@ -300,42 +304,71 @@ export class CombatScene extends Phaser.Scene {
 
     private createAbilityButton(): void {
         const covenant = this.playerData!.covenant;
-        const abilityName = covenant === 'snake' ? 'REWIND' : covenant === 'phoenix' ? 'BURN RUNE' : 'INTIMIDATE';
-        const cost = covenant === 'snake' ? 2 : 1;
+        const frame = covenant === 'phoenix' ? 0 : covenant === 'snake' ? 1 : 2;
 
-        this.abilityBtn = this.add.text(200, 370, `[${abilityName}]`, {
-            fontFamily: FONT_FAMILY, fontSize: '14px', color: '#000000', fontStyle: 'bold'
-        }).setOrigin(0.5).setScrollFactor(0).setInteractive({ useHandCursor: true }).setAlpha(0.7);
+        const btnX = this.scale.width - 30;
+        const btnY = this.scale.height - 100;
 
-        this.abilityCostText = this.add.text(200, 390, `Cost: ${cost} SC`, {
-            fontFamily: FONT_FAMILY, fontSize: '11px', color: '#555555'
-        }).setOrigin(0.5).setScrollFactor(0);
+        this.abilityBtnSprite = this.add.sprite(btnX, btnY, 'special-attack-btn', frame)
+            .setOrigin(1, 0.5).setScrollFactor(0).setScale(2)
+            .setInteractive({ useHandCursor: true });
 
-        this.abilityBtn.on('pointerover', () => this.abilityBtn?.setAlpha(1));
-        this.abilityBtn.on('pointerout', () => this.abilityBtn?.setAlpha(0.7));
-        this.abilityBtn.on('pointerdown', () => this.onAbilityClick());
+        this.refreshAbilityVisual();
+
+        this.abilityBtnSprite.on('pointerover', () => {
+            if (this.canUseAbility()) this.abilityBtnSprite?.setAlpha(1);
+        });
+        this.abilityBtnSprite.on('pointerout', () => this.refreshAbilityVisual());
+        this.abilityBtnSprite.on('pointerdown', () => this.onAbilityClick());
+    }
+
+    private canUseAbility(): boolean {
+        if (!this.combatSystem) return false;
+        if (this.combatSystem.isAbilityUsedThisTurn()) return false;
+        const player = this.combatSystem.getLocalPlayer();
+        if (!player) return false;
+        const cost = player.covenant === 'snake' ? 2 : 1;
+        return player.specialCurrency >= cost;
+    }
+
+    private refreshAbilityVisual(): void {
+        if (!this.abilityBtnSprite) return;
+        if (this.canUseAbility()) {
+            this.abilityBtnSprite.clearTint();
+            this.abilityBtnSprite.setAlpha(0.85);
+        } else {
+            this.abilityBtnSprite.setTint(0x555555);
+            this.abilityBtnSprite.setAlpha(0.4);
+        }
     }
 
     private onAbilityClick(): void {
-        if (!this.combatSystem || this.isAnimating) return;
+        if (!this.combatSystem || this.isAnimating || !this.canUseAbility()) return;
         const covenant = this.playerData!.covenant;
 
+        let success = false;
         if (covenant === 'phoenix') {
             const discovered = RuneData.getInstance().getDiscoveredDefinitions();
             if (discovered.length > 0) {
                 const randomRune = discovered[Math.floor(Math.random() * discovered.length)];
-                this.combatSystem.useCovenantAbility('local', { runeLetter: randomRune.letter });
+                success = this.combatSystem.useCovenantAbility('local', { runeLetter: randomRune.letter });
             }
         } else {
-            this.combatSystem.useCovenantAbility('local');
+            success = this.combatSystem.useCovenantAbility('local');
+        }
+
+        if (success && this.abilityBtnSprite) {
+            this.tweens.add({
+                targets: this.abilityBtnSprite,
+                scaleX: 1.3, scaleY: 1.3,
+                duration: 150, yoyo: true, ease: 'Quad.easeOut',
+                onComplete: () => this.refreshAbilityVisual()
+            });
         }
     }
 
     private updateAbilityButton(): void {
-        if (!this.abilityBtn || !this.combatSystem) return;
-        const used = this.combatSystem.isAbilityUsedThisTurn();
-        this.abilityBtn.setAlpha(used ? 0.3 : 0.7);
-        if (used) this.abilityBtn.disableInteractive();
+        this.refreshAbilityVisual();
     }
 
     private createHUD(centerX: number): void {
@@ -345,7 +378,7 @@ export class CombatScene extends Phaser.Scene {
         this.add.sprite(hpLeftX, hpTopY, 'currency', 0)
             .setOrigin(0, 0.5).setScrollFactor(0).setScale(2);
 
-        this.add.text(hpLeftX + 40, hpTopY, `${this.playerData!.hp} / ${this.playerData!.maxHp}`, {
+        this.hpHudText = this.add.text(hpLeftX + 40, hpTopY, `${this.playerData!.hp} / ${this.playerData!.maxHp}`, {
             fontSize: '18px', color: '#FFFFFF', fontFamily: FONT_FAMILY
         }).setOrigin(0, 0.5).setScrollFactor(0);
 
@@ -367,7 +400,7 @@ export class CombatScene extends Phaser.Scene {
 
         this.add.sprite(currencyRightX + currencySpacing, currencyTopY, 'currency', specialCurrencyFrame)
             .setOrigin(0, 0.5).setScrollFactor(0).setScale(2);
-        this.add.text(currencyRightX + currencySpacing + 40, currencyTopY, `${this.playerData!.specialCurrency}`, {
+        this.scHudText = this.add.text(currencyRightX + currencySpacing + 40, currencyTopY, `${this.playerData!.specialCurrency}`, {
             fontSize: '20px', color: '#FFFFFF', fontFamily: FONT_FAMILY
         }).setOrigin(0, 0.5).setScrollFactor(0);
 
@@ -383,6 +416,10 @@ export class CombatScene extends Phaser.Scene {
             const timerStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             this.timerText.setText(`${timerStr} - ${this.combatSystem.getCurrentRound()}`);
         }
+        if (this.scHudText && this.combatSystem) {
+            const player = this.combatSystem.getLocalPlayer();
+            if (player) this.scHudText.setText(`${player.specialCurrency}`);
+        }
     }
 
     private updateTurnIndicator(text: string): void {
@@ -390,9 +427,11 @@ export class CombatScene extends Phaser.Scene {
     }
 
     private updatePlayerHp(): void {
-        if (!this.playerHpText || !this.combatSystem) return;
+        if (!this.combatSystem) return;
         const player = this.combatSystem.getLocalPlayer();
-        if (player) this.playerHpText.setText(`${player.stats.hp}/${player.stats.maxHp}`);
+        if (player && this.hpHudText) {
+            this.hpHudText.setText(`${player.stats.hp} / ${player.stats.maxHp}`);
+        }
     }
 
     private updateEnemyHp(): void {
@@ -435,8 +474,12 @@ export class CombatScene extends Phaser.Scene {
         this.time.delayedCall(400, () => {
             const damage = this.combatSystem!.executePlayerAttack('local');
             if (damage > 0 && this.enemySprite) {
+                this.enemySprite.setTintFill(0xffffff);
                 this.tweens.add({
-                    targets: this.enemySprite, x: this.enemySprite.x + 10, duration: 50, yoyo: true, repeat: 3
+                    targets: this.enemySprite, x: this.enemySprite.x + 10, duration: 50, yoyo: true, repeat: 3,
+                    onComplete: () => {
+                        this.time.delayedCall(150, () => this.enemySprite?.clearTint());
+                    }
                 });
             }
 
@@ -511,7 +554,9 @@ export class CombatScene extends Phaser.Scene {
 
         bg.setInteractive();
         bg.on('pointerdown', () => {
-            this.scene.start('LevelScene', { mapKey: 'hub' });
+            const returnMap = this.encounterMapKey || localStorage.getItem('glossary_combat_return_map') || 'hub';
+            localStorage.removeItem('glossary_combat_return_map');
+            this.scene.start('LevelScene', { mapKey: returnMap });
         });
     }
 
