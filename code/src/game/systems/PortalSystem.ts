@@ -32,7 +32,7 @@ export class PortalSystem {
 
             let targetMap = '';
 
-            if (mapKey === 'central-hub') {
+            if (mapKey === 'central-hub' || mapKey === 'hub') {
                 const covenant = PlayerData.getInstance().covenant;
                 if (y < -500) {
                     targetMap = covenant === 'dragon' ? 'boss-floor-mechanic' :
@@ -58,7 +58,7 @@ export class PortalSystem {
     calculateSpawn(portalsLayer: any, mapKey: string, previousMap: string, OFFSET: number): { x: number, y: number } {
         let spawnX = 0, spawnY = 0;
 
-        if (mapKey === 'central-hub') {
+        if (mapKey === 'central-hub' || mapKey === 'hub') {
             if (previousMap.includes('boss-')) {
                 const topPortal = portalsLayer?.objects.find((o: any) => (o.y || 0) < -500);
                 if (topPortal) {
