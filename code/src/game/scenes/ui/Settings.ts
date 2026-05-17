@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { InputKeys } from '../../constants';
 
 export class Settings extends Phaser.Scene {
 
@@ -40,7 +41,7 @@ export class Settings extends Phaser.Scene {
             this.scene.resume('MainMenu');
         });
 
-        this.input.keyboard!.on('keydown-ESC', () => {
+        this.input.keyboard!.on(InputKeys.BACK, () => {
             this.scene.stop('SettingsUI');
             this.scene.stop();
             this.scene.resume('MainMenu');

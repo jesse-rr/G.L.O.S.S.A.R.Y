@@ -3,7 +3,7 @@ import * as Phaser from 'phaser';
 export class InteractSystem {
     private static instanceMap: Map<Phaser.Scene, InteractSystem> = new Map();
 
-    private scene: Phaser.Scene;
+
     private container: Phaser.GameObjects.Container;
     private isVisibleThisFrame: boolean = false;
     private currentAlpha: number = 0;
@@ -12,7 +12,7 @@ export class InteractSystem {
     private targetY: number = 0;
 
     private constructor(scene: Phaser.Scene) {
-        this.scene = scene;
+
 
         const bg = scene.add.sprite(0, 0, 'interact-btn').setScale(0.5);
 

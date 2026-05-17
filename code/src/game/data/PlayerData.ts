@@ -1,4 +1,3 @@
-// PlayerData.ts - Versão corrigida
 export type CovenantType = 'dragon' | 'phoenix' | 'snake';
 
 export interface ItemData {
@@ -20,8 +19,7 @@ export class PlayerData {
     items: ItemData[] = [];
     runes: PlayerRuneEntry[] = [];
     hubDoorOpened: boolean = false;
-
-    private static instance: PlayerData;
+    private static instance: PlayerData | null = null;
 
     static getInstance(): PlayerData {
         if (!PlayerData.instance) {
@@ -81,7 +79,6 @@ export class PlayerData {
             this.runes.push({ id: runeId, quantity });
         }
         this.save();
-        console.log("[PlayerData] Added rune:", runeId, "Total runes:", this.runes);
     }
 
     removeRune(runeId: string, quantity: number = 1): boolean {
@@ -140,7 +137,6 @@ export class PlayerData {
     }
 
     loadFromJSON(data: any): void {
-        console.log("[PlayerData] Loading from JSON:", data);
         if (data.covenant) this.covenant = data.covenant;
         if (data.gemstones !== undefined) this.gemstones = data.gemstones;
         if (data.specialCurrency !== undefined) this.specialCurrency = data.specialCurrency;
@@ -149,31 +145,25 @@ export class PlayerData {
         if (data.items) this.items = data.items;
         if (data.runes) this.runes = data.runes;
         if (data.hubDoorOpened !== undefined) this.hubDoorOpened = data.hubDoorOpened;
-        console.log("[PlayerData] Loaded runes:", this.runes);
     }
 
     save(): void {
         const data = this.toJSON();
         localStorage.setItem('glossary_player_data', JSON.stringify(data));
-        console.log("[PlayerData] Saved data:", data);
     }
 
     load(): void {
         const data = localStorage.getItem('glossary_player_data');
-        console.log("[PlayerData] Loading from localStorage:", data);
         if (data) {
             try {
                 this.loadFromJSON(JSON.parse(data));
             } catch (e) {
                 console.error("Failed to load player data", e);
             }
-        } else {
-            console.log("[PlayerData] No saved data found, using defaults");
         }
     }
 
     forceReload(): void {
-        console.log("[PlayerData] Forcing reload");
         this.load();
     }
 }

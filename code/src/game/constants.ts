@@ -1,5 +1,19 @@
 export const FONT_FAMILY = 'VCRosdNEUE';
 export const RUNE_FONT = 'RuneFont';
+export const TITLE_FONT = 'OldeEnglish';
+
+export enum InputKeys {
+    INTERACT = 'keydown-X',
+    HELP = 'keydown-Q',
+    GLOSSARY = 'keydown-G',
+    BACK = 'keydown-ESC',
+    ENTER = 'keydown-ENTER',
+    UP = 'keydown-UP',
+    DOWN = 'keydown-DOWN',
+    LEFT = 'keydown-LEFT',
+    RIGHT = 'keydown-RIGHT',
+    SHIFT = 'keydown-SHIFT'
+}
 
 export const COVENANT_COLORS: Record<string, number> = {
     dragon: 0x734f7b,
@@ -13,6 +27,12 @@ export const COVENANT_TINTS: Record<string, number> = {
     phoenix: 0x9e2e2e,
     snake: 0x545f67,
     default: 0xffffff
+};
+
+export const COVENANT_CARD_TINTS: Record<string, number> = {
+    dragon: 0x816188,
+    phoenix: 0xa74444,
+    snake: 0x5a7872
 };
 
 export const ROOM_FIRST_WORDS: string[] = [

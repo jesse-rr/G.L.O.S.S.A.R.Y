@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 
-import { FONT_FAMILY } from '../../constants';
+import { FONT_FAMILY, InputKeys } from '../../constants';
 
 export class Help extends Phaser.Scene {
     private scrollY = 0;
@@ -160,7 +160,7 @@ export class Help extends Phaser.Scene {
             this.scene.resume(this.previousScene);
         });
 
-        this.input.keyboard!.on('keydown-ESC', () => {
+        this.input.keyboard!.on(InputKeys.BACK, () => {
             this.scene.stop('SettingsUI');
             this.scene.stop('AchievementsUI');
             this.scene.stop('ControlsUI');
@@ -168,7 +168,7 @@ export class Help extends Phaser.Scene {
             this.scene.resume(this.previousScene);
         });
 
-        this.input.keyboard!.on('keydown-Q', () => {
+        this.input.keyboard!.on(InputKeys.HELP, () => {
             this.scene.stop('SettingsUI');
             this.scene.stop('AchievementsUI');
             this.scene.stop('ControlsUI');

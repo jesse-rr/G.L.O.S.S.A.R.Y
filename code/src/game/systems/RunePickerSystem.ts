@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { RuneData } from '../data/RuneData';
-import { FONT_FAMILY, RUNE_FONT } from '../constants';
+import { FONT_FAMILY, RUNE_FONT, InputKeys } from '../constants';
 
 const MAX_CHAIN_RUNES = 3;
 const CHAIN_CARD_SCALE = 3;
@@ -70,7 +70,7 @@ export class RunePickerSystem {
         }).setOrigin(0, 0);
         this.runeTooltip.add([bg, this.runeTooltipTitle, this.runeTooltipDesc]);
 
-        this.scene.input.keyboard!.on('keydown-SHIFT', () => {
+        this.scene.input.keyboard!.on(InputKeys.SHIFT, () => {
             this.isShiftDown = true;
             this.updateTooltipDisplay();
         });

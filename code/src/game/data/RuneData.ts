@@ -1,6 +1,6 @@
 export type RuneEffectType = 'damage' | 'defense' | 'heal' | 'buff' | 'debuff' | 'utility';
 export type RuneCardType = 'base' | 'boost' | 'unique';
-export type RuneStatusEffect = 'ignite' | 'venom' | 'dazed' | 'shatter' | 'slow' | 'overcharge';
+export type RuneStatusEffect = 'ignite' | 'venom' | 'dazed' | 'shatter' | 'slow' | 'overcharge' | 'weaken' | 'fortify';
 
 export interface RuneDefinition {
     letter: string;
@@ -30,7 +30,7 @@ const RUNE_DEFINITIONS: RuneDefinition[] = [
     { letter: 'H', name: 'Hallow', translation: 'Purify', effectType: 'heal', cardType: 'boost', basePower: 7, description: "Blessed by the High Priestesses of the Sun Altar. Hallow washes away corruption and decay, returning the flesh and spirit to its most pristine, untainted state." },
     { letter: 'I', name: 'Ignis', translation: 'Ignite', effectType: 'damage', cardType: 'unique', basePower: 9, description: "Distinct from raw fire, Ignis represents the sudden, violent birth of a spark. Found on the anvils of the legendary dwarven smiths, it forces a target to combust from within. Applies Ignite: 5 fire damage each turn for 3 turns.", statusEffect: 'ignite' },
     { letter: 'J', name: 'Jinx', translation: 'Curse', effectType: 'debuff', cardType: 'boost', basePower: 6, description: "Unearthed from the cursed catacombs of the Usurper King. Jinx twists probability and fate, ensuring misfortune plagues anyone who dares stand against its invoker. Applies Venom: Stacking damage each turn for 3 turns.", statusEffect: 'venom' },
-    { letter: 'K', name: 'Kael', translation: 'Fortify', effectType: 'defense', cardType: 'base', basePower: 8, description: "The foundational stone of the Great Bastion. Kael goes beyond physical shields; it reinforces the very spirit and resolve of an ally, making them immovable objects." },
+    { letter: 'K', name: 'Kael', translation: 'Fortify', effectType: 'defense', cardType: 'base', basePower: 8, description: "The foundational stone of the Great Bastion. Kael goes beyond physical shields; it reinforces the very spirit and resolve of an ally, making them immovable objects. Applies Fortify: +50% defense for 2 turns.", statusEffect: 'fortify' },
     { letter: 'L', name: 'Lux', translation: 'Light', effectType: 'heal', cardType: 'boost', basePower: 6, description: "A beacon in the dark age. Lux is said to be a crystallized fragment of a falling star, offering warmth, clarity, and mending to those lost in the shadow." },
     { letter: 'M', name: 'Morth', translation: 'Decay', effectType: 'debuff', cardType: 'base', basePower: 7, description: "A taboo rune banished from all grand libraries. Morth symbolizes the inevitable end of all things. It accelerates time locally, causing weapons to rust and flesh to rot. Applies Weaken: Enemy damage reduced by 50% for 2 turns.", statusEffect: 'weaken' },
     { letter: 'N', name: 'Nyx', translation: 'Shadow', effectType: 'damage', cardType: 'base', basePower: 11, description: "Worshipped by the veiled brotherhood, Nyx is the embodiment of the void. It swallows light and hope alike, striking enemies from places the eye cannot see. Applies Dazed: 50% chance for enemy to miss attacks for 2 turns.", statusEffect: 'dazed' },
@@ -44,7 +44,7 @@ const RUNE_DEFINITIONS: RuneDefinition[] = [
     { letter: 'V', name: 'Vox', translation: 'Command', effectType: 'buff', cardType: 'boost', basePower: 5, description: "The word of the sovereign. Vox enforces absolute authority over lesser beings. Uttering this rune bends the will of the weak and bolsters the courage of the loyal." },
     { letter: 'W', name: 'Wyrd', translation: 'Fate', effectType: 'utility', cardType: 'unique', basePower: 0, description: "Interpreted by the blind seers of the oracle pool. Wyrd acknowledges that all paths are pre-written. It manipulates destiny slightly, shifting luck entirely in your favor. Applies Overcharge: +50% attack power for 2 turns if chain is exactly 3 runes.", statusEffect: 'overcharge' },
     { letter: 'X', name: 'Xael', translation: 'Shatter', effectType: 'damage', cardType: 'base', basePower: 14, description: "The breaker of chains. Xael represents pure destructive resonance. It was used in siege warfare to turn impenetrable fortress walls into dust with a single strike. Applies Shatter: Enemy defense reduced to 0 for 2 turns.", statusEffect: 'shatter' },
-    { letter: 'Y', name: 'Ymir', translation: 'Endure', effectType: 'defense', cardType: 'unique', basePower: 10, description: "The rune of the lone survivor. Ymir demands that life persists against all odds. It grants an unnatural resilience, allowing one to stand firm long after they should have fallen." }
+    { letter: 'Y', name: 'Ymir', translation: 'Endure', effectType: 'defense', cardType: 'unique', basePower: 10, description: "The rune of the lone survivor. Ymir demands that life persists against all odds. It grants an unnatural resilience, allowing one to stand firm long after they should have fallen. Applies Fortify: +50% defense for 2 turns.", statusEffect: 'fortify' }
 ];
 
 export const SUMMIT_RUNE: RuneDefinition = {

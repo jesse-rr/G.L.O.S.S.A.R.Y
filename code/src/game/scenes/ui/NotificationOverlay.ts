@@ -1,16 +1,10 @@
 import * as Phaser from 'phaser';
 import { EventBus } from '../../EventBus';
 import { FONT_FAMILY } from '../../constants';
+import { fadeIn, fadeOutAndDestroy } from '../../utils/TweenUtils';
 
 const NOTIFICATION_DURATION = 3000;
 const FADE_DURATION = 400;
-const NOTIFICATION_HEIGHT = 44; // Approx height + spacing
-
-interface NotificationItem {
-    bg: Phaser.GameObjects.Image;
-    label: Phaser.GameObjects.Text;
-    targetY: number;
-}
 
 export class NotificationOverlay extends Phaser.Scene {
     private messageQueue: string[] = [];
@@ -76,26 +70,12 @@ export class NotificationOverlay extends Phaser.Scene {
             .setDepth(201)
             .setAlpha(0);
 
-        this.tweens.add({
-            targets: [bg, label],
-            alpha: 1,
-            duration: FADE_DURATION,
-            ease: 'Quad.easeOut',
-            onComplete: () => {
-                this.time.delayedCall(NOTIFICATION_DURATION, () => {
-                    this.tweens.add({
-                        targets: [bg, label],
-                        alpha: 0,
-                        duration: FADE_DURATION,
-                        ease: 'Quad.easeIn',
-                        onComplete: () => {
-                            bg.destroy();
-                            label.destroy();
-                            this.showNextNotification();
-                        }
-                    });
+        fadeIn(this, [bg, label], FADE_DURATION, () => {
+            this.time.delayedCall(NOTIFICATION_DURATION, () => {
+                fadeOutAndDestroy(this, [bg, label], FADE_DURATION, () => {
+                    this.showNextNotification();
                 });
-            }
+            });
         });
     }
 }

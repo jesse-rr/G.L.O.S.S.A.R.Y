@@ -4,6 +4,7 @@ import { UserData } from '../data/UserData';
 import { PlayerData } from '../data/PlayerData';
 import { InteractSystem } from './InteractSystem';
 import { COVENANT_COLORS, FONT_FAMILY } from '../constants';
+import { MatterScene } from '../types';
 
 const INTERACT_DISTANCE = 40;
 const STORAGE_KEY = 'glossary_opened_chests';
@@ -45,7 +46,7 @@ function getOpenFrame(type: 'big' | 'small', sideways: boolean): number {
 
 export function createChests(
     scene: Phaser.Scene,
-    chestLayer: { objects: any[] },
+    chestLayer: Phaser.Tilemaps.ObjectLayer,
     mapKey: string,
     playerDepth: number = 12
 ): ChestState[] {
@@ -114,7 +115,7 @@ export function createChests(
 
         const bodyWidth = (type === 'big' && !sideways) ? width - 10 : width - 14;
         const bodyHeight = (type === 'big' && sideways) ? 31 : 22;
-        const body = (scene as any).matter.add.rectangle(cx, bodyY, bodyWidth, bodyHeight, { isStatic: true });
+        const body = (scene as MatterScene).matter.add.rectangle(cx, bodyY, bodyWidth, bodyHeight, { isStatic: true });
 
         chests.push({
             sprite,
@@ -137,7 +138,7 @@ export function handleChestInteraction(
     chests: ChestState[],
     player: Phaser.Physics.Matter.Sprite,
     interactKeyDown: boolean,
-    delta: number,
+    _delta: number,
     isCinematic: boolean,
     isTeleporting: boolean,
     isEntering: boolean

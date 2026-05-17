@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { NetworkManager } from '../../NetworkManager';
+import { fadeIn, fadeOut } from '../../utils/TweenUtils';
 
 export class ItemModal extends Phaser.Scene {
     private bgOverlay!: Phaser.GameObjects.Rectangle;
@@ -26,35 +27,25 @@ export class ItemModal extends Phaser.Scene {
             .setTint(0x000000)
             .setAlpha(0);
 
-        this.tweens.add({
-            targets: this.itemSprite,
-            alpha: 1,
-            duration: 600,
-            onComplete: () => {
-                this.time.delayedCall(800, () => {
-                    this.itemSprite.clearTint();
-                    this.cameras.main.flash(400, 255, 255, 255);
-                    
-                    const nm = NetworkManager.getInstance();
-                    if (nm.role !== 'offline') {
-                        nm.broadcast({ type: 'ITEM_FOUND', itemName: data.itemName });
-                    }
+        fadeIn(this, this.itemSprite, 600, () => {
+            this.time.delayedCall(800, () => {
+                this.itemSprite.clearTint();
+                this.cameras.main.flash(400, 255, 255, 255);
 
-                    this.time.delayedCall(1000, () => this.closeModal());
-                });
-            }
+                const nm = NetworkManager.getInstance();
+                if (nm.role !== 'offline') {
+                    nm.broadcast({ type: 'ITEM_FOUND', itemName: data.itemName });
+                }
+
+                this.time.delayedCall(1000, () => this.closeModal());
+            });
         });
     }
 
     private closeModal() {
-        this.tweens.add({
-            targets: [this.bgOverlay, this.itemSprite],
-            alpha: 0,
-            duration: 400,
-            onComplete: () => {
-                this.scene.resume('LevelScene');
-                this.scene.stop();
-            }
+        fadeOut(this, [this.bgOverlay, this.itemSprite], 400, () => {
+            this.scene.resume('LevelScene');
+            this.scene.stop();
         });
     }
 }

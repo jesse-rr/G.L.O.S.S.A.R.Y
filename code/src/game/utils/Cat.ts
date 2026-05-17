@@ -82,7 +82,7 @@ export class Cat extends Phaser.Scene {
     });
   }
 
-  private beginSpin(duration: number, rotations: number) {
+  private beginSpin(duration: number, _rotations: number) {
     this.isSpinning = true;
     this.spinStartTime = this.game.getTime();
     this.spinDuration = duration;
@@ -96,7 +96,7 @@ export class Cat extends Phaser.Scene {
     if (this.spinAudio) this.spinAudio.stop();
   }
 
-  update(time: number, delta: number) {
+  update(_time: number, delta: number) {
     if (!this.model) return;
 
     if (this.isSpinning) {

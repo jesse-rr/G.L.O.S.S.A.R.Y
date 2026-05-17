@@ -1,29 +1,24 @@
 import * as Phaser from 'phaser';
 import { createVignette } from '../../utils/Vignette';
-import { PlayerData } from '../../data/PlayerData';
+import { InputKeys } from '../../constants';
 import { LocationData } from '../../data/LocationData';
 import { parseCollisionObjects, parseStairObjects } from '../../systems/CollisionParser';
 import { DoorState, createDoors, handleDoorInteraction } from '../../systems/DoorSystem';
 import { BossButtonState, createBossButtons, handleBossButtonInteraction } from '../../systems/BossButtonSystem';
 import { ChestState, createChests, handleChestInteraction } from '../../systems/ChestSystem';
-import { LightSystem } from '../../systems/LightSystem';
 import { TradeState, createTrades, handleTradeInteraction } from "../../systems/TradeSystem";
+import { PortalSystem } from '../../systems/PortalSystem';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-    private keys!: any;
+    private keys!: { W: Phaser.Input.Keyboard.Key, A: Phaser.Input.Keyboard.Key, S: Phaser.Input.Keyboard.Key, D: Phaser.Input.Keyboard.Key };
     private mapKey!: string;
-    private returnPortalGroup!: Phaser.GameObjects.Group;
-    private isTeleporting = false;
-    private teleportDirection: { x: number, y: number } = { x: 0, y: 0 };
+    private portalSystem!: PortalSystem;
 
-    private slowZones!: Phaser.GameObjects.Group;
     private targetSlowFactor = 1;
     private currentSlowFactor = 1;
-
     private stairZones!: Phaser.GameObjects.Group;
-    private onStairs = false;
     private inReverseZone = false;
 
     private activeStairZones: Set<number> = new Set();
@@ -35,7 +30,6 @@ export class LevelScene extends Phaser.Scene {
     private isCinematic = false;
     private glossaryBtn!: Phaser.GameObjects.Sprite;
     private settingsBtn!: Phaser.GameObjects.Sprite;
-    private lightSystem!: LightSystem;
     private wasInteractPressed = { value: false };
 
     constructor() {
@@ -56,9 +50,10 @@ export class LevelScene extends Phaser.Scene {
         this.entryDirY = data?.entryDirY || 0;
         this.overrideSpawnX = data?.spawnX ?? null;
         this.overrideSpawnY = data?.spawnY ?? null;
-        this.isTeleporting = false;
         this.isEntering = false;
         this.isCinematic = false;
+        if (this.portalSystem) {
+        }
     }
 
     preload() {
@@ -140,9 +135,7 @@ export class LevelScene extends Phaser.Scene {
     }
 
     create() {
-        this.slowZones = this.add.group();
         this.stairZones = this.add.group();
-        this.onStairs = false;
         this.inReverseZone = false;
         this.targetSlowFactor = 1;
         this.currentSlowFactor = 1;
@@ -158,7 +151,7 @@ export class LevelScene extends Phaser.Scene {
 
         this.cameras.main.setBackgroundColor('#111111');
 
-        this.returnPortalGroup = this.add.group();
+        this.portalSystem = new PortalSystem(this);
 
         if (this.mapKey === 'hub' || this.mapKey === 'central-hub') {
             this.createMap('central-hub');
@@ -208,7 +201,7 @@ export class LevelScene extends Phaser.Scene {
         }
 
         this.cursors = this.input.keyboard!.createCursorKeys();
-        this.keys = this.input.keyboard!.addKeys('W,A,S,D') as any;
+        this.keys = this.input.keyboard!.addKeys('W,A,S,D') as { W: Phaser.Input.Keyboard.Key, A: Phaser.Input.Keyboard.Key, S: Phaser.Input.Keyboard.Key, D: Phaser.Input.Keyboard.Key };
         this.interactKey = this.input.keyboard!.addKey('X');
 
         if (!this.anims.exists('door-open')) {
@@ -225,7 +218,7 @@ export class LevelScene extends Phaser.Scene {
             });
         }
 
-        this.input.keyboard!.on('keydown-Q', () => {
+        this.input.keyboard!.on(InputKeys.HELP, () => {
             if (!this.scene.isPaused()) {
                 this.scene.pause();
                 this.scene.launch('Help', { previousScene: 'LevelScene' });
@@ -252,7 +245,7 @@ export class LevelScene extends Phaser.Scene {
             }
         });
 
-        this.input.keyboard!.on('keydown-G', () => {
+        this.input.keyboard!.on(InputKeys.GLOSSARY, () => {
             if (!this.scene.isActive('GlossaryUI')) {
                 this.scene.pause();
                 this.scene.launch('GlossaryUI', { previousScene: 'LevelScene', isPaused: true });
@@ -286,8 +279,6 @@ export class LevelScene extends Phaser.Scene {
 
         createVignette(this);
 
-
-
         this.matter.world.on('collisionstart', (event: any) => {
             event.pairs.forEach((pair: any) => {
                 const { bodyA, bodyB } = pair;
@@ -310,7 +301,7 @@ export class LevelScene extends Phaser.Scene {
                             }
                         }
                         if (other.getData('target')) {
-                            this.onPortalOverlap(other);
+                            this.portalSystem.onPortalOverlap(other, this.player, this.mapKey);
                         }
                     }
                 }
@@ -342,28 +333,16 @@ export class LevelScene extends Phaser.Scene {
                 }
             });
         });
-
-        this.lightSystem = new LightSystem(this);
     }
 
     private updateSlowFactor(): void {
         if (this.inReverseZone) {
             this.targetSlowFactor = 1;
-            this.onStairs = false;
         } else if (this.activeStairZones.size > 0) {
             this.targetSlowFactor = 0.6;
-            this.onStairs = true;
         } else {
             this.targetSlowFactor = 1;
-            this.onStairs = false;
         }
-    }
-
-    private createPortal(x: number, y: number, targetMap: string, width: number = 60, height: number = 60) {
-        const portal = this.add.rectangle(x, y, width, height, 0x000000, 0);
-        this.matter.add.gameObject(portal, { isStatic: true, isSensor: true });
-        this.returnPortalGroup.add(portal);
-        portal.setData('target', targetMap);
     }
 
     private createMap(mapKey: string) {
@@ -382,140 +361,47 @@ export class LevelScene extends Phaser.Scene {
 
         this.cameras.main.setZoom(2);
         this.matter.world.setBounds(-2000, -2000, 4000, 4000);
-
-        parseCollisionObjects(this, map.objects as any);
+        parseCollisionObjects(this, map.objects);
 
         const stairsLayer = map.objects.find(layer => layer.name.toLowerCase() === 'stairs');
         if (stairsLayer) {
-            parseStairObjects(this, stairsLayer as any, this.stairZones);
+            parseStairObjects(this, stairsLayer, this.stairZones);
         }
 
         const portalsLayer = map.objects.find(layer => layer.name.toLowerCase() === 'portals');
         if (portalsLayer) {
-            portalsLayer.objects.forEach(obj => {
-                const x = obj.x || 0;
-                const y = obj.y || 0;
-                const width = obj.width || 60;
-                const height = obj.height || 60;
-                const cx = x + width / 2;
-                const cy = y + height / 2;
-
-                let targetMap = '';
-
-                if (mapKey === 'central-hub') {
-                    const covenant = PlayerData.getInstance().covenant;
-                    if (y < -500) {
-                        targetMap = covenant === 'dragon' ? 'boss-floor-mechanic' :
-                            covenant === 'phoenix' ? 'boss-floor-desert' : 'boss-floor-abandoned';
-                    } else if (x < -100) {
-                        targetMap = covenant === 'dragon' ? 'mechanic-settlement' :
-                            covenant === 'phoenix' ? 'desert-settlement' : 'abandoned-settlement';
-                    } else if (x > 100) {
-                        targetMap = 'summit-trade';
-                    } else {
-                        return;
-                    }
-                } else {
-                    targetMap = 'hub';
-                }
-
-                if (targetMap) {
-                    this.createPortal(cx, cy, targetMap, width, height);
-                }
-            });
+            this.portalSystem.parsePortals(portalsLayer, this.mapKey);
         }
 
         const doorLayer = map.objects.find(layer => layer.name.toLowerCase() === 'door');
         if (doorLayer) {
-            this.doors = createDoors(this, doorLayer as any);
+            this.doors = createDoors(this, doorLayer);
         }
 
         const buttonLayer = map.objects.find(layer => layer.name.toLowerCase() === 'button');
         if (buttonLayer) {
-            this.bossButtons = createBossButtons(this, buttonLayer as any, mapKey);
+            this.bossButtons = createBossButtons(this, buttonLayer, mapKey);
         }
 
         const chestLayer = map.objects.find(layer => layer.name.toLowerCase() === 'chests');
         if (chestLayer) {
-            this.chests = createChests(this, chestLayer as any, mapKey, this.getPlayerDepth(mapKey) - 1);
+            this.chests = createChests(this, chestLayer, mapKey, this.getPlayerDepth(mapKey) - 1);
         }
 
         const tradeLayer = map.objects.find(layer => layer.name.toLowerCase() === 'trades');
         if (tradeLayer) {
-            this.trades = createTrades(this, tradeLayer as any, mapKey);
+            this.trades = createTrades(this, tradeLayer, mapKey);
         }
 
-        let spawnX = 0, spawnY = 0;
         const OFFSET = 54;
-
-        if (mapKey === 'central-hub') {
-            if (this.previousMap.includes('boss-')) {
-                const topPortal = portalsLayer?.objects.find(o => (o.y || 0) < -500);
-                if (topPortal) {
-                    const pw = topPortal.width || 60;
-                    const ph = topPortal.height || 60;
-                    spawnX = (topPortal.x || 0) + pw / 2;
-                    spawnY = (topPortal.y || 0) + ph / 2 + OFFSET;
-                }
-            } else if (this.previousMap.includes('-settlement')) {
-                const leftPortal = portalsLayer?.objects.find(o => (o.x || 0) < -100 && (o.y || 0) > -500);
-                if (leftPortal) {
-                    const pw = leftPortal.width || 60;
-                    const ph = leftPortal.height || 60;
-                    spawnX = (leftPortal.x || 0) + pw / 2 + OFFSET;
-                    spawnY = (leftPortal.y || 0) + ph / 2;
-                }
-            } else if (this.previousMap === 'summit-trade') {
-                const rightPortal = portalsLayer?.objects.find(o => (o.x || 0) > 100);
-                if (rightPortal) {
-                    const pw = rightPortal.width || 60;
-                    const ph = rightPortal.height || 60;
-                    spawnX = (rightPortal.x || 0) + pw / 2 - OFFSET;
-                    spawnY = (rightPortal.y || 0) + ph / 2;
-                }
-            } else {
-                spawnX = 0;
-                spawnY = -30;
-            }
-        } else {
-            const returnPortal = portalsLayer?.objects[0];
-            if (returnPortal) {
-                const pw = returnPortal.width || 60;
-                const ph = returnPortal.height || 60;
-                const px = (returnPortal.x || 0) + pw / 2;
-                const py = (returnPortal.y || 0) + ph / 2;
-
-                if (mapKey.includes('boss-')) {
-                    spawnX = px;
-                    spawnY = py - OFFSET;
-                } else if (mapKey.includes('-settlement')) {
-                    spawnX = px - OFFSET;
-                    spawnY = py;
-                } else if (mapKey === 'summit-trade') {
-                    spawnX = px + OFFSET;
-                    spawnY = py;
-                } else {
-                    spawnX = px;
-                    spawnY = py;
-                }
-            }
-        }
+        const spawnPos = this.portalSystem.calculateSpawn(portalsLayer, mapKey, this.previousMap, OFFSET);
+        let spawnX = spawnPos.x;
+        let spawnY = spawnPos.y;
 
         this.spawnPlayer(this.overrideSpawnX !== null ? this.overrideSpawnX : spawnX, this.overrideSpawnY !== null ? this.overrideSpawnY : spawnY);
         this.overrideSpawnX = null;
         this.overrideSpawnY = null;
         this.player.setDepth(this.getPlayerDepth(mapKey));
-
-        this.matter.world.on('collisionstart', (event: any) => {
-            event.pairs.forEach((pair: any) => {
-                const { bodyA, bodyB } = pair;
-                const goA = bodyA.gameObject, goB = bodyB.gameObject;
-                if ((goA === this.player || goB === this.player) && (goA?.getData?.('target') || goB?.getData?.('target'))) {
-                    const portal = goA === this.player ? goB : goA;
-                    if (portal?.getData('target')) this.onPortalOverlap(portal);
-                }
-            });
-        });
 
         this.cameras.main.fadeIn(800, 0, 0, 0);
 
@@ -543,34 +429,7 @@ export class LevelScene extends Phaser.Scene {
         this.player.play('idle');
     }
 
-    private onPortalOverlap(portal: Phaser.GameObjects.GameObject) {
-        if (this.isTeleporting) return;
-        const targetMap = portal.getData('target');
-        if (targetMap) {
-            this.isTeleporting = true;
-
-            const px = (portal as Phaser.GameObjects.Rectangle).x;
-            const py = (portal as Phaser.GameObjects.Rectangle).y;
-
-            let dirX = 0; let dirY = 0;
-            if (Math.abs(this.player.x - px) > Math.abs(this.player.y - py)) {
-                dirX = this.player.x < px ? 1 : -1;
-            } else {
-                dirY = this.player.y < py ? 1 : -1;
-            }
-            this.teleportDirection = { x: dirX, y: dirY };
-
-            this.time.delayedCall(100, () => {
-                this.cameras.main.fadeOut(400, 0, 0, 0);
-            });
-
-            this.time.delayedCall(500, () => {
-                this.scene.restart({ mapKey: targetMap, previousMap: this.mapKey, entryDirX: dirX, entryDirY: dirY });
-            });
-        }
-    }
-
-    update(time: number, delta: number) {
+    update(_time: number, delta: number) {
         handleDoorInteraction(
             this,
             this.doors,
@@ -578,7 +437,7 @@ export class LevelScene extends Phaser.Scene {
             this.interactKey.isDown,
             delta,
             this.isCinematic,
-            this.isTeleporting,
+            this.portalSystem.getIsTeleporting(),
             this.isEntering,
             (val) => { this.isCinematic = val; }
         );
@@ -589,7 +448,7 @@ export class LevelScene extends Phaser.Scene {
             this.player,
             this.interactKey.isDown,
             this.isCinematic,
-            this.isTeleporting,
+            this.portalSystem.getIsTeleporting(),
             this.isEntering,
             (val) => { this.isCinematic = val; },
             this.mapKey,
@@ -603,7 +462,7 @@ export class LevelScene extends Phaser.Scene {
             this.interactKey.isDown,
             delta,
             this.isCinematic,
-            this.isTeleporting,
+            this.portalSystem.getIsTeleporting(),
             this.isEntering
         );
 
@@ -624,9 +483,10 @@ export class LevelScene extends Phaser.Scene {
 
         let moveX = 0, moveY = 0, moving = false;
 
-        if (this.isTeleporting) {
-            moveX = this.teleportDirection.x;
-            moveY = this.teleportDirection.y;
+        if (this.portalSystem.getIsTeleporting()) {
+            const dir = this.portalSystem.getTeleportDirection();
+            moveX = dir.x;
+            moveY = dir.y;
             moving = true;
             if (moveX < 0) this.player.setFlipX(true);
             else if (moveX > 0) this.player.setFlipX(false);

@@ -3,8 +3,7 @@ import { MultiplayerData, RoomData } from '../../data/MultiplayerData';
 import { RuneData } from '../../data/RuneData';
 import { NetworkManager } from '../../NetworkManager';
 import { EventBus, GameEvents } from '../../EventBus';
-
-import { FONT_FAMILY } from '../../constants';
+import { FONT_FAMILY, InputKeys } from '../../constants';
 
 export class Multiplayer extends Phaser.Scene {
 
@@ -13,7 +12,7 @@ export class Multiplayer extends Phaser.Scene {
     }
 
     preload() {
-        const multiplayerData = MultiplayerData.getInstance();
+        
 
         this.load.image('multiplayer-bg', 'assets/exports/UI/Multiplayer-UI.png');
         this.load.image('multiplayer-room-ui', 'assets/exports/UI/Multiplayer-Room-UI.png');
@@ -31,7 +30,7 @@ export class Multiplayer extends Phaser.Scene {
         const centerX = Math.floor(this.scale.width / 2);
         const centerY = Math.floor(this.scale.height / 2);
 
-        const bg = this.add.image(centerX, centerY, 'multiplayer-bg')
+        this.add.image(centerX, centerY, 'multiplayer-bg')
             .setOrigin(0.5)
             .setScale(scale);
 
@@ -48,7 +47,7 @@ export class Multiplayer extends Phaser.Scene {
             this.scene.resume('MainMenu');
         });
 
-        this.input.keyboard!.on('keydown-ESC', () => {
+        this.input.keyboard!.on(InputKeys.BACK, () => {
             this.scene.stop();
             this.scene.resume('MainMenu');
         });
@@ -282,14 +281,14 @@ export class Multiplayer extends Phaser.Scene {
                 this.scene.launch('TransitionScene', { targetScene: 'Covenant', currentScene: 'Multiplayer' });
             } else {
                 createRoomBtnTxt.setText('HOSTING...');
-                NetworkManager.getInstance().hostRoom(previewRoom.passcode, (id) => {
+                NetworkManager.getInstance().hostRoom(previewRoom.passcode, (_id: string) => {
                     md.myRoom = previewRoom;
                     NetworkManager.getInstance().registerRoom({ ...previewRoom, id: previewRoom.passcode });
                     updateRightPanel();
                     renderPage();
-                }, (err) => {
+                }, (_err) => {
                     createRoomBtnTxt.setText('Create');
-                    console.error('Host error', err);
+                    console.error('Host error', _err);
                 });
             }
         });
@@ -390,7 +389,7 @@ export class Multiplayer extends Phaser.Scene {
                 updateRightPanel();
                 updateJoinPanel();
                 renderPage();
-            }, (err) => {
+            }, (_err) => {
                 flashJoinButton('NOT FOUND', '#ff5555');
                 NetworkManager.getInstance().disconnect();
             });
@@ -404,7 +403,7 @@ export class Multiplayer extends Phaser.Scene {
             }
         };
 
-        const onPeerConnected = (peerId: string) => {
+        const onPeerConnected = (_peerId: string) => {
             if (md.myRoom) {
                 md.myRoom.currentPlayers++;
                 NetworkManager.getInstance().registerRoom({ ...md.myRoom, id: md.myRoom.passcode });
@@ -413,7 +412,7 @@ export class Multiplayer extends Phaser.Scene {
             }
         };
 
-        const onPeerDisconnected = (peerId: string) => {
+        const onPeerDisconnected = (_peerId: string) => {
             if (md.myRoom) {
                 md.myRoom.currentPlayers = Math.max(1, md.myRoom.currentPlayers - 1);
                 NetworkManager.getInstance().registerRoom({ ...md.myRoom, id: md.myRoom.passcode });

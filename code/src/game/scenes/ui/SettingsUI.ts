@@ -1,7 +1,8 @@
 import * as Phaser from 'phaser';
 import { UserData } from '../../data/UserData';
 
-import { FONT_FAMILY } from '../../constants';
+import { FONT_FAMILY, InputKeys } from '../../constants';
+import { ScrollableScene } from '../../types';
 
 export class SettingsUI extends Phaser.Scene {
 
@@ -17,7 +18,6 @@ export class SettingsUI extends Phaser.Scene {
     private draggingSlider: any = null;
 
     private leftCount = 3;
-    private rightCount = 4;
 
     constructor() {
         super('SettingsUI');
@@ -214,11 +214,11 @@ export class SettingsUI extends Phaser.Scene {
 
         this.select(0);
 
-        this.input.keyboard!.on('keydown-UP', () => this.move(-1));
-        this.input.keyboard!.on('keydown-DOWN', () => this.move(1));
-        this.input.keyboard!.on('keydown-LEFT', () => this.moveSide(-1));
-        this.input.keyboard!.on('keydown-RIGHT', () => this.moveSide(1));
-        this.input.keyboard!.on('keydown-ENTER', () => this.activate(this.selected));
+        this.input.keyboard!.on(InputKeys.UP, () => this.move(-1));
+        this.input.keyboard!.on(InputKeys.DOWN, () => this.move(1));
+        this.input.keyboard!.on(InputKeys.LEFT, () => this.moveSide(-1));
+        this.input.keyboard!.on(InputKeys.RIGHT, () => this.moveSide(1));
+        this.input.keyboard!.on(InputKeys.ENTER, () => this.activate(this.selected));
 
         this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
             if (this.draggingSlider) {
@@ -227,7 +227,7 @@ export class SettingsUI extends Phaser.Scene {
                 const clamped = Phaser.Math.Clamp(local.x, minX, maxX);
                 update(((clamped - minX) / (maxX - minX)) * 100);
             } else if (p.isDown) {
-                const parent = this.parentScene as any;
+                const parent = this.parentScene as ScrollableScene;
                 if (parent && parent.scrollY !== undefined) {
                     parent.scrollY -= p.velocity.y / 10;
                     parent.scrollY = Phaser.Math.Clamp(parent.scrollY, 0, parent.maxScroll);
@@ -241,7 +241,7 @@ export class SettingsUI extends Phaser.Scene {
         });
 
         this.input.on('wheel', (_: any, __: any, ___: number, dy: number) => {
-            const parent = this.parentScene as any;
+            const parent = this.parentScene as ScrollableScene;
             if (parent && parent.scrollY !== undefined) {
                 parent.scrollY += dy;
                 parent.scrollY = Phaser.Math.Clamp(parent.scrollY, 0, parent.maxScroll);
@@ -251,7 +251,7 @@ export class SettingsUI extends Phaser.Scene {
     }
 
     update() {
-        const scrollY = (this.parentScene.cameras.main as any).scrollY;
+        const scrollY = this.parentScene.cameras.main.scrollY;
 
         this.elements.forEach((el: any) => {
             el.obj.setPosition(
@@ -313,7 +313,7 @@ export class SettingsUI extends Phaser.Scene {
             if (i === 0) {
                 userData.settings.vsync = el.enabled;
                 this.game.loop.targetFps = el.enabled ? 60 : 240;
-                this.game.loop.forceSetTimeOut = !el.enabled;
+                (this.game.loop as any).forceSetTimeOut = !el.enabled;
                 this.game.loop.stop();
                 this.game.loop.start((this.game.loop as any).callback);
             }

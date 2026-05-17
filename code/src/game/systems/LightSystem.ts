@@ -3,7 +3,6 @@ export class LightSystem {
     private minAlpha: number = 0;
     private maxAlpha: number = 0.5;
     private duration: number = 900000;
-    private isDarkening: boolean = true;
     private scene: Phaser.Scene;
     private static globalAlpha: number = 0;
     private static globalIsDarkening: boolean = true;

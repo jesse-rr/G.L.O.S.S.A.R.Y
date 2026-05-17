@@ -1,11 +1,10 @@
 import * as Phaser from 'phaser';
-
 import { FONT_FAMILY } from '../../constants';
+import { ScrollableScene } from '../../types';
 
 export class ControlsUI extends Phaser.Scene {
     private baseX = 0;
     private baseY = 0;
-    private imgScale = 2;
     private parentScene!: Phaser.Scene;
     private container!: Phaser.GameObjects.Container;
 
@@ -17,7 +16,6 @@ export class ControlsUI extends Phaser.Scene {
         this.parentScene = data.scene;
         this.baseX = data.x;
         this.baseY = data.y;
-        this.imgScale = data.scale || 2;
 
         this.container = this.add.container(this.baseX, this.baseY);
 
@@ -68,7 +66,7 @@ export class ControlsUI extends Phaser.Scene {
         this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing * 4, '- View Rune Info (While in combat)', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
 
         this.input.on('wheel', (_: any, __: any, ___: number, dy: number) => {
-            const parent = this.parentScene as any;
+            const parent = this.parentScene as ScrollableScene;
             if (parent && parent.scrollY !== undefined) {
                 parent.scrollY += dy;
                 parent.scrollY = Phaser.Math.Clamp(parent.scrollY, 0, parent.maxScroll);
@@ -78,7 +76,7 @@ export class ControlsUI extends Phaser.Scene {
 
         this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
             if (p.isDown) {
-                const parent = this.parentScene as any;
+                const parent = this.parentScene as ScrollableScene;
                 if (parent && parent.scrollY !== undefined) {
                     parent.scrollY -= p.velocity.y / 10;
                     parent.scrollY = Phaser.Math.Clamp(parent.scrollY, 0, parent.maxScroll);

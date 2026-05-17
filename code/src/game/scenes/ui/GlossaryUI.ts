@@ -1,27 +1,33 @@
 import { Scene, GameObjects } from 'phaser';
-import { RuneData, RuneDefinition } from '../../data/RuneData';
-import { ItemData, ItemDefinition } from '../../data/ItemData';
-import { LocationData, LocationDefinition, SETTLEMENTS, BOSSES, HUBS } from '../../data/LocationData';
-import { BestiaryData, BESTIARY } from '../../data/BestiaryData';
-import { FONT_FAMILY, RUNE_FONT } from '../../constants';
+import { FONT_FAMILY, InputKeys, RUNE_FONT } from '../../constants';
 import {
     ScrambleContext,
-    playScrambleAnimation,
-    cleanupAnimations,
-    convertToRunicWords
+    cleanupAnimations
 } from '../../utils/ScrambleAnimation';
+import { GlossaryProloguePage } from './glossary/GlossaryProloguePage';
+import { GlossaryRunesPage } from './glossary/GlossaryRunesPage';
+import { GlossaryItemsPage } from './glossary/GlossaryItemsPage';
+import { GlossaryBestiaryPage } from './glossary/GlossaryBestiaryPage';
+import { GlossaryLocationsPage } from './glossary/GlossaryLocationsPage';
 
 export class GlossaryUI extends Scene implements ScrambleContext {
     private previousScene = 'CombatScene';
-    private activeSection: number = 0;
     private contentContainer!: GameObjects.Container;
-    private detailsContainer!: GameObjects.Container;
-    private runeDefs = RuneData.getAllDefinitions();
-    private currentBestiaryPage: number = 0;
-    private currentLocationsPage: number = 0;
-    private currentSelectionId: string | number | null = null;
-    activeTweens: Phaser.Tweens.Tween[] = [];
-    activeScrambleTimers: Phaser.Time.TimerEvent[] = [];
+    public detailsContainer!: GameObjects.Container | null;
+    public currentSelectionId: string | number | null = null;
+    private currentPage: number = 0;
+    private readonly totalPages: number = 7;
+    private prevArrow!: GameObjects.Text;
+    private nextArrow!: GameObjects.Text;
+    private prevHitZone!: GameObjects.Rectangle;
+    private nextHitZone!: GameObjects.Rectangle;
+    public activeTweens: Phaser.Tweens.Tween[] = [];
+    public activeScrambleTimers: Phaser.Time.TimerEvent[] = [];
+
+    public cleanupTweens(): void {
+        this.activeTweens.forEach(t => t.stop());
+        this.activeTweens = [];
+    }
 
     constructor() {
         super({ key: 'GlossaryUI' });
@@ -85,18 +91,18 @@ export class GlossaryUI extends Scene implements ScrambleContext {
         const bmY = this.scale.height - 688;
         const bookmarks: Phaser.GameObjects.Sprite[] = [];
         const startX = Math.floor(centerX + 315);
-        const offsets = [0, 44, 86, 128];
+        const offsets = [-40, 2, 44, 86, 128];
 
-        const bookmarkZone = this.add.rectangle(startX + 64, bmY, 162, 40, 0x000000, 0)
+        const bookmarkZone = this.add.rectangle(startX + 43, bmY, 210, 40, 0x000000, 0)
             .setDepth(100)
             .setScrollFactor(0)
             .setInteractive();
 
-        bookmarkZone.on('pointerdown', (ptr: any, x: number, y: number, event: any) => {
+        bookmarkZone.on('pointerdown', (_ptr: any, _x: number, _y: number, event: any) => {
             event.stopPropagation();
         });
 
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 5; i++) {
             const bx = startX + offsets[i];
             const bm = this.add.sprite(bx, bmY, 'bookmarks-ui', i)
                 .setDepth(101)
@@ -104,9 +110,9 @@ export class GlossaryUI extends Scene implements ScrambleContext {
                 .setScale(2)
                 .setInteractive({ useHandCursor: true });
 
-            bm.on('pointerover', () => { bm.setFrame(i + 4); });
+            bm.on('pointerover', () => { bm.setFrame(i + 5); });
             bm.on('pointerout', () => { bm.setFrame(i); });
-            bm.on('pointerdown', (ptr: any, x: number, y: number, event: any) => {
+            bm.on('pointerdown', (_ptr: any, _x: number, _y: number, event: any) => {
                 event.stopPropagation();
                 this.switchSection(i);
             });
@@ -114,7 +120,42 @@ export class GlossaryUI extends Scene implements ScrambleContext {
         }
 
         this.contentContainer = this.add.container(0, 0).setDepth(102);
-        this.switchSection(0);
+
+        const navY = this.scale.height - 100;
+        this.prevArrow = this.add.text(centerX - 550, navY, '<', {
+            fontFamily: FONT_FAMILY, fontSize: '32px', color: '#000000', fontStyle: 'bold'
+        }).setOrigin(0.5).setAlpha(0.35).setDepth(103);
+
+        this.nextArrow = this.add.text(centerX + 550, navY, '>', {
+            fontFamily: FONT_FAMILY, fontSize: '32px', color: '#000000', fontStyle: 'bold'
+        }).setOrigin(0.5).setAlpha(0.35).setDepth(103);
+
+        this.prevHitZone = this.add.rectangle(centerX - 550, navY, 40, 50, 0x000000, 0)
+            .setDepth(104).setInteractive({ useHandCursor: true });
+        this.nextHitZone = this.add.rectangle(centerX + 550, navY, 40, 50, 0x000000, 0)
+            .setDepth(104).setInteractive({ useHandCursor: true });
+
+        this.prevHitZone.on('pointerover', () => this.prevArrow.setAlpha(0.7));
+        this.prevHitZone.on('pointerout', () => this.prevArrow.setAlpha(0.35));
+        this.prevHitZone.on('pointerdown', (_ptr: any, _x: number, _y: number, event: any) => {
+            event.stopPropagation();
+            if (this.currentPage > 0) {
+                this.currentPage--;
+                this.navigateToPage(this.currentPage);
+            }
+        });
+
+        this.nextHitZone.on('pointerover', () => this.nextArrow.setAlpha(0.7));
+        this.nextHitZone.on('pointerout', () => this.nextArrow.setAlpha(0.35));
+        this.nextHitZone.on('pointerdown', (_ptr: any, _x: number, _y: number, event: any) => {
+            event.stopPropagation();
+            if (this.currentPage < this.totalPages - 1) {
+                this.currentPage++;
+                this.navigateToPage(this.currentPage);
+            }
+        });
+
+        this.navigateToPage(0);
 
         const closeGlossary = () => {
             cleanupAnimations(this);
@@ -124,545 +165,115 @@ export class GlossaryUI extends Scene implements ScrambleContext {
             }
         };
 
-        bookUI.on('pointerdown', (ptr: any, x: number, y: number, event: any) => {
-            event.stopPropagation();
+        bookUI.on('pointerdown', (_ptr: any, _x: number, _y: number, event: any) => {
+            event.stopPropagation(); ``
         });
 
         overlay.on('pointerdown', closeGlossary);
 
-        this.input.keyboard!.on('keydown-ESC', closeGlossary);
-        this.input.keyboard!.on('keydown-G', closeGlossary);
+        this.input.keyboard!.on(InputKeys.BACK, closeGlossary);
+        this.input.keyboard!.on(InputKeys.GLOSSARY, closeGlossary);
+
+        this.input.keyboard!.on(InputKeys.LEFT, () => {
+            if (this.currentPage > 0) {
+                this.currentPage--;
+                this.navigateToPage(this.currentPage);
+            }
+        });
+
+        this.input.keyboard!.on(InputKeys.RIGHT, () => {
+            if (this.currentPage < this.totalPages - 1) {
+                this.currentPage++;
+                this.navigateToPage(this.currentPage);
+            }
+        });
+    }
+
+    private navigateToPage(page: number) {
+        this.currentPage = page;
+        cleanupAnimations(this);
+        this.currentSelectionId = null;
+        this.contentContainer.removeAll(true);
+        this.detailsContainer = null;
+
+        if (page === 0) {
+            this.renderFrontPageSection();
+        } else if (page === 1) {
+            this.renderInfoPage2();
+        } else if (page === 2) {
+            this.renderRunesSection();
+        } else if (page === 3) {
+            this.renderItemsSection();
+        } else if (page === 4) {
+            this.renderBestiarySection();
+        } else if (page === 5) {
+            this.renderLocationsSection();
+        } else if (page === 6) {
+            this.renderLocationsPage2();
+        }
+
+        this.updateNavArrows();
+    }
+
+    private updateNavArrows() {
+        const pointer = this.input.activePointer;
+        const prevHovered = this.prevHitZone.getBounds().contains(pointer.x, pointer.y);
+        const nextHovered = this.nextHitZone.getBounds().contains(pointer.x, pointer.y);
+
+        if (this.currentPage <= 0) {
+            this.prevArrow.setAlpha(0.15);
+            this.prevHitZone.disableInteractive();
+        } else {
+            this.prevArrow.setAlpha(prevHovered ? 0.7 : 0.35);
+            this.prevHitZone.setInteractive({ useHandCursor: true });
+        }
+
+        if (this.currentPage >= this.totalPages - 1) {
+            this.nextArrow.setAlpha(0.15);
+            this.nextHitZone.disableInteractive();
+        } else {
+            this.nextArrow.setAlpha(nextHovered ? 0.7 : 0.35);
+            this.nextHitZone.setInteractive({ useHandCursor: true });
+        }
     }
 
     private switchSection(index: number) {
-        cleanupAnimations(this);
-        this.activeSection = index;
-        this.currentSelectionId = null;
-        this.contentContainer.removeAll(true);
-        this.detailsContainer = null as any;
+        const pageMap: Record<number, number> = { 0: 0, 1: 2, 2: 3, 3: 4, 4: 5 };
+        this.navigateToPage(pageMap[index] ?? index);
+    }
 
-        if (index === 0) {
-            this.renderRunesSection();
-        } else if (index === 1) {
-            this.renderItemsSection();
-        } else if (index === 2) {
-            this.currentBestiaryPage = 0;
-            this.renderBestiarySection();
-        } else if (index === 3) {
-            this.currentLocationsPage = 0;
-            this.renderLocationsSection();
-        } else {
-            const centerX = this.scale.width / 2;
-            const wipText = this.add.text(centerX, this.scale.height - 400, 'Work In Progress', {
-                fontFamily: FONT_FAMILY,
-                fontSize: '48px',
-                color: '#000000'
-            }).setOrigin(0.5).setAlpha(0.7);
-            this.contentContainer.add(wipText);
-        }
+    private renderFrontPageSection() {
+        const prologuePage = new GlossaryProloguePage(this, this.contentContainer);
+        prologuePage.renderFrontPage(this.scale.width / 2, this.scale.height);
+    }
+
+    private renderInfoPage2() {
+        const prologuePage = new GlossaryProloguePage(this, this.contentContainer);
+        prologuePage.renderInfoPage(this.scale.width / 2, this.scale.height);
     }
 
     private renderRunesSection() {
-        const centerX = this.scale.width / 2;
-        const leftPageX = centerX - 510;
-        const leftPageY = this.scale.height - 590;
-        const rightPageX = centerX + 80;
-        const rightPageY = this.scale.height - 660;
-
-        this.runeDefs.forEach((def, index) => {
-            const col = index % 5;
-            const row = Math.floor(index / 5);
-            const x = leftPageX + col * 110;
-            const y = leftPageY + row * 110;
-
-            const box = this.add.image(x, y, 'book-layout')
-                .setAlpha(0.5)
-                .setInteractive({ useHandCursor: true });
-            this.contentContainer.add(box);
-
-            const isUnlocked = RuneData.getInstance().isDiscovered(def.letter);
-            const runeText = this.add.text(x, y, def.letter, {
-                fontFamily: RUNE_FONT,
-                fontSize: '76px',
-                color: '#000000'
-            }).setOrigin(0.5).setAlpha(isUnlocked ? 0.7 : 0.3);
-
-            box.on('pointerover', () => box.setAlpha(1));
-            box.on('pointerout', () => box.setAlpha(0.5));
-            box.on('pointerdown', () => this.showRuneDetails(def, rightPageX, rightPageY, true));
-
-            this.contentContainer.add(runeText);
-        });
-
-        if (this.runeDefs.length > 0) {
-            this.showRuneDetails(this.runeDefs[0], rightPageX, rightPageY, true);
-        }
-    }
-
-    private showRuneDetails(def: RuneDefinition, x: number, y: number, autoPlay: boolean = false) {
-        if (this.currentSelectionId === def.letter) return;
-        this.currentSelectionId = def.letter;
-
-        if (this.detailsContainer) {
-            cleanupAnimations(this);
-            this.detailsContainer.destroy();
-        }
-        this.detailsContainer = this.add.container(x, y);
-        this.contentContainer.add(this.detailsContainer);
-
-        const isUnlocked = RuneData.getInstance().isDiscovered(def.letter);
-        const isViewed = RuneData.getInstance().isViewed(def.letter);
-        const useRunic = !isUnlocked || (isUnlocked && !isViewed);
-
-        const letter = this.add.text(10, 130, def.letter, {
-            fontFamily: RUNE_FONT, fontSize: '96px', color: '#000000'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        const infoLayout = this.add.image(-90, 20, 'book-layout-2').setOrigin(0).setAlpha(0.5);
-        const textCenterX = 210;
-
-        const displayNameStr = def.name;
-        const typeStr = `Type: ${def.cardType.toUpperCase()}`;
-        const effectStr = `Effect: ${def.effectType.toUpperCase()}`;
-        const powerStr = `Base Power: ${def.basePower}`;
-        const explanationOriginal = def.description;
-
-        const title = this.add.text(textCenterX, 65, useRunic ? convertToRunicWords(displayNameStr) : displayNameStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '32px', color: '#000000'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        const typeText = this.add.text(textCenterX, 110, useRunic ? convertToRunicWords(typeStr) : typeStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '20px', color: '#000000'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        const effectText = this.add.text(textCenterX, 140, useRunic ? convertToRunicWords(effectStr) : effectStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '20px', color: '#000000'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        const powerText = this.add.text(textCenterX, 170, useRunic ? convertToRunicWords(powerStr) : powerStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '20px', color: '#000000'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        const descLayout = this.add.image(-90, 200, 'book-layout-3').setOrigin(0).setAlpha(0.5);
-
-        const explanation = this.add.text(210, 400, useRunic ? convertToRunicWords(explanationOriginal) : explanationOriginal, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '22px', color: '#000000',
-            wordWrap: { width: 480 }, lineSpacing: 10, align: 'center'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        if (useRunic) explanation.setStroke('#000000', 1);
-
-        this.detailsContainer.add([infoLayout, descLayout, letter, title, typeText, effectText, powerText, explanation]);
-
-        const triggerAnimation = () => {
-            if (!isUnlocked || isViewed) return;
-            this.activeTweens.forEach(tween => tween.stop());
-            this.activeTweens = [];
-            playScrambleAnimation(this, this,
-                [title, typeText, effectText, powerText, explanation],
-                [displayNameStr, typeStr, effectStr, powerStr, explanationOriginal],
-                () => RuneData.getInstance().markViewed(def.letter)
-            );
-        };
-
-        if (autoPlay && isUnlocked && !isViewed) {
-            this.time.delayedCall(200, triggerAnimation);
-        }
+        const runesPage = new GlossaryRunesPage(this, this.contentContainer);
+        runesPage.render(this.scale.width / 2, this.scale.height);
     }
 
     private renderItemsSection() {
-        const centerX = this.scale.width / 2;
-        const leftPageX = centerX - 510;
-        const leftPageY = this.scale.height - 590;
-        const rightPageX = centerX + 80;
-        const rightPageY = this.scale.height - 660;
-
-        const items = ItemData.getAllItems();
-
-        items.forEach((def, index) => {
-            const col = index % 5;
-            const row = Math.floor(index / 5);
-            const x = leftPageX + col * 110;
-            const y = leftPageY + row * 110;
-
-            const box = this.add.image(x, y, 'book-layout').setAlpha(0.5).setInteractive({ useHandCursor: true });
-            this.contentContainer.add(box);
-
-            const isUnlocked = ItemData.getInstance().isDiscovered(def.id);
-            const frame = ItemData.getItemFrame(def.id, isUnlocked);
-
-            const itemIcon = this.add.sprite(x, y, 'items', frame)
-                .setOrigin(0.5).setScale(1.2).setAlpha(isUnlocked ? 0.9 : 0.6);
-
-            if (!isUnlocked) itemIcon.setTint(0x000000);
-
-            box.on('pointerover', () => box.setAlpha(1));
-            box.on('pointerout', () => box.setAlpha(0.5));
-            box.on('pointerdown', () => this.showItemDetails(def, rightPageX, rightPageY, true));
-
-            this.contentContainer.add(itemIcon);
-        });
-
-        if (items.length > 0) {
-            this.showItemDetails(items[0], rightPageX, rightPageY, true);
-        }
-    }
-
-    private showItemDetails(def: ItemDefinition, x: number, y: number, autoPlay: boolean = false) {
-        if (this.currentSelectionId === def.id) return;
-        this.currentSelectionId = def.id;
-
-        if (this.detailsContainer) {
-            cleanupAnimations(this);
-            this.detailsContainer.destroy();
-        }
-        this.detailsContainer = this.add.container(x, y);
-        this.contentContainer.add(this.detailsContainer);
-
-        const isUnlocked = ItemData.getInstance().isDiscovered(def.id);
-        const isViewed = ItemData.getInstance().isViewed(def.id);
-        const useRunic = !isUnlocked || (isUnlocked && !isViewed);
-
-        const frame = ItemData.getItemFrame(def.id, isUnlocked);
-        const itemIcon = this.add.sprite(10, 120, 'items', frame)
-            .setOrigin(0.5).setScale(1.5).setAlpha(isUnlocked ? 0.9 : 0.6);
-        if (!isUnlocked) itemIcon.setTint(0x000000);
-
-        const infoLayout = this.add.image(-90, 20, 'book-layout-2').setOrigin(0).setAlpha(0.5);
-        const textCenterX = 210;
-
-        const displayNameStr = def.name;
-        const abilityStr = `Ability: ${def.ability}`;
-        const rarityStr = `Rarity: ${def.rarity}`;
-        const costStr = `Cost: ${def.cost}`;
-        const explanationOriginal = `${def.effectDescription}\n\n"${def.lore}"`;
-
-        const title = this.add.text(textCenterX, 65, useRunic ? convertToRunicWords(displayNameStr) : displayNameStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '32px', color: '#000000'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        const abilityText = this.add.text(textCenterX, 110, useRunic ? convertToRunicWords(abilityStr) : abilityStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '20px', color: '#000000'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        const rarityText = this.add.text(textCenterX, 140, useRunic ? convertToRunicWords(rarityStr) : rarityStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '20px', color: '#000000'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        const costText = this.add.text(textCenterX, 170, useRunic ? convertToRunicWords(costStr) : costStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '20px', color: '#000000'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        const descLayout = this.add.image(-90, 200, 'book-layout-3').setOrigin(0).setAlpha(0.5);
-
-        const explanation = this.add.text(210, 400, useRunic ? convertToRunicWords(explanationOriginal) : explanationOriginal, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '22px', color: '#000000',
-            wordWrap: { width: 480 }, lineSpacing: 10, align: 'center'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        if (useRunic) explanation.setStroke('#000000', 1);
-
-        this.detailsContainer.add([infoLayout, descLayout, itemIcon, title, abilityText, rarityText, costText, explanation]);
-
-        const triggerAnimation = () => {
-            if (!isUnlocked || isViewed) return;
-            this.activeTweens.forEach(tween => tween.stop());
-            this.activeTweens = [];
-            playScrambleAnimation(this, this,
-                [title, abilityText, rarityText, costText, explanation],
-                [displayNameStr, abilityStr, rarityStr, costStr, explanationOriginal],
-                () => ItemData.getInstance().markViewed(def.id)
-            );
-        };
-
-        if (autoPlay && isUnlocked && !isViewed) {
-            this.time.delayedCall(200, triggerAnimation);
-        }
+        const itemsPage = new GlossaryItemsPage(this, this.contentContainer);
+        itemsPage.render(this.scale.width / 2, this.scale.height);
     }
 
     private renderLocationsSection() {
-        const centerX = this.scale.width / 2;
-        const leftPageX = centerX - 590;
-        const rightPageX = centerX - 5;
-        const startY = this.scale.height - 660;
-
-        const locData = LocationData.getInstance();
-
-        const createLocationEntry = (def: LocationDefinition, index: number, x: number, isBoss: boolean) => {
-            const y = startY + index * 190;
-            const isUnlocked = locData.isDiscovered(def.id);
-            const isViewed = locData.isViewed(def.id);
-            const useRunic = !isUnlocked || (isUnlocked && !isViewed);
-
-            const box = this.add.image(x, y, 'book-layout-4')
-                .setOrigin(0).setAlpha(0.5).setInteractive({ useHandCursor: true });
-
-            const mapIcon = this.add.sprite(x + 110, y + 100, isBoss ? 'map-boss-outlines' : 'map-outlines', def.frame)
-                .setOrigin(0.5).setAlpha(isUnlocked ? 0.9 : 0.6);
-            if (isBoss) mapIcon.setScale(1.5);
-            if (!isUnlocked) mapIcon.setTint(0x000000);
-
-            const titleStr = def.name;
-            const explanationStr = def.description;
-
-            const title = this.add.text(x + 230, y + 30, useRunic ? convertToRunicWords(titleStr) : titleStr, {
-                fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '22px', color: '#000000',
-                wordWrap: { width: 270 }, lineSpacing: 3
-            }).setAlpha(0.7);
-
-            const explanation = this.add.text(x + 230, y + 70, useRunic ? convertToRunicWords(explanationStr) : explanationStr, {
-                fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '18px', color: '#000000',
-                wordWrap: { width: 270 }, lineSpacing: 5
-            }).setAlpha(0.7);
-
-            if (useRunic) explanation.setStroke('#000000', 1);
-
-            this.contentContainer.add([box, mapIcon, title, explanation]);
-
-            let isAnimating = false;
-            const triggerAnimation = () => {
-                if (!isUnlocked || locData.isViewed(def.id) || isAnimating) return;
-                isAnimating = true;
-                this.activeTweens.forEach(tween => tween.stop());
-                this.activeTweens = [];
-                playScrambleAnimation(this, this,
-                    [title, explanation],
-                    [titleStr, explanationStr],
-                    () => {
-                        isAnimating = false;
-                        locData.markViewed(def.id);
-                    }
-                );
-            };
-
-            if (isUnlocked && !isViewed) {
-                box.on('pointerover', () => box.setAlpha(1));
-                box.on('pointerout', () => box.setAlpha(0.5));
-                box.on('pointerdown', triggerAnimation);
-                this.time.delayedCall(300 + index * 150, triggerAnimation);
-            }
-        };
-
-        SETTLEMENTS.forEach((def, index) => createLocationEntry(def, index, leftPageX, false));
-        BOSSES.forEach((def, index) => createLocationEntry(def, index, rightPageX, true));
-
-        const navY = this.scale.height - 100;
-        const nextBtn = this.add.text(centerX + 550, navY, '>', {
-            fontFamily: FONT_FAMILY, fontSize: '32px', color: '#000000', fontStyle: 'bold'
-        }).setOrigin(0.5).setAlpha(0.6).setInteractive({ useHandCursor: true });
-        nextBtn.on('pointerover', () => nextBtn.setAlpha(1));
-        nextBtn.on('pointerout', () => nextBtn.setAlpha(0.6));
-        nextBtn.on('pointerdown', () => {
-            this.currentLocationsPage = 1;
-            this.contentContainer.removeAll(true);
-            this.renderLocationsPage2();
-        });
-
-        this.contentContainer.add(nextBtn);
+        const locationsPage = new GlossaryLocationsPage(this, this.contentContainer);
+        locationsPage.renderPage1(this.scale.width / 2, this.scale.height);
     }
 
     private renderLocationsPage2() {
-        const centerX = this.scale.width / 2;
-        const leftPageX = centerX - 590;
-        const rightPageX = centerX - 5;
-        const startY = this.scale.height - 660;
-
-        const locData = LocationData.getInstance();
-
-        HUBS.forEach((def, index) => {
-            const isLeft = index % 2 === 0;
-            const x = isLeft ? leftPageX : rightPageX;
-            const row = Math.floor(index / 2);
-            const y = startY + row * 190;
-            const isUnlocked = locData.isDiscovered(def.id);
-            const isViewed = locData.isViewed(def.id);
-            const useRunic = !isUnlocked || (isUnlocked && !isViewed);
-
-            const box = this.add.image(x, y, 'book-layout-4')
-                .setOrigin(0).setAlpha(0.5).setInteractive({ useHandCursor: true });
-
-            const textureKey = def.texture || 'map-outlines';
-            const mapIcon = this.add.image(x + 125, y + 100, textureKey)
-                .setOrigin(0.5).setAlpha(isUnlocked ? 0.9 : 0.6).setScale(1.4);
-            if (!isUnlocked) mapIcon.setTint(0x000000);
-
-            const titleStr = def.name;
-            const explanationStr = def.description;
-
-            const title = this.add.text(x + 230, y + 30, useRunic ? convertToRunicWords(titleStr) : titleStr, {
-                fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '22px', color: '#000000',
-                wordWrap: { width: 270 }, lineSpacing: 3
-            }).setAlpha(0.7);
-
-            const explanation = this.add.text(x + 230, y + 70, useRunic ? convertToRunicWords(explanationStr) : explanationStr, {
-                fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '18px', color: '#000000',
-                wordWrap: { width: 270 }, lineSpacing: 5
-            }).setAlpha(0.7);
-
-            if (useRunic) explanation.setStroke('#000000', 1);
-
-            this.contentContainer.add([box, mapIcon, title, explanation]);
-
-            let isAnimating = false;
-            const triggerAnimation = () => {
-                if (!isUnlocked || locData.isViewed(def.id) || isAnimating) return;
-                isAnimating = true;
-                this.activeTweens.forEach(tween => tween.stop());
-                this.activeTweens = [];
-                playScrambleAnimation(this, this,
-                    [title, explanation],
-                    [titleStr, explanationStr],
-                    () => {
-                        isAnimating = false;
-                        locData.markViewed(def.id);
-                    }
-                );
-            };
-
-            if (isUnlocked && !isViewed) {
-                box.on('pointerover', () => box.setAlpha(1));
-                box.on('pointerout', () => box.setAlpha(0.5));
-                box.on('pointerdown', triggerAnimation);
-                this.time.delayedCall(300 + index * 150, triggerAnimation);
-            }
-        });
-
-        const navY = this.scale.height - 100;
-        const prevBtn = this.add.text(centerX - 550, navY, '<', {
-            fontFamily: FONT_FAMILY, fontSize: '32px', color: '#000000', fontStyle: 'bold'
-        }).setOrigin(0.5).setAlpha(0.6).setInteractive({ useHandCursor: true });
-        prevBtn.on('pointerover', () => prevBtn.setAlpha(1));
-        prevBtn.on('pointerout', () => prevBtn.setAlpha(0.6));
-        prevBtn.on('pointerdown', () => {
-            this.currentLocationsPage = 0;
-            this.contentContainer.removeAll(true);
-            this.renderLocationsSection();
-        });
-
-        this.contentContainer.add(prevBtn);
+        const locationsPage = new GlossaryLocationsPage(this, this.contentContainer);
+        locationsPage.renderPage2(this.scale.width / 2, this.scale.height);
     }
 
     private renderBestiarySection() {
-        const centerX = this.scale.width / 2;
-        const leftPageX = centerX - 510;
-        const leftPageY = this.scale.height - 590;
-        const rightPageX = centerX + 80;
-        const rightPageY = this.scale.height - 660;
-
-        const bestiaryData = BestiaryData.getInstance();
-        const baseEntries = BESTIARY.filter(def => !def.id.endsWith('_2'));
-
-        baseEntries.forEach((def, index) => {
-            const col = index % 5;
-            const row = Math.floor(index / 5);
-            const x = leftPageX + col * 110;
-            const y = leftPageY + row * 110;
-
-            const box = this.add.image(x, y, 'book-layout').setAlpha(0.5).setInteractive({ useHandCursor: true });
-            this.contentContainer.add(box);
-
-            const isUnlocked = bestiaryData.isDiscovered(def.id);
-            const sprite = this.add.sprite(x, y, def.texture, def.frame)
-                .setOrigin(0.5).setScale(1.2).setAlpha(isUnlocked ? 0.9 : 0.6);
-            if (!isUnlocked) sprite.setTint(0x000000);
-
-            box.on('pointerover', () => box.setAlpha(1));
-            box.on('pointerout', () => box.setAlpha(0.5));
-            box.on('pointerdown', () => this.showBestiaryDetails(def, rightPageX, rightPageY, true));
-
-            this.contentContainer.add(sprite);
-        });
-
-        if (BESTIARY.length > 0) {
-            this.showBestiaryDetails(BESTIARY[0], rightPageX, rightPageY, true);
-        }
-    }
-
-    private showBestiaryDetails(def: any, x: number, y: number, autoPlay: boolean = false) {
-        if (this.currentSelectionId === def.id) return;
-        this.currentSelectionId = def.id;
-
-        if (this.detailsContainer) {
-            cleanupAnimations(this);
-            this.detailsContainer.destroy();
-        }
-        this.detailsContainer = this.add.container(x, y);
-        this.contentContainer.add(this.detailsContainer);
-
-        const isUnlocked = BestiaryData.getInstance().isDiscovered(def.id);
-        const isViewed = BestiaryData.getInstance().isViewed(def.id);
-        const useRunic = !isUnlocked || (isUnlocked && !isViewed);
-
-        const sprite = this.add.sprite(10, 120, def.texture, def.frame)
-            .setOrigin(0.5).setScale(1.5).setAlpha(isUnlocked ? 0.9 : 0.6);
-        if (!isUnlocked) sprite.setTint(0x000000);
-
-        const infoLayout = this.add.image(-90, 20, 'book-layout-2').setOrigin(0).setAlpha(0.5);
-        const textCenterX = 210;
-
-        const displayNameStr = def.name;
-        const statsStr = `Rarity: ${def.rarity}\nHP: ${def.hp}\nDMG: ${def.baseDamage}`;
-        const explanationOriginal = def.description;
-
-        const title = this.add.text(textCenterX, 65, useRunic ? convertToRunicWords(displayNameStr) : displayNameStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '32px', color: '#000000'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        const statsText = this.add.text(textCenterX, 140, useRunic ? convertToRunicWords(statsStr) : statsStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '20px', color: '#000000',
-            align: 'center', lineSpacing: 5
-        }).setOrigin(0.5).setAlpha(0.6);
-
-        const descLayout = this.add.image(-90, 200, 'book-layout-3').setOrigin(0).setAlpha(0.5);
-
-        const explanation = this.add.text(210, 400, useRunic ? convertToRunicWords(explanationOriginal) : explanationOriginal, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '22px', color: '#000000',
-            wordWrap: { width: 480 }, lineSpacing: 10, align: 'center'
-        }).setOrigin(0.5).setAlpha(0.7);
-
-        if (useRunic) explanation.setStroke('#000000', 1);
-
-        this.detailsContainer.add([infoLayout, descLayout, sprite, title, statsText, explanation]);
-
-        const triggerAnimation = () => {
-            if (!isUnlocked || isViewed) return;
-            this.activeTweens.forEach(tween => tween.stop());
-            this.activeTweens = [];
-            playScrambleAnimation(this, this,
-                [title, statsText, explanation],
-                [displayNameStr, statsStr, explanationOriginal],
-                () => BestiaryData.getInstance().markViewed(def.id)
-            );
-        };
-
-        if (autoPlay && isUnlocked && !isViewed) {
-            this.time.delayedCall(200, triggerAnimation);
-        }
-
-        const isV1 = def.id.endsWith('_1');
-        const isV2 = def.id.endsWith('_2');
-
-        if (isV1 || isV2) {
-            const baseId = def.id.split('_')[0];
-            const counterpartId = isV1 ? `${baseId}_2` : `${baseId}_1`;
-            const counterpartDef = BESTIARY.find((e: any) => e.id === counterpartId);
-
-            if (counterpartDef) {
-                const switchText = this.add.text(410, 120, '< >', {
-                    fontFamily: FONT_FAMILY, fontSize: '40px', color: '#000000', fontStyle: 'bold'
-                }).setOrigin(0.5).setAlpha(0.6).setInteractive({ useHandCursor: true });
-
-                const versionStr = isV1 ? '1/2' : '2/2';
-                const versionText = this.add.text(410, 90, versionStr, {
-                    fontFamily: FONT_FAMILY, fontSize: '18px', color: '#000000'
-                }).setOrigin(0.5).setAlpha(0.6);
-
-                switchText.on('pointerover', () => switchText.setAlpha(1));
-                switchText.on('pointerout', () => switchText.setAlpha(0.6));
-                switchText.on('pointerdown', () => this.showBestiaryDetails(counterpartDef, x, y, true));
-
-                this.detailsContainer.add([switchText, versionText]);
-            }
-        }
+        const bestiaryPage = new GlossaryBestiaryPage(this, this.contentContainer);
+        bestiaryPage.render(this.scale.width / 2, this.scale.height);
     }
 }

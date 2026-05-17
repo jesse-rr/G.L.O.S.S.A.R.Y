@@ -32,17 +32,6 @@ function getBossButtonTextureKey(mapKey: string): string {
     return 'btn-boss-abandoned';
 }
 
-function getBossPressCount(mapKey: string): number {
-    try {
-        const data = localStorage.getItem(BOSS_PRESS_STORAGE_KEY);
-        if (data) {
-            const parsed = JSON.parse(data);
-            return parsed[mapKey] || 0;
-        }
-    } catch {}
-    return 0;
-}
-
 function incrementBossPressCount(mapKey: string): number {
     let counts: Record<string, number> = {};
     try {
@@ -57,7 +46,7 @@ function incrementBossPressCount(mapKey: string): number {
 
 export function createBossButtons(
     scene: Phaser.Scene,
-    buttonLayer: { objects: any[] },
+    buttonLayer: Phaser.Tilemaps.ObjectLayer,
     mapKey: string
 ): BossButtonState[] {
     const buttons: BossButtonState[] = [];
@@ -92,7 +81,7 @@ export function createBossButtons(
             .setAlpha(0);
         symbolGlow.setTintMode(Phaser.TintModes.FILL);
 
-        const glowTween = (scene as any).tweens.add({
+        const glowTween = scene.tweens.add({
             targets: symbolGlow,
             alpha: 0.15,
             duration: 3000,
@@ -127,7 +116,7 @@ export function handleBossButtonInteraction(
     isEntering: boolean,
     setCinematic: (val: boolean) => void,
     mapKey: string,
-    delta: number
+    _delta: number
 ): void {
     if (isTeleporting || isEntering || isCinematic) return;
 
@@ -156,13 +145,13 @@ export function handleBossButtonInteraction(
         const darkVignette = createVignette(scene, 99, true);
         darkVignette.setAlpha(0);
 
-        (scene as any).tweens.add({
+        scene.tweens.add({
             targets: darkVignette,
             alpha: 1,
             duration: 500,
             ease: 'Linear',
             onComplete: () => {
-                (scene as any).tweens.add({
+                scene.tweens.add({
                     targets: player,
                     x: btn.x,
                     y: btn.y + 2,

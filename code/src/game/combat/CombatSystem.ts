@@ -5,7 +5,6 @@ export interface CombatantStats {
     hp: number;
     maxHp: number;
     attack: number;
-    attack: number;
     defense: number;
 }
 
@@ -28,9 +27,9 @@ export interface CombatPlayer {
     gemstones: number;
     specialCurrency: number;
     currentChain: RuneChain | null;
-    currentChain: RuneChain | null;
     isLocal: boolean;
     statusEffects: ActiveStatusEffect[];
+    roundDefense?: number;
 }
 
 export interface CombatEnemy {
@@ -39,7 +38,6 @@ export interface CombatEnemy {
     stats: CombatantStats;
     targetPlayerId: string;
     texture: string;
-    frame: number;
     frame: number;
     damageModifier: number;
     statusEffects: ActiveStatusEffect[];
@@ -66,6 +64,7 @@ export type CombatEventType =
     | 'combat_victory'
     | 'combat_defeat'
     | 'turn_order_set'
+    | 'player_healed'
     | 'ability_used'
     | 'ability_failed';
 
@@ -98,10 +97,12 @@ export class CombatSystem {
         this.lastEnemyDamage.clear();
         this.intimidateRoundsLeft = 0;
         this.phoenixBurnActive = false;
-        this.phoenixBurnActive = false;
         this.burnedRuneLetter = null;
         this.covenantAbilityUsedThisTurn = false;
-        this.players.forEach(p => p.statusEffects = []);
+        this.players.forEach(p => {
+            p.statusEffects = [];
+            p.roundDefense = 0;
+        });
         this.enemies.forEach(e => {
             e.statusEffects = [];
             e.slowSkipNext = false;
@@ -128,14 +129,12 @@ export class CombatSystem {
         for (const enemy of this.enemies) {
             if (enemy.stats.hp <= 0) continue;
 
-
             const venom = enemy.statusEffects.find(s => s.effect === 'venom');
             if (venom) {
                 const dmg = (venom.stacks || 1) * 2;
                 enemy.stats.hp = Math.max(0, enemy.stats.hp - dmg);
                 this.emit({ type: 'enemy_damaged', data: { enemyId: enemy.id, damage: dmg, remainingHp: enemy.stats.hp, isDoT: true, effect: 'venom' } });
             }
-
 
             const ignite = enemy.statusEffects.find(s => s.effect === 'ignite');
             if (ignite) {
@@ -147,7 +146,6 @@ export class CombatSystem {
             if (enemy.stats.hp <= 0) {
                 this.emit({ type: 'enemy_defeated', data: { enemyId: enemy.id, byPlayerId: 'dot' } });
             }
-
 
             enemy.statusEffects.forEach(s => s.duration--);
             enemy.statusEffects = enemy.statusEffects.filter(s => s.duration > 0);
@@ -185,7 +183,31 @@ export class CombatSystem {
 
         this.lastEnemyDamage.clear();
 
-        let rawDamage = player.currentChain.resolvedValue + player.stats.attack;
+        let damagePower = player.stats.attack;
+        let healPower = 0;
+        let defensePower = 0;
+
+        for (const letter of player.currentChain.runes) {
+            const def = RuneData.getDefinition(letter);
+            if (def) {
+                if (def.effectType === 'heal') healPower += def.basePower;
+                else if (def.effectType === 'defense') defensePower += def.basePower;
+                else damagePower += def.basePower;
+            }
+        }
+
+        const combo = RuneData.findMatchingCombo(player.currentChain.runes);
+        if (combo) {
+            damagePower += combo.bonusPower;
+        }
+
+        if (healPower > 0) {
+            player.stats.hp = Math.min(player.stats.maxHp, player.stats.hp + healPower);
+            this.emit({ type: 'player_healed', data: { playerId: player.id, amount: healPower, newHp: player.stats.hp } });
+        }
+        player.roundDefense = defensePower;
+
+        let rawDamage = damagePower;
 
         const overcharge = player.statusEffects.find(s => s.effect === 'overcharge');
         if (overcharge) {
@@ -207,7 +229,6 @@ export class CombatSystem {
         enemy.stats.hp = Math.max(0, enemy.stats.hp - damage);
         this.emit({ type: 'enemy_damaged', data: { enemyId: enemy.id, damage, remainingHp: enemy.stats.hp } });
 
-
         const appliedEffects: RuneStatusEffect[] = [];
         for (const letter of player.currentChain.runes) {
             const def = RuneData.getDefinition(letter);
@@ -226,17 +247,19 @@ export class CombatSystem {
     }
 
     private applyStatusEffect(effect: RuneStatusEffect, player: CombatPlayer, enemy: CombatEnemy) {
-        if (effect === 'overcharge') {
-
-            if (player.currentChain && player.currentChain.runes.length === 3) {
-                const existing = player.statusEffects.find(s => s.effect === effect);
-                if (existing) {
-                    existing.duration = 3;
-                } else {
-                    player.statusEffects.push({ effect, duration: 3 });
-                }
-                this.emit({ type: 'status_applied', data: { targetId: player.id, effect } });
+        if (effect === 'overcharge' || effect === 'fortify') {
+            if (effect === 'overcharge' && (!player.currentChain || player.currentChain.runes.length !== 3)) {
+                return;
             }
+
+            const duration = effect === 'fortify' ? 2 : 3;
+            const existing = player.statusEffects.find(s => s.effect === effect);
+            if (existing) {
+                existing.duration = duration;
+            } else {
+                player.statusEffects.push({ effect, duration });
+            }
+            this.emit({ type: 'status_applied', data: { targetId: player.id, effect } });
             return;
         }
 
@@ -287,7 +310,14 @@ export class CombatSystem {
         if (weaken) {
             rawDamage = Math.max(1, Math.floor(rawDamage * 0.5));
         }
-        const damage = Math.max(1, rawDamage - player.stats.defense);
+
+        let playerDef = player.stats.defense + (player.roundDefense || 0);
+        const fortify = player.statusEffects.find(s => s.effect === 'fortify');
+        if (fortify) {
+            playerDef = Math.floor(playerDef * 1.5);
+        }
+
+        const damage = Math.max(1, rawDamage - playerDef);
 
         this.lastEnemyDamage.set(enemyId, damage);
         player.stats.hp = Math.max(0, player.stats.hp - damage);

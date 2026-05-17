@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { InputKeys } from '../../constants';
 
 const BG_FRAME_RATE = 8;
 const SELECTOR_FRAME_RATE = 10;
@@ -95,10 +96,10 @@ export class MainMenu extends Phaser.Scene {
 
         this.positionSelector(0);
 
-        this.input.keyboard!.on('keydown-UP', () => this.moveSelection(-1));
-        this.input.keyboard!.on('keydown-DOWN', () => this.moveSelection(1));
-        this.input.keyboard!.on('keydown-ENTER', () => this.onButtonClick(BUTTONS[this.selectedButton].label));
-        this.input.keyboard!.on('keydown-Q', () => this.onButtonClick('HELP'));
+        this.input.keyboard!.on(InputKeys.UP, () => this.moveSelection(-1));
+        this.input.keyboard!.on(InputKeys.DOWN, () => this.moveSelection(1));
+        this.input.keyboard!.on(InputKeys.ENTER, () => this.onButtonClick(BUTTONS[this.selectedButton].label));
+        this.input.keyboard!.on(InputKeys.HELP, () => this.onButtonClick('HELP'));
 
         this.scale.on('resize', this.resize, this);
         this.playCurrentAnim();
@@ -106,7 +107,6 @@ export class MainMenu extends Phaser.Scene {
 
     private onButtonClick(label: string) {
         if (this.inputLocked) return;
-        console.log(`[MainMenu] Button: ${label}`);
         switch (label) {
             case BUTTONS[0].label:
                 this.inputLocked = true;

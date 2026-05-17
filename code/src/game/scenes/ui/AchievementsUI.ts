@@ -3,6 +3,7 @@ import { UserData } from '../../data/UserData';
 
 const CUBE_SIZE = 50.5;
 import { FONT_FAMILY } from '../../constants';
+import { ScrollableScene } from '../../types';
 
 const CUBE_POSITIONS = [
     { x: 246, y: 107.5 },
@@ -105,7 +106,7 @@ export class AchievementsUI extends Phaser.Scene {
         });
 
         this.input.on('wheel', (_: any, __: any, ___: number, dy: number) => {
-            const parent = this.parentScene as any;
+            const parent = this.parentScene as ScrollableScene;
             parent.scrollY += dy;
             parent.scrollY = Phaser.Math.Clamp(parent.scrollY, 0, parent.maxScroll);
             parent.cameras.main.scrollY = Math.floor(parent.scrollY);
@@ -113,7 +114,7 @@ export class AchievementsUI extends Phaser.Scene {
 
         this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
             if (p.isDown) {
-                const parent = this.parentScene as any;
+                const parent = this.parentScene as ScrollableScene;
                 if (parent && parent.scrollY !== undefined) {
                     parent.scrollY -= p.velocity.y / 10;
                     parent.scrollY = Phaser.Math.Clamp(parent.scrollY, 0, parent.maxScroll);

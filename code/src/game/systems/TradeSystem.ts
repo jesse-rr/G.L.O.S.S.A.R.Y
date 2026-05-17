@@ -3,7 +3,7 @@ import { PlayerData } from "../data/PlayerData";
 import { InteractSystem } from "./InteractSystem";
 import { RuneData } from "../data/RuneData";
 import { ItemData as ItemDataClass } from "../data/ItemData";
-import { FONT_FAMILY, COVENANT_COLORS, RUNE_FONT } from "../constants";
+import { FONT_FAMILY, COVENANT_COLORS, RUNE_FONT, InputKeys } from "../constants";
 
 const TRADE_STORAGE_KEY = 'glossary_completed_trades';
 
@@ -88,7 +88,7 @@ export function isTradeActive(): boolean {
     return tradeActive;
 }
 
-export function createTrades(scene: Phaser.Scene, layer: any, mapKey: string): TradeState[] {
+export function createTrades(scene: Phaser.Scene, layer: Phaser.Tilemaps.ObjectLayer, mapKey: string): TradeState[] {
     const trades: TradeState[] = [];
 
     if (mapKey !== 'summit-trade') return trades;
@@ -209,7 +209,7 @@ export function handleTradeInteraction(
     return tradeActive;
 }
 
-function cleanupTrade(scene: Phaser.Scene): void {
+function cleanupTrade(_scene: Phaser.Scene): void {
     if (centerRuneContainer) {
         centerRuneContainer.destroy();
         centerRuneContainer = null;
@@ -276,7 +276,7 @@ function openTradeCard(
     scene.input.on('pointermove', handleTradePointerMove);
     scene.input.on('pointerdown', handleCardClick);
 
-    scene.input.keyboard!.on('keydown-X', () => {
+    scene.input.keyboard!.on(InputKeys.INTERACT, () => {
         if (tradeActive && !tradeLocked) {
             onConfirmTrade();
         }
@@ -338,7 +338,7 @@ function openTradeCard(
     createCenterRuneDisplay(scene, cardX, cardY);
 
     scene.events.once('shutdown', () => {
-        scene.input.keyboard!.off('keydown-X');
+        scene.input.keyboard!.off(InputKeys.INTERACT);
     });
 }
 
@@ -543,7 +543,7 @@ function executeTradeWithAnim(
 ): void {
     tradeLocked = true;
 
-    scene.input.keyboard!.off('keydown-X');
+    scene.input.keyboard!.off(InputKeys.INTERACT);
     scene.input.off('pointermove', handleTradePointerMove);
     scene.input.off('pointerdown', handleCardClick);
 

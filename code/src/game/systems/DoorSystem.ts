@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import { createVignette } from '../utils/Vignette';
 import { PlayerData } from '../data/PlayerData';
 import { InteractSystem } from './InteractSystem';
+import { MatterScene } from '../types';
+import { fadeIn, fadeOutAndDestroy } from '../utils/TweenUtils';
 
 export interface DoorState {
     sprite: Phaser.GameObjects.Sprite;
@@ -18,7 +20,7 @@ export interface DoorState {
 
 export function createDoors(
     scene: Phaser.Scene,
-    doorLayer: { objects: any[] }
+    doorLayer: Phaser.Tilemaps.ObjectLayer
 ): DoorState[] {
     const doors: DoorState[] = [];
     const playerOpenedDoor = PlayerData.getInstance().hubDoorOpened;
@@ -39,10 +41,10 @@ export function createDoors(
 
         const baseY = cy + 25;
         if (!playerOpenedDoor) {
-            bodyBase = (scene as any).matter.add.rectangle(cx, baseY, width - 10, 10, { isStatic: true });
+            bodyBase = (scene as MatterScene).matter.add.rectangle(cx, baseY, width - 10, 10, { isStatic: true });
         } else {
-            bodyLeft = (scene as any).matter.add.rectangle(cx - 27, baseY, 10, 10, { isStatic: true });
-            bodyRight = (scene as any).matter.add.rectangle(cx + 27, baseY, 10, 10, { isStatic: true });
+            bodyLeft = (scene as MatterScene).matter.add.rectangle(cx - 27, baseY, 10, 10, { isStatic: true });
+            bodyRight = (scene as MatterScene).matter.add.rectangle(cx + 27, baseY, 10, 10, { isStatic: true });
         }
 
         const covenant = PlayerData.getInstance().covenant;
@@ -116,13 +118,13 @@ export function handleDoorInteraction(
                         const startDoorAnimation = () => {
                             scene.cameras.main.shake(1000, 0.001);
                             door.sprite.play('door-open');
-                            if (door.bodyBase) (scene as any).matter.world.remove(door.bodyBase);
+                            if (door.bodyBase) (scene as MatterScene).matter.world.remove(door.bodyBase);
 
                             const baseY = door.y + 25;
-                            door.bodyLeft = (scene as any).matter.add.rectangle(door.x - 29, baseY, 8, 8, { isStatic: true });
-                            door.bodyRight = (scene as any).matter.add.rectangle(door.x + 29, baseY, 8, 8, { isStatic: true });
+                            door.bodyLeft = (scene as MatterScene).matter.add.rectangle(door.x - 29, baseY, 8, 8, { isStatic: true });
+                            door.bodyRight = (scene as MatterScene).matter.add.rectangle(door.x + 29, baseY, 8, 8, { isStatic: true });
 
-                            door.sprite.on('animationupdate', (anim: any, frame: any) => {
+                            door.sprite.on('animationupdate', (_anim: any, frame: any) => {
                                 const offset = (frame.index - 1) * 2;
                                 door.symbolLeft.x = door.x - offset;
                                 door.symbolRight.x = door.x + offset;
@@ -135,21 +137,9 @@ export function handleDoorInteraction(
 
                         const darkVignette = createVignette(scene, 99, true);
                         darkVignette.setAlpha(0);
-                        (scene as any).tweens.add({
-                            targets: darkVignette,
-                            alpha: 1,
-                            duration: 500,
-                            ease: 'Linear',
-                            onComplete: () => {
-                                startDoorAnimation();
-                                (scene as any).tweens.add({
-                                    targets: darkVignette,
-                                    alpha: 0,
-                                    duration: 1000,
-                                    ease: 'Linear',
-                                    onComplete: () => darkVignette.destroy()
-                                });
-                            }
+                        fadeIn(scene, darkVignette, 500, () => {
+                            startDoorAnimation();
+                            fadeOutAndDestroy(scene, darkVignette, 1000);
                         });
                     }
             }

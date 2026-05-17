@@ -1,29 +1,21 @@
 import * as Phaser from 'phaser';
 import { PlayerData } from '../../data/PlayerData';
-import { FONT_FAMILY, COVENANT_COLORS, COVENANT_TINTS, RUNE_FONT } from '../../constants';
+import { FONT_FAMILY, COVENANT_COLORS, COVENANT_TINTS, RUNE_FONT, InputKeys } from '../../constants';
 import { createVignette } from '../../utils/Vignette';
 import { CombatSystem, CombatPlayer, CombatEnemy } from '../../combat/CombatSystem';
+import { CombatHUD } from '../../combat/CombatHUD';
+import { StatusEffectUI } from '../../combat/StatusEffectUI';
 import { RunePickerSystem } from '../../systems/RunePickerSystem';
 import { PlayerPanelSystem } from '../../systems/PlayerPanelSystem';
 import { BESTIARY, BestiaryData } from '../../data/BestiaryData';
 import { RuneData } from '../../data/RuneData';
-import { RuneData } from '../../data/RuneData';
 
-const STATUS_DATA: Record<string, { frame: number, name: string, desc: string }> = {
-    'slow': { frame: 1, name: 'Slow', desc: 'Skips every other attack.' },
-    'venom': { frame: 2, name: 'Venom', desc: 'Stacking damage each turn.' },
-    'ignite': { frame: 3, name: 'Ignite', desc: 'Takes flat fire damage each turn.' },
-    'overcharge': { frame: 4, name: 'Overcharge', desc: '+50% attack power.' },
-    'shatter': { frame: 5, name: 'Shatter', desc: 'Defense reduced to 0.' },
-    'dazed': { frame: 6, name: 'Dazed', desc: '50% chance to miss attacks.' },
-    'weaken': { frame: 7, name: 'Weaken', desc: 'Enemy damage reduced by 50%.' }
-};
+
 
 export class CombatScene extends Phaser.Scene {
     private playerData: PlayerData | null = null;
-    private combatTimer: number = 0;
-    private timerText: Phaser.GameObjects.Text | null = null;
-    private currentTurn: number = 1;
+    private combatHUD: CombatHUD | null = null;
+    private statusEffectUI: StatusEffectUI | null = null;
     private combatSystem: CombatSystem | null = null;
     private runePickerSystem: RunePickerSystem | null = null;
     private playerPanelSystem: PlayerPanelSystem | null = null;
@@ -32,17 +24,12 @@ export class CombatScene extends Phaser.Scene {
     private enemySprite: Phaser.GameObjects.Sprite | null = null;
     private enemyHpText: Phaser.GameObjects.Text | null = null;
     private playerRect: Phaser.GameObjects.Rectangle | null = null;
-    private turnIndicator: Phaser.GameObjects.Text | null = null;
     private abilityBtnSprite: Phaser.GameObjects.Sprite | null = null;
     private isAnimating: boolean = false;
-    private hpHudText: Phaser.GameObjects.Text | null = null;
-    private scHudText: Phaser.GameObjects.Text | null = null;
     private overlayContainer: Phaser.GameObjects.Container | null = null;
     private enemyStatusContainer: Phaser.GameObjects.Container | null = null;
     private playerStatusContainer: Phaser.GameObjects.Container | null = null;
-    private statusTooltip: Phaser.GameObjects.Container | null = null;
-    private statusTooltipTextTitle: Phaser.GameObjects.Text | null = null;
-    private statusTooltipTextDesc: Phaser.GameObjects.Text | null = null;
+    private combatTimer: number = 0;
 
     constructor() {
         super('CombatScene');
@@ -135,12 +122,14 @@ export class CombatScene extends Phaser.Scene {
         this.add.image(centerX, 0, 'battle-ui')
             .setOrigin(0.5, 0).setScale(2).setScrollFactor(0);
 
-        this.createHUD(centerX);
+        this.combatHUD = new CombatHUD(this);
+        this.combatHUD.create(centerX, this.playerData.hp, this.playerData.maxHp, this.playerData.gemstones, this.playerData.specialCurrency, this.getSpecialCurrencyFrame(this.playerData.covenant));
+        this.statusEffectUI = new StatusEffectUI(this);
+        this.statusEffectUI.createTooltip();
         this.createPlayerVisual();
         this.createEnemyVisual();
         this.createAbilityButton();
         this.createPlayerPanel();
-        this.createStatusTooltip();
 
         this.runePickerSystem = new RunePickerSystem(
             this,
@@ -181,18 +170,18 @@ export class CombatScene extends Phaser.Scene {
             }
         });
 
-        this.input.keyboard!.on('keydown-Q', () => {
+        this.input.keyboard!.on(InputKeys.HELP, () => {
             if (!this.scene.isPaused()) {
                 this.scene.pause();
                 this.scene.launch('Help', { previousScene: 'CombatScene' });
             }
         });
-        this.input.keyboard!.on('keydown-ESC', () => {
+        this.input.keyboard!.on(InputKeys.BACK, () => {
             if (!this.scene.isPaused() && this.runePickerSystem) {
                 this.runePickerSystem.clearChain();
             }
         });
-        this.input.keyboard!.on('keydown-G', () => {
+        this.input.keyboard!.on(InputKeys.GLOSSARY, () => {
             if (!this.scene.isActive('GlossaryUI')) {
                 this.scene.pause();
                 this.scene.launch('GlossaryUI', { previousScene: 'CombatScene', isPaused: true });
@@ -234,7 +223,9 @@ export class CombatScene extends Phaser.Scene {
             gemstones: this.playerData!.gemstones,
             specialCurrency: this.playerData!.specialCurrency,
             currentChain: null,
-            isLocal: true
+            isLocal: true,
+            statusEffects: [],
+            roundDefense: 0
         };
 
         const enemyDef = this.pickEnemyFromBestiary();
@@ -245,7 +236,9 @@ export class CombatScene extends Phaser.Scene {
             targetPlayerId: 'local',
             texture: enemyDef.texture,
             frame: enemyDef.frame,
-            damageModifier: 1.0
+            damageModifier: 1.0,
+            statusEffects: [],
+            slowSkipNext: false
         }];
 
         this.combatSystem.initCombat([localPlayer], enemies);
@@ -257,12 +250,17 @@ export class CombatScene extends Phaser.Scene {
 
         this.combatSystem.on('enemy_damaged', (e) => {
             this.updateEnemyHp();
-            this.showDamageNumber(this.scale.width - 200, 250, e.data.damage, '#cc0000');
+            this.showDamageNumber(this.scale.width - 200, 250, e.data.damage, '#cc0000', '-');
         });
 
         this.combatSystem.on('player_damaged', (e) => {
             this.updatePlayerHp();
-            this.showDamageNumber(200, 250, e.data.damage, '#0000cc');
+            this.showDamageNumber(200, 250, e.data.damage, '#0000cc', '-');
+        });
+
+        this.combatSystem.on('player_healed', (e) => {
+            this.updatePlayerHp();
+            this.showDamageNumber(200, 250, e.data.amount, '#00cc00', '+');
         });
 
         this.combatSystem.on('combat_victory', () => {
@@ -407,67 +405,20 @@ export class CombatScene extends Phaser.Scene {
         this.refreshAbilityVisual();
     }
 
-    private createHUD(centerX: number): void {
-        const hpLeftX = 50;
-        const hpTopY = 22;
-
-        this.add.sprite(hpLeftX, hpTopY, 'currency', 0)
-            .setOrigin(0, 0.5).setScrollFactor(0).setScale(2);
-
-        this.hpHudText = this.add.text(hpLeftX + 40, hpTopY, `${this.playerData!.hp} / ${this.playerData!.maxHp}`, {
-            fontSize: '18px', color: '#FFFFFF', fontFamily: FONT_FAMILY
-        }).setOrigin(0, 0.5).setScrollFactor(0);
-
-        this.timerText = this.add.text(centerX, 22, '00:00 - 1', {
-            fontSize: '20px', color: '#FFFFFF', fontFamily: FONT_FAMILY, align: 'center'
-        }).setOrigin(0.5, 0.5).setScrollFactor(0);
-
-        const currencyRightX = this.scale.width - 200;
-        const currencyTopY = 22;
-
-        this.add.sprite(currencyRightX, currencyTopY, 'currency', 4)
-            .setOrigin(0, 0.5).setScrollFactor(0).setScale(2);
-        this.add.text(currencyRightX + 40, currencyTopY, `${this.playerData!.gemstones}`, {
-            fontSize: '20px', color: '#FFFFFF', fontFamily: FONT_FAMILY
-        }).setOrigin(0, 0.5).setScrollFactor(0);
-
-        const specialCurrencyFrame = this.getSpecialCurrencyFrame(this.playerData!.covenant);
-        const currencySpacing = 120;
-
-        this.add.sprite(currencyRightX + currencySpacing, currencyTopY, 'currency', specialCurrencyFrame)
-            .setOrigin(0, 0.5).setScrollFactor(0).setScale(2);
-        this.scHudText = this.add.text(currencyRightX + currencySpacing + 40, currencyTopY, `${this.playerData!.specialCurrency}`, {
-            fontSize: '20px', color: '#FFFFFF', fontFamily: FONT_FAMILY
-        }).setOrigin(0, 0.5).setScrollFactor(0);
-
-        this.turnIndicator = this.add.text(centerX, 55, 'YOUR TURN', {
-            fontSize: '14px', color: '#FFD700', fontFamily: FONT_FAMILY, align: 'center'
-        }).setOrigin(0.5, 0.5).setScrollFactor(0);
-    }
-
     private updateHUD(): void {
-        if (this.timerText && this.combatSystem) {
-            const minutes = Math.floor(this.combatTimer / 60);
-            const seconds = this.combatTimer % 60;
-            const timerStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            this.timerText.setText(`${timerStr} - ${this.combatSystem.getCurrentRound()}`);
-        }
-        if (this.scHudText && this.combatSystem) {
-            const player = this.combatSystem.getLocalPlayer();
-            if (player) this.scHudText.setText(`${player.specialCurrency}`);
-        }
+        if (!this.combatHUD || !this.combatSystem) return;
+        const player = this.combatSystem.getLocalPlayer();
+        this.combatHUD.update(this.combatTimer, this.combatSystem.getCurrentRound(), player ? player.specialCurrency : 0);
     }
 
     private updateTurnIndicator(text: string): void {
-        if (this.turnIndicator) this.turnIndicator.setText(text);
+        if (this.combatHUD) this.combatHUD.setTurnText(text);
     }
 
     private updatePlayerHp(): void {
-        if (!this.combatSystem) return;
+        if (!this.combatSystem || !this.combatHUD) return;
         const player = this.combatSystem.getLocalPlayer();
-        if (player && this.hpHudText) {
-            this.hpHudText.setText(`${player.stats.hp} / ${player.stats.maxHp}`);
-        }
+        if (player) this.combatHUD.updateHpText(player.stats.hp, player.stats.maxHp);
     }
 
     private updateEnemyHp(): void {
@@ -476,26 +427,12 @@ export class CombatScene extends Phaser.Scene {
         if (enemy) this.enemyHpText.setText(`${enemy.stats.hp}/${enemy.stats.maxHp}`);
     }
 
-    private showDamageNumber(x: number, y: number, damage: number, color: string): void {
-        const dmgText = this.add.text(x, y, `-${damage}`, {
-            fontFamily: FONT_FAMILY, fontSize: '28px', color, fontStyle: 'bold'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
-
-        this.tweens.add({
-            targets: dmgText, y: y - 50, alpha: 0, duration: 1000, ease: 'Quad.easeOut',
-            onComplete: () => dmgText.destroy()
-        });
+    private showDamageNumber(x: number, y: number, value: number, color: string, prefix: string = '-'): void {
+        if (this.combatHUD) this.combatHUD.showDamageNumber(x, y, value, color, prefix);
     }
 
     private showFloatingText(x: number, y: number, text: string, color: string): void {
-        const t = this.add.text(x, y, text, {
-            fontFamily: FONT_FAMILY, fontSize: '18px', color, fontStyle: 'bold'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
-
-        this.tweens.add({
-            targets: t, y: y - 40, alpha: 0, duration: 1500, ease: 'Quad.easeOut',
-            onComplete: () => t.destroy()
-        });
+        if (this.combatHUD) this.combatHUD.showFloatingText(x, y, text, color);
     }
 
     public onComboConfirmed(chain: string[]): void {
@@ -510,7 +447,7 @@ export class CombatScene extends Phaser.Scene {
         this.time.delayedCall(400, () => {
             const damage = this.combatSystem!.executePlayerAttack('local');
             if (damage > 0 && this.enemySprite) {
-                this.enemySprite.setTintFill(0xffffff);
+                this.enemySprite.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
                 this.tweens.add({
                     targets: this.enemySprite,
                     x: this.enemySprite.x + 10,
@@ -585,119 +522,24 @@ export class CombatScene extends Phaser.Scene {
     private startNextRound(): void {
         this.isAnimating = false;
         this.combatSystem!.startRound();
-        this.currentTurn = this.combatSystem!.getCurrentRound();
+        this.combatSystem!.getCurrentRound();
         this.updateHUD();
         this.updateStatusEffects();
         this.updateTurnIndicator('YOUR TURN - Select Runes');
         this.updateAbilityButton();
-        if (this.abilityBtn) this.abilityBtn.setInteractive({ useHandCursor: true });
-    }
-
-    private createStatusTooltip(): void {
-        this.statusTooltip = this.add.container(0, 0).setDepth(1000).setScrollFactor(0).setAlpha(0);
-        const bg = this.add.rectangle(0, 0, 160, 60, 0x000000, 0.8).setOrigin(0, 1);
-        this.statusTooltipTextTitle = this.add.text(10, -50, '', {
-            fontFamily: FONT_FAMILY, fontSize: '14px', color: '#FFD700', fontStyle: 'bold'
-        }).setOrigin(0, 0);
-        this.statusTooltipTextDesc = this.add.text(10, -30, '', {
-            fontFamily: FONT_FAMILY, fontSize: '12px', color: '#FFFFFF', wordWrap: { width: 140 }
-        }).setOrigin(0, 0);
-        this.statusTooltip.add([bg, this.statusTooltipTextTitle, this.statusTooltipTextDesc]);
+        if (this.abilityBtnSprite) this.abilityBtnSprite.setInteractive({ useHandCursor: true });
     }
 
     private updateStatusEffects(): void {
-        if (!this.combatSystem || !this.enemyStatusContainer || !this.playerStatusContainer) return;
+        if (!this.combatSystem || !this.statusEffectUI || !this.enemyStatusContainer || !this.playerStatusContainer) return;
 
         const enemy = this.combatSystem.getAllEnemies()[0];
         const enemyEffects = enemy ? enemy.statusEffects : [];
-        this.syncStatusIcons(enemyEffects, this.enemyStatusContainer);
+        this.statusEffectUI.syncIcons(enemyEffects, this.enemyStatusContainer);
 
         const player = this.combatSystem.getLocalPlayer();
         const playerEffects = player ? player.statusEffects : [];
-        this.syncStatusIcons(playerEffects, this.playerStatusContainer);
-    }
-
-    private syncStatusIcons(effects: any[], container: Phaser.GameObjects.Container): void {
-        const activeEffects = new Set(effects.map(e => e.effect));
-        const isLeftSide = container.x < this.scale.width / 2;
-
-
-        container.each((child: Phaser.GameObjects.GameObject) => {
-            if (child.name && !activeEffects.has(child.name)) {
-                child.name = '';
-                this.tweens.add({
-                    targets: child, scaleX: 0, scaleY: 0, alpha: 0, duration: 300,
-                    onComplete: () => { child.destroy(); }
-                });
-            }
-        });
-
-
-        let index = 0;
-        effects.forEach(eff => {
-            const data = STATUS_DATA[eff.effect];
-            if (!data) return;
-
-            const targetY = index * 34;
-            let iconContainer = container.getByName(eff.effect) as Phaser.GameObjects.Container;
-
-            if (!iconContainer) {
-
-                iconContainer = this.add.container(0, targetY);
-                iconContainer.name = eff.effect;
-
-                const bg = this.add.sprite(0, 0, 'status-btn', 0).setScale(1);
-                const icon = this.add.sprite(0, 0, 'status-btn', data.frame).setScale(1);
-                iconContainer.add([bg, icon]);
-
-                const hitArea = new Phaser.Geom.Rectangle(-16, -16, 32, 32);
-                iconContainer.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
-
-                iconContainer.on('pointerout', () => {
-                    if (this.statusTooltip) this.statusTooltip.setAlpha(0);
-                });
-                iconContainer.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-                    if (this.statusTooltip) {
-                        const tooltipX = isLeftSide ? pointer.x + 15 : pointer.x - 175;
-                        this.statusTooltip.setPosition(tooltipX, pointer.y - 10);
-                    }
-                });
-
-                container.add(iconContainer);
-
-
-                iconContainer.setScale(0);
-                iconContainer.setAlpha(0);
-                this.tweens.add({
-                    targets: iconContainer, scaleX: 1, scaleY: 1, alpha: 1, duration: 300, ease: 'Back.easeOut'
-                });
-            } else {
-
-                if (iconContainer.y !== targetY) {
-                    this.tweens.add({
-                        targets: iconContainer, y: targetY, duration: 300, ease: 'Cubic.easeOut'
-                    });
-                }
-            }
-
-
-            iconContainer.off('pointerover');
-            iconContainer.on('pointerover', (pointer: Phaser.Input.Pointer) => {
-                if (this.statusTooltip && this.statusTooltipTextTitle && this.statusTooltipTextDesc) {
-                    let title = data.name;
-                    if (eff.stacks) title += ` (${eff.stacks}x)`;
-                    title += ` - ${eff.duration} TURN`;
-                    this.statusTooltipTextTitle.setText(title);
-                    this.statusTooltipTextDesc.setText(data.desc);
-
-                    const tooltipX = isLeftSide ? pointer.x + 15 : pointer.x - 175;
-                    this.statusTooltip.setPosition(tooltipX, pointer.y - 10);
-                    this.statusTooltip.setAlpha(1);
-                }
-            });
-
-            index++;
-        });
+        this.statusEffectUI.syncIcons(playerEffects, this.playerStatusContainer);
     }
 
     private syncPlayerDataFromCombat(): void {

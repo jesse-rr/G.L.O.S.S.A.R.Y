@@ -8,9 +8,10 @@ import { LocationData } from '../../data/LocationData';
 import { BestiaryData } from '../../data/BestiaryData';
 import { NetworkManager } from '../../NetworkManager';
 import { EventBus } from '../../EventBus';
-import { COVENANT_TINTS } from '../../types';
+import { COVENANT_CARD_TINTS, InputKeys } from '../../constants';
 import { resetOpenedChests } from '../../systems/ChestSystem';
 import { resetCompletedTrades } from '../../systems/TradeSystem';
+import { CovenantType } from '../../types';
 
 const BG_FRAME_RATE = 8;
 const CARD_FRAME_RATE = 8;
@@ -103,10 +104,9 @@ export class Covenant extends Phaser.Scene {
                 this.setSelectedCard(i);
             });
 
-
             sprite.on('pointerdown', () => {
                 if (!this.inputReady || this.myLock) return;
-                this.selectCovenant(covenant.key as any);
+                this.selectCovenant(covenant.key as CovenantType);
             });
 
             this.cards.push({ key: covenant.key, sprite });
@@ -114,17 +114,17 @@ export class Covenant extends Phaser.Scene {
 
         this.setSelectedCard(this.selectedCardIndex);
 
-        this.input.keyboard!.on('keydown-LEFT', () => {
+        this.input.keyboard!.on(InputKeys.LEFT, () => {
             if (!this.inputReady || this.myLock) return;
             this.setSelectedCard(this.selectedCardIndex - 1);
         });
 
-        this.input.keyboard!.on('keydown-ENTER', () => {
+        this.input.keyboard!.on(InputKeys.ENTER, () => {
             if (!this.inputReady || this.myLock) return;
-            this.selectCovenant(COVENANTS[this.selectedCardIndex].key as any);
+            this.selectCovenant(COVENANTS[this.selectedCardIndex].key as CovenantType);
         });
 
-        this.input.keyboard!.on('keydown-RIGHT', () => {
+        this.input.keyboard!.on(InputKeys.RIGHT, () => {
             if (!this.inputReady || this.myLock) return;
             this.setSelectedCard(this.selectedCardIndex + 1);
         });
@@ -227,7 +227,7 @@ export class Covenant extends Phaser.Scene {
                 card.sprite.setFrame(0);
                 this.tweenCardScale(card.sprite, CARD_BASE_SCALE);
             } else if (isMyLock) {
-                card.sprite.setTint(COVENANT_TINTS[card.key as keyof typeof COVENANT_TINTS]);
+                card.sprite.setTint(COVENANT_CARD_TINTS[card.key as keyof typeof COVENANT_CARD_TINTS]);
                 card.sprite.setAlpha(1);
                 card.sprite.play(`${card.key}-anim`, true);
                 this.tweenCardScale(card.sprite, CARD_HOVER_SCALE);
@@ -296,14 +296,7 @@ export class Covenant extends Phaser.Scene {
         card.setData('scaleTween', tween);
     }
 
-    private getCardIndexAtPointer(pointer: Phaser.Input.Pointer) {
-        for (let i = 0; i < this.cards.length; i++) {
-            if (this.cards[i].sprite.getBounds().contains(pointer.worldX, pointer.worldY)) {
-                return i;
-            }
-        }
-        return -1;
-    }
+
 
     private selectCovenant(covenant: 'dragon' | 'phoenix' | 'snake'): void {
         const nm = NetworkManager.getInstance();
