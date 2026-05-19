@@ -45,7 +45,7 @@ export class Help extends Phaser.Scene {
 
         const HELP_PAGES = [
             'GLOSSARY is a turn-based combat and exploration game. Choose a Covenant to define your playstyle and ability, then begin your ascent. Collect Runes and chain them to craft powerful attacks.\n\nDiscover enemies, items, and locations — all cataloged in your Glossary. Seek the three combat bosses symbols to challenge yourself. Death is permanent. Explore, grow stronger.',
-            'COMBAT SYSTEM\n\nDuring combat, Runes are drawn to form your hand each turn. To attack, you must chain these runes together. A valid combo requires at least one Base Rune to function.',
+            'COMBAT SYSTEM\n\nDuring combat, Runes are drawn to form your hand each turn. To attack, you must chain these runes together. A valid combo requires at least one Base Rune to function.\n\nDamage = (Rune Base + Combo Bonus) * Status Multipliers - Enemy Defense.',
             'RUNE TYPES\n\nCube = Base Rune - Initiates the chain.\nArrow = Boost Rune - Increases stats.\nDiamond = Unique Effect Rune - Applies special conditions.',
             'FINDING RUNES AND GEMSTONES\n\n- Merchant: Purchase runes and items directly.\n- Chests: Found throughout the map containing various loot.\n- Monoliths: Interacting with these triggers a combat encounter. Winning rewards you with new runes.'
         ];

@@ -90,13 +90,6 @@ function getCovenantFrames(): { start: number; end: number } {
     if (covenant === 'dragon') return { start: 7, end: 13 };
     return { start: 15, end: 20 };
 }
-
-function covenantColorHex(): string {
-    const covenant = PlayerData.getInstance().covenant;
-    const color = COVENANT_COLORS[covenant] || COVENANT_COLORS['default'];
-    return '#' + color.toString(16).padStart(6, '0');
-}
-
 export function isTradeActive(): boolean {
     return tradeActive;
 }

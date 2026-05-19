@@ -71,7 +71,7 @@ export class GlossaryBestiaryPage {
         const textCenterX = 210;
 
         const displayNameStr = def.name;
-        const statsStr = `Rarity: ${def.rarity}\nHP: ${def.hp}\nDMG: ${def.baseDamage}`;
+        const statsStr = `Rarity: ${def.rarity}\nHP: ${def.hp}\nDMG: ${def.baseDamage}\nDEF: ${Math.floor(def.baseDamage * 0.2)}`;
         const explanationOriginal = def.description;
 
         const title = this.scene.add.text(textCenterX, 65, useRunic ? convertToRunicWords(displayNameStr) : displayNameStr, {

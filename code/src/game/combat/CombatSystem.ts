@@ -8,6 +8,16 @@ export interface CombatantStats {
     defense: number;
 }
 
+export interface DamagePreview {
+    damage: number;
+    heal: number;
+    defense: number;
+    effects: string[];
+    damageLine: string;
+    healLine: string;
+    defenseLine: string;
+}
+
 export interface ActiveStatusEffect {
     effect: RuneStatusEffect | string;
     duration: number;
@@ -103,7 +113,7 @@ export class CombatSystem {
         this.burnedRuneLetter = null;
         this.covenantAbilityUsedThisTurn = false;
         this.covenantAbilityUsedThisTurn = false;
-        
+
         const pData = PlayerData.getInstance();
         this.players.forEach(p => {
             if (p.isLocal) {
@@ -191,6 +201,140 @@ export class CombatSystem {
         if (player) {
             player.currentChain = chain;
         }
+    }
+
+    previewAttack(playerId: string, chain: string[]): DamagePreview {
+        const result: DamagePreview = {
+            damage: 0,
+            heal: 0,
+            defense: 0,
+            effects: [],
+            damageLine: '',
+            healLine: '',
+            defenseLine: ''
+        };
+        const player = this.getPlayer(playerId);
+        const enemy = this.enemies.find(e => e.targetPlayerId === playerId);
+        if (!player || !enemy) return result;
+
+        const damageParts: string[] = [];
+        const healParts: string[] = [];
+        const defenseParts: string[] = [];
+
+        // 1. Base attack from player (if > 0)
+        if (player.stats.attack > 0) {
+            damageParts.push(player.stats.attack.toString());
+        }
+
+        let damagePower = player.stats.attack;
+        let healPower = 0;
+        let defensePower = 0;
+
+        // 2. Rune powers
+        for (const letter of chain) {
+            const def = RuneData.getDefinition(letter);
+            if (def) {
+                if (def.effectType === 'heal') {
+                    healPower += def.basePower;
+                    if (def.basePower > 0) healParts.push(def.basePower.toString());
+                } else if (def.effectType === 'defense') {
+                    defensePower += def.basePower;
+                    if (def.basePower > 0) defenseParts.push(def.basePower.toString());
+                } else {
+                    damagePower += def.basePower;
+                    if (def.basePower > 0) damageParts.push(def.basePower.toString());
+                }
+
+                if (def.statusEffect) {
+                    const label = def.statusEffect.toUpperCase();
+                    if (!result.effects.includes(label)) {
+                        result.effects.push(label);
+                    }
+                }
+            }
+        }
+
+        // 3. Extra Buffs
+        for (const buff of player.statusEffects) {
+            if (buff.duration === -1 && buff.name === 'Extra Buff' && buff.desc) {
+                if (buff.desc === 'Trade: +2 Damage') {
+                    damagePower += 2;
+                    damageParts.push('2');
+                } else if (buff.desc === 'Trade: +2 Defense') {
+                    defensePower += 2;
+                    defenseParts.push('2');
+                } else if (buff.desc === 'Trade: +2 Healing') {
+                    healPower += 2;
+                    healParts.push('2');
+                } else {
+                    damagePower += 1;
+                    damageParts.push('1');
+                }
+            }
+        }
+
+        // 4. Combo Bonus
+        const combo = RuneData.findMatchingCombo(chain);
+        if (combo && combo.bonusPower > 0) {
+            damagePower += combo.bonusPower;
+            damageParts.push(combo.bonusPower.toString());
+        }
+
+        // 5. Multipliers
+        let rawDamage = damagePower;
+        let multiplier = 1.0;
+
+        const overcharge = player.statusEffects.find(s => s.effect === 'overcharge');
+        if (overcharge) {
+            multiplier *= 1.5;
+        }
+
+        if (this.phoenixBurnActive) {
+            multiplier *= 1.5;
+        }
+
+        if (multiplier > 1.0) {
+            rawDamage = Math.floor(rawDamage * multiplier);
+        }
+
+        // 6. Defense subtraction
+        let enemyDef = enemy.stats.defense;
+        const shatter = enemy.statusEffects.find(s => s.effect === 'shatter');
+        if (shatter) {
+            enemyDef = 0;
+        }
+
+        result.damage = Math.max(1, rawDamage - enemyDef);
+        result.heal = healPower;
+        result.defense = defensePower;
+
+        // Build Damage Line
+        if (damagePower > 0 || result.damage > 0) {
+            let dmgExpr = damageParts.join(' + ');
+            if (multiplier > 1.0 && damageParts.length > 1) {
+                dmgExpr = `(${dmgExpr}) * ${multiplier}`;
+            } else if (multiplier > 1.0) {
+                dmgExpr = `${dmgExpr} * ${multiplier}`;
+            }
+
+            if (enemyDef > 0) {
+                dmgExpr = `${dmgExpr} - ${enemyDef}`;
+            }
+
+            result.damageLine = `DMG: ${dmgExpr} = ${result.damage}`;
+        }
+
+        // Build Heal Line
+        if (healPower > 0) {
+            result.healLine = `HEAL: ${healParts.join(' + ')} = +${healPower}`;
+        }
+
+        // Build Defense Line
+        if (defensePower > 0) {
+            result.defenseLine = `DEF: ${defenseParts.join(' + ')} = +${defensePower}`;
+        }
+
+        return result;
     }
 
     executePlayerAttack(playerId: string): number {

@@ -33,6 +33,9 @@ export class CombatScene extends Phaser.Scene {
     private enemyStatusContainer: Phaser.GameObjects.Container | null = null;
     private playerStatusContainer: Phaser.GameObjects.Container | null = null;
     private combatTimer: number = 0;
+    private enemyTooltip: Phaser.GameObjects.Container | null = null;
+    private enemyTooltipTitle: Phaser.GameObjects.Text | null = null;
+    private enemyTooltipDesc: Phaser.GameObjects.Text | null = null;
 
     constructor() {
         super('CombatScene');
@@ -147,7 +150,8 @@ export class CombatScene extends Phaser.Scene {
             this.playerData.covenant,
             this.getRuneFrame.bind(this),
             (cov) => COVENANT_COLORS[cov] ?? COVENANT_COLORS['default'],
-            (chain) => this.onComboConfirmed(chain)
+            (chain) => this.onComboConfirmed(chain),
+            (chain) => this.combatSystem!.previewAttack('local', chain)
         );
         this.runePickerSystem.createDimOverlay();
         this.runePickerSystem.createChainSlots();
@@ -237,7 +241,7 @@ export class CombatScene extends Phaser.Scene {
             id: 'local',
             name: 'You',
             covenant: this.playerData!.covenant,
-            stats: { hp: this.playerData!.hp, maxHp: this.playerData!.maxHp, attack: 10, defense: 3 },
+            stats: { hp: this.playerData!.hp, maxHp: this.playerData!.maxHp, attack: 0, defense: 3 },
             gemstones: this.playerData!.gemstones,
             specialCurrency: this.playerData!.specialCurrency,
             currentChain: null,
@@ -345,7 +349,7 @@ export class CombatScene extends Phaser.Scene {
         }
 
         this.enemySprite = this.add.sprite(x, y, enemy.texture, enemy.frame)
-            .setScale(2.5).setScrollFactor(0);
+            .setScale(2.5).setScrollFactor(0).setInteractive({ useHandCursor: true });
         this.enemySprite.play(idleKey);
 
         this.enemyHpText = this.add.text(x, y - 85, `${enemy.stats.hp}/${enemy.stats.maxHp}`, {
@@ -353,6 +357,39 @@ export class CombatScene extends Phaser.Scene {
         }).setOrigin(0.5).setScrollFactor(0);
 
         this.enemyStatusContainer = this.add.container(this.scale.width - 40, 95).setScrollFactor(0);
+
+        this.enemyTooltip = this.add.container(0, 0).setDepth(1000).setScrollFactor(0).setAlpha(0);
+        const bg = this.add.rectangle(75, -42.5, 150, 85, 0x000000, 0.9).setStrokeStyle(1, 0x847E87);
+        this.enemyTooltipTitle = this.add.text(10, -75, '', {
+            fontFamily: FONT_FAMILY, fontSize: '15px', color: '#FFD700', fontStyle: 'bold'
+        }).setOrigin(0, 0);
+        this.enemyTooltipDesc = this.add.text(10, -55, '', {
+            fontFamily: FONT_FAMILY, fontSize: '12px', color: '#FFFFFF', wordWrap: { width: 130 }
+        }).setOrigin(0, 0);
+        this.enemyTooltip.add([bg, this.enemyTooltipTitle, this.enemyTooltipDesc]);
+
+        this.enemySprite.on('pointerover', (pointer: Phaser.Input.Pointer) => {
+            if (this.enemyTooltip && this.enemyTooltipTitle && this.enemyTooltipDesc) {
+                this.enemyTooltipTitle.setText(enemy.name);
+                this.enemyTooltipDesc.setText(`HP: ${enemy.stats.hp}/${enemy.stats.maxHp}\nDMG: ${enemy.stats.attack}\nDEF: ${enemy.stats.defense}`);
+                const tx = pointer.x > this.scale.width / 2 ? pointer.x - 170 : pointer.x + 20;
+                this.enemyTooltip.setPosition(tx, pointer.y - 10);
+                this.enemyTooltip.setAlpha(1);
+            }
+        });
+
+        this.enemySprite.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            if (this.enemyTooltip && this.enemyTooltip.alpha > 0) {
+                const tx = pointer.x > this.scale.width / 2 ? pointer.x - 170 : pointer.x + 20;
+                this.enemyTooltip.setPosition(tx, pointer.y - 10);
+            }
+        });
+
+        this.enemySprite.on('pointerout', () => {
+            if (this.enemyTooltip) {
+                this.enemyTooltip.setAlpha(0);
+            }
+        });
     }
 
     private createAbilityButton(): void {

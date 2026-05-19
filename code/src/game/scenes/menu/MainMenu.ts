@@ -94,8 +94,6 @@ export class MainMenu extends Phaser.Scene {
                 .setOrigin(0.5, 0.5)
                 .setInteractive({ cursor: 'pointer' });
 
-            this.add.rectangle(cx, cy, bw, bh).setStrokeStyle(1, 0xff00ff).setOrigin(0.5);
-
             zone.on('pointerover', () => {
                 this.positionSelector(i);
                 this.input.setDefaultCursor('pointer');
@@ -237,7 +235,7 @@ export class MainMenu extends Phaser.Scene {
             ease: 'Sine.easeInOut',
             onUpdate: (tw) => {
                 const val = tw.getValue();
-                const colorObject = Phaser.Display.Color.Interpolate.ColorWithColor(startRGB, endRGB, 100, val);
+                const colorObject = Phaser.Display.Color.Interpolate.ColorWithColor(startRGB, endRGB, 100, val ?? undefined);
                 const color = Phaser.Display.Color.GetColor(colorObject.r, colorObject.g, colorObject.b);
                 rect.setFillStyle(color);
             }

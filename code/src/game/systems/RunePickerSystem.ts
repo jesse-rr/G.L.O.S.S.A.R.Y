@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { RuneData } from '../data/RuneData';
 import { FONT_FAMILY, RUNE_FONT, InputKeys } from '../constants';
+import { DamagePreview } from '../combat/CombatSystem';
 
 const MAX_CHAIN_RUNES = 3;
 const CHAIN_CARD_SCALE = 3;
@@ -22,6 +23,7 @@ export class RunePickerSystem {
     private getCovenantColor: (covenant: string) => number;
     private covenant: string;
     private onComboConfirmed: ((chain: string[]) => void) | null = null;
+    private getDamagePreview: ((chain: string[]) => DamagePreview) | null = null;
 
     private runeTooltip: Phaser.GameObjects.Container | null = null;
     private runeTooltipTitle: Phaser.GameObjects.Text | null = null;
@@ -35,13 +37,15 @@ export class RunePickerSystem {
         covenant: string,
         getRuneFrame: (cardType: string) => number,
         getCovenantColor: (covenant: string) => number,
-        onComboConfirmed?: (chain: string[]) => void
+        onComboConfirmed?: (chain: string[]) => void,
+        getDamagePreview?: (chain: string[]) => DamagePreview
     ) {
         this.scene = scene;
         this.covenant = covenant;
         this.getRuneFrame = getRuneFrame;
         this.getCovenantColor = getCovenantColor;
         this.onComboConfirmed = onComboConfirmed || null;
+        this.getDamagePreview = getDamagePreview || null;
     }
 
     createDimOverlay(): void {
@@ -432,14 +436,54 @@ export class RunePickerSystem {
                 .setFlipX(true)
                 .play('attack-selector-anim');
 
+            const comboChildren: Phaser.GameObjects.GameObject[] = [comboLabel, selectorLeft, selectorRight];
+
+            if (this.getDamagePreview) {
+                const preview = this.getDamagePreview(this.selectedChain);
+                const parts: string[] = [];
+                if (preview.damageLine) parts.push(preview.damageLine);
+                if (preview.healLine) parts.push(preview.healLine);
+                if (preview.defenseLine) parts.push(preview.defenseLine);
+                const previewLine = parts.join('  |  ');
+
+                const previewText = this.scene.add.text(centerX, chainY + 148, previewLine, {
+                    fontSize: '13px',
+                    color: '#FFD700',
+                    fontFamily: FONT_FAMILY,
+                    align: 'center',
+                    stroke: '#000000',
+                    strokeThickness: 2
+                }).setOrigin(0.5, 0.5)
+                    .setScrollFactor(0)
+                    .setDepth(77)
+                    .setAlpha(0);
+                comboChildren.push(previewText);
+
+                if (preview.effects.length > 0) {
+                    const effectsLine = preview.effects.join(', ');
+                    const effectsText = this.scene.add.text(centerX, chainY + 167, effectsLine, {
+                        fontSize: '12px',
+                        color: '#FFD700',
+                        fontFamily: FONT_FAMILY,
+                        align: 'center',
+                        stroke: '#000000',
+                        strokeThickness: 2
+                    }).setOrigin(0.5, 0.5)
+                        .setScrollFactor(0)
+                        .setDepth(77)
+                        .setAlpha(0);
+                    comboChildren.push(effectsText);
+                }
+            }
+
             this.scene.tweens.add({
-                targets: [comboLabel, selectorLeft, selectorRight],
+                targets: comboChildren,
                 alpha: 1,
                 duration: 400,
                 ease: 'Quad.easeOut'
             });
 
-            const comboContainer = this.scene.add.container(0, 0).add([comboLabel, selectorLeft, selectorRight])
+            const comboContainer = this.scene.add.container(0, 0).add(comboChildren)
                 .setDepth(77)
                 .setScrollFactor(0);
             this.chainCards.push(comboContainer);

@@ -10,6 +10,7 @@ import { GlossaryRunesPage } from './glossary/GlossaryRunesPage';
 import { GlossaryItemsPage } from './glossary/GlossaryItemsPage';
 import { GlossaryBestiaryPage } from './glossary/GlossaryBestiaryPage';
 import { GlossaryLocationsPage } from './glossary/GlossaryLocationsPage';
+import { GlossaryCombosPage } from './glossary/GlossaryCombosPage';
 
 export class GlossaryUI extends Scene implements ScrambleContext {
     private previousScene = 'CombatScene';
@@ -17,7 +18,7 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     public detailsContainer!: GameObjects.Container | null;
     public currentSelectionId: string | number | null = null;
     private currentPage: number = 0;
-    private readonly totalPages: number = 8;
+    private readonly totalPages: number = 9;
     private prevArrow!: GameObjects.Text;
     private nextArrow!: GameObjects.Text;
     private prevHitZone!: GameObjects.Rectangle;
@@ -202,16 +203,18 @@ export class GlossaryUI extends Scene implements ScrambleContext {
         } else if (page === 1) {
             this.renderPlayerPage();
         } else if (page === 2) {
-            this.renderInfoPage2();
+            this.renderCombosSection();
         } else if (page === 3) {
-            this.renderRunesSection();
+            this.renderInfoPage2();
         } else if (page === 4) {
-            this.renderItemsSection();
+            this.renderRunesSection();
         } else if (page === 5) {
-            this.renderBestiarySection();
+            this.renderItemsSection();
         } else if (page === 6) {
-            this.renderLocationsSection();
+            this.renderBestiarySection();
         } else if (page === 7) {
+            this.renderLocationsSection();
+        } else if (page === 8) {
             this.renderLocationsPage2();
         }
 
@@ -241,7 +244,7 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     }
 
     private switchSection(index: number) {
-        const pageMap: Record<number, number> = { 0: 0, 1: 3, 2: 4, 3: 5, 4: 6 };
+        const pageMap: Record<number, number> = { 0: 0, 1: 4, 2: 5, 3: 6, 4: 7 };
         this.navigateToPage(pageMap[index] ?? index);
     }
 
@@ -283,5 +286,10 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     private renderBestiarySection() {
         const bestiaryPage = new GlossaryBestiaryPage(this, this.contentContainer);
         bestiaryPage.render(this.scale.width / 2, this.scale.height);
+    }
+
+    private renderCombosSection() {
+        const combosPage = new GlossaryCombosPage(this, this.contentContainer);
+        combosPage.render(this.scale.width / 2, this.scale.height);
     }
 }
