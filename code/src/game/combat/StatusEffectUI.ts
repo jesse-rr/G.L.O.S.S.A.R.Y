@@ -16,6 +16,9 @@ export interface StatusEffect {
     effect: string;
     duration: number;
     stacks?: number;
+    name?: string;
+    desc?: string;
+    frame?: number;
 }
 
 export class StatusEffectUI {
@@ -56,7 +59,7 @@ export class StatusEffectUI {
 
         let index = 0;
         effects.forEach(eff => {
-            const data = STATUS_DATA[eff.effect];
+            const data = STATUS_DATA[eff.effect] || { frame: eff.frame ?? 9, name: eff.name || 'Buff', desc: eff.desc || '' };
             if (!data) return;
 
             const targetY = index * 34;
@@ -103,7 +106,11 @@ export class StatusEffectUI {
                 if (this.tooltip && this.tooltipTitle && this.tooltipDesc) {
                     let title = data.name;
                     if (eff.stacks) title += ` (${eff.stacks}x)`;
-                    title += ` - ${eff.duration} TURN`;
+                    if (eff.duration === -1) {
+                        title += ` (Perm)`;
+                    } else {
+                        title += ` - ${eff.duration} TURN`;
+                    }
                     this.tooltipTitle.setText(title);
                     this.tooltipDesc.setText(data.desc);
 

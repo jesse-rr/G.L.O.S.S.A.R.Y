@@ -128,17 +128,6 @@ export class ItemData {
 
     private constructor() {
         this.load();
-        if (this.discoveredItems.size === 0) {
-            const itemIds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-            for (let i = itemIds.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [itemIds[i], itemIds[j]] = [itemIds[j], itemIds[i]];
-            }
-            this.discoveredItems.add(itemIds[0]);
-            this.discoveredItems.add(itemIds[1]);
-            this.discoveredItems.add(itemIds[2]);
-            this.save();
-        }
     }
 
     public static getInstance(): ItemData {

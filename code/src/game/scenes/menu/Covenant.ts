@@ -316,10 +316,13 @@ export class Covenant extends Phaser.Scene {
         if (!this.myLock) return;
         const covenant = this.myLock as 'dragon' | 'phoenix' | 'snake';
 
-        const playerData = this.registry.get('playerData') as PlayerData;
+        const playerData = this.registry.get('playerData') as PlayerData || PlayerData.getInstance();
+        playerData.reset();
         playerData.setCovenantData(covenant);
         const userData = this.registry.get('userData') as UserData;
-        userData.discoverCovenant(covenant);
+        if (userData) userData.discoverCovenant(covenant);
+        
+        localStorage.removeItem('glossary_boss_presses');
 
         let mapKey = 'hub';
         let uniqueRune = '';

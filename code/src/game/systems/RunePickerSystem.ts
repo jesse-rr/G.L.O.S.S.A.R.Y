@@ -61,7 +61,7 @@ export class RunePickerSystem {
 
     private createTooltip(): void {
         this.runeTooltip = this.scene.add.container(0, 0).setDepth(1000).setScrollFactor(0).setAlpha(0);
-        const bg = this.scene.add.rectangle(0, 0, 320, 110, 0x000000, 0.9).setOrigin(0, 1);
+        const bg = this.scene.add.rectangle(160, -55, 320, 110, 0x000000, 0.9).setStrokeStyle(1, 0x847E87);
         this.runeTooltipTitle = this.scene.add.text(10, -95, '', {
             fontFamily: FONT_FAMILY, fontSize: '16px', color: '#FFD700', fontStyle: 'bold'
         }).setOrigin(0, 0);
@@ -89,22 +89,22 @@ export class RunePickerSystem {
 
     private updateTooltipDisplay(): void {
         if (!this.runeTooltip || !this.runeTooltipTitle || !this.runeTooltipDesc) return;
-        
+
         if (this.isShiftDown && this.hoveredRuneLetter) {
             const def = RuneData.getDefinition(this.hoveredRuneLetter);
             if (def) {
                 let stats = `Type: ${def.effectType.toUpperCase()} | Pwr: ${def.basePower}`;
                 if (def.statusEffect) stats += ` | Effect: ${def.statusEffect.toUpperCase()}`;
-                
+
                 let text = stats;
                 const match = def.description.match(/Applies.*/);
                 if (match) {
                     text += `\n\n${match[0]}`;
                 }
-                
+
                 this.runeTooltipTitle.setText(`${def.name} (${def.translation})`);
                 this.runeTooltipDesc.setText(text);
-                
+
                 if (this.lastPointer) {
                     const x = this.lastPointer.x < this.scene.scale.width / 2 ? this.lastPointer.x + 15 : this.lastPointer.x - 255;
                     this.runeTooltip.setPosition(x, this.lastPointer.y - 10);

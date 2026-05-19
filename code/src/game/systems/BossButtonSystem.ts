@@ -140,6 +140,14 @@ export function handleBossButtonInteraction(
         setCinematic(true);
         player.setVelocity(0, 0);
 
+        btn.glowTween.stop();
+        scene.tweens.add({
+            targets: btn.symbolGlow,
+            alpha: 0,
+            duration: WALK_DURATION + 500,
+            ease: 'Sine.easeOut'
+        });
+
         const encounterTier = Math.min(incrementBossPressCount(mapKey), 3);
 
         const darkVignette = createVignette(scene, 99, true);
@@ -179,9 +187,6 @@ export function handleBossButtonInteraction(
                         ScreenShake.trigger(scene, SHAKE_DURATION, SHAKE_INTENSITY);
 
                         btn.button.on('animationcomplete', () => {
-                            btn.glowTween.stop();
-                            btn.symbolGlow.setAlpha(0);
-
                             localStorage.setItem('glossary_combat_player_x', String(player.x));
                             localStorage.setItem('glossary_combat_player_y', String(player.y));
 

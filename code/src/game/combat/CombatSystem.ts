@@ -1,4 +1,4 @@
-import { CovenantType } from '../data/PlayerData';
+import { PlayerData, CovenantType } from '../data/PlayerData';
 import { RuneData, RuneStatusEffect } from '../data/RuneData';
 
 export interface CombatantStats {
@@ -9,9 +9,12 @@ export interface CombatantStats {
 }
 
 export interface ActiveStatusEffect {
-    effect: RuneStatusEffect;
+    effect: RuneStatusEffect | string;
     duration: number;
     stacks?: number;
+    name?: string;
+    desc?: string;
+    frame?: number;
 }
 
 export interface RuneChain {
@@ -99,8 +102,21 @@ export class CombatSystem {
         this.phoenixBurnActive = false;
         this.burnedRuneLetter = null;
         this.covenantAbilityUsedThisTurn = false;
+        this.covenantAbilityUsedThisTurn = false;
+        
+        const pData = PlayerData.getInstance();
         this.players.forEach(p => {
-            p.statusEffects = [];
+            if (p.isLocal) {
+                p.statusEffects = pData.activeBuffs.map(b => ({
+                    effect: b.id,
+                    duration: b.duration,
+                    name: b.name,
+                    desc: b.desc,
+                    frame: b.frame
+                }));
+            } else {
+                p.statusEffects = [];
+            }
             p.roundDefense = 0;
         });
         this.enemies.forEach(e => {
@@ -153,8 +169,10 @@ export class CombatSystem {
 
         for (const player of this.players) {
             if (player.stats.hp <= 0) continue;
-            player.statusEffects.forEach(s => s.duration--);
-            player.statusEffects = player.statusEffects.filter(s => s.duration > 0);
+            player.statusEffects.forEach(s => {
+                if (s.duration > 0) s.duration--;
+            });
+            player.statusEffects = player.statusEffects.filter(s => s.duration === -1 || s.duration > 0);
         }
 
         if (this.checkCombatEnd()) return;
@@ -193,6 +211,15 @@ export class CombatSystem {
                 if (def.effectType === 'heal') healPower += def.basePower;
                 else if (def.effectType === 'defense') defensePower += def.basePower;
                 else damagePower += def.basePower;
+            }
+        }
+
+        for (const buff of player.statusEffects) {
+            if (buff.duration === -1 && buff.name === 'Extra Buff' && buff.desc) {
+                if (buff.desc === 'Trade: +2 Damage') damagePower += 2;
+                else if (buff.desc === 'Trade: +2 Defense') defensePower += 2;
+                else if (buff.desc === 'Trade: +2 Healing') healPower += 2;
+                else damagePower += 1;
             }
         }
 
@@ -398,6 +425,15 @@ export class CombatSystem {
         this.burnedRuneLetter = runeLetter;
         this.covenantAbilityUsedThisTurn = true;
 
+        player.statusEffects.push({
+            effect: 'pyre',
+            name: 'Pyre',
+            desc: '+50% Attack Power for this turn.',
+            duration: 1,
+            frame: 9
+        });
+        this.emit({ type: 'status_applied', data: { targetId: player.id, effect: 'pyre' } });
+
         this.emit({
             type: 'ability_used', data: {
                 ability: 'burn',
@@ -419,6 +455,15 @@ export class CombatSystem {
         player.specialCurrency -= 3;
         this.intimidateRoundsLeft = 3;
         this.covenantAbilityUsedThisTurn = true;
+
+        player.statusEffects.push({
+            effect: 'roar',
+            name: 'Roar',
+            desc: 'Enemies deal -25% Damage.',
+            duration: 3,
+            frame: 9
+        });
+        this.emit({ type: 'status_applied', data: { targetId: player.id, effect: 'roar' } });
 
         for (const enemy of this.enemies) {
             enemy.damageModifier = 0.75;

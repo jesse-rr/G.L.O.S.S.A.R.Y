@@ -130,17 +130,6 @@ export class BestiaryData {
 
     private constructor() {
         this.load();
-        if (this.discoveredEntities.size === 0) {
-            const ids = BESTIARY.map(e => e.id);
-            for (let i = ids.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [ids[i], ids[j]] = [ids[j], ids[i]];
-            }
-            this.discoveredEntities.add(ids[0]);
-            this.discoveredEntities.add(ids[1]);
-            this.discoveredEntities.add(ids[2]);
-            this.save();
-        }
     }
 
     public static getInstance(): BestiaryData {

@@ -10,6 +10,14 @@ export interface PlayerRuneEntry {
     quantity: number;
 }
 
+export interface ActiveBuff {
+    id: string;
+    name: string;
+    desc: string;
+    frame: number;
+    duration: number; // -1 for permanent, otherwise number of turns
+}
+
 export class PlayerData {
     covenant: CovenantType = 'phoenix';
     gemstones: number = 0;
@@ -18,7 +26,14 @@ export class PlayerData {
     maxHp: number = 100;
     items: ItemData[] = [];
     runes: PlayerRuneEntry[] = [];
+    activeBuffs: ActiveBuff[] = [];
     hubDoorOpened: boolean = false;
+    lastMap: string = 'hub';
+    lastX: number | null = null;
+    lastY: number | null = null;
+    inCombat: boolean = false;
+    combatEnemyId: string | null = null;
+    combatTier: number = 1;
     private static instance: PlayerData | null = null;
 
     static getInstance(): PlayerData {
@@ -102,6 +117,41 @@ export class PlayerData {
         return this.runes;
     }
 
+    addBuff(buff: ActiveBuff): void {
+        const existing = this.activeBuffs.find(b => b.id === buff.id);
+        if (existing) {
+            existing.duration = buff.duration === -1 ? -1 : (existing.duration !== -1 ? existing.duration + buff.duration : -1);
+            existing.name = buff.name;
+            existing.desc = buff.desc;
+            existing.frame = buff.frame;
+        } else {
+            this.activeBuffs.push(buff);
+        }
+        this.save();
+    }
+
+    removeBuff(id: string): void {
+        this.activeBuffs = this.activeBuffs.filter(b => b.id !== id);
+        this.save();
+    }
+
+    decrementBuffs(): void {
+        let changed = false;
+        this.activeBuffs.forEach(b => {
+            if (b.duration > 0) {
+                b.duration--;
+                changed = true;
+            }
+        });
+        if (this.activeBuffs.some(b => b.duration === 0)) {
+            this.activeBuffs = this.activeBuffs.filter(b => b.duration !== 0);
+            changed = true;
+        }
+        if (changed) {
+            this.save();
+        }
+    }
+
     takeDamage(damage: number): void {
         this.hp = Math.max(0, this.hp - damage);
         this.save();
@@ -119,7 +169,14 @@ export class PlayerData {
         this.hp = this.maxHp;
         this.items = [];
         this.runes = [];
+        this.activeBuffs = [];
         this.hubDoorOpened = false;
+        this.lastMap = 'hub';
+        this.lastX = null;
+        this.lastY = null;
+        this.inCombat = false;
+        this.combatEnemyId = null;
+        this.combatTier = 1;
         this.save();
     }
 
@@ -132,7 +189,14 @@ export class PlayerData {
             maxHp: this.maxHp,
             items: this.items,
             runes: this.runes,
-            hubDoorOpened: this.hubDoorOpened
+            activeBuffs: this.activeBuffs,
+            hubDoorOpened: this.hubDoorOpened,
+            lastMap: this.lastMap,
+            lastX: this.lastX,
+            lastY: this.lastY,
+            inCombat: this.inCombat,
+            combatEnemyId: this.combatEnemyId,
+            combatTier: this.combatTier
         };
     }
 
@@ -144,7 +208,34 @@ export class PlayerData {
         if (data.maxHp !== undefined) this.maxHp = data.maxHp;
         if (data.items) this.items = data.items;
         if (data.runes) this.runes = data.runes;
+        if (data.activeBuffs) {
+            this.activeBuffs = data.activeBuffs.map((b: any) => {
+                if (b.id && b.id.startsWith('trade_') && b.name !== 'Extra Buff') {
+                    let val = b.name;
+                    if (val === 'EXTRA DAMAGE') val = '+2 Damage';
+                    else if (val === 'EXTRA DEFENSE') val = '+2 Defense';
+                    else if (val === 'EXTRA HEALING') val = '+2 Healing';
+                    else if (val === 'EXTRA BOOST') val = '+1 Boost';
+                    else if (val === 'EXTRA POWER') val = '+1 Power';
+                    else if (val === 'EXTRA BUFF') val = '+1 Buff';
+                    else if (val === 'EXTRA DEBUFF') val = '+1 Debuff';
+
+                    return {
+                        ...b,
+                        name: 'Extra Buff',
+                        desc: `Trade - ${val}`
+                    };
+                }
+                return b;
+            });
+        }
         if (data.hubDoorOpened !== undefined) this.hubDoorOpened = data.hubDoorOpened;
+        if (data.lastMap !== undefined) this.lastMap = data.lastMap;
+        if (data.lastX !== undefined) this.lastX = data.lastX;
+        if (data.lastY !== undefined) this.lastY = data.lastY;
+        if (data.inCombat !== undefined) this.inCombat = data.inCombat;
+        if (data.combatEnemyId !== undefined) this.combatEnemyId = data.combatEnemyId;
+        if (data.combatTier !== undefined) this.combatTier = data.combatTier;
     }
 
     save(): void {

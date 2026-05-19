@@ -32,9 +32,10 @@ export interface TradeState {
 }
 
 interface TradeReward {
-    type: 'gemstone' | 'special' | 'hp';
+    type: 'gemstone' | 'special' | 'boost';
     amount: number;
     iconFrame: number;
+    boostLabel?: string;
 }
 
 function getCompletedTrades(): Set<string> {
@@ -55,6 +56,18 @@ export function resetCompletedTrades(): void {
     localStorage.removeItem(TRADE_STORAGE_KEY);
 }
 
+function getBoostLabel(effectType: string): string {
+    switch (effectType) {
+        case 'damage': return '+2 Damage';
+        case 'defense': return '+2 Defense';
+        case 'heal': return '+2 Healing';
+        case 'buff': return '+1 Buff';
+        case 'debuff': return '+1 Debuff';
+        case 'utility': return '+1 Power';
+        default: return '+1 Boost';
+    }
+}
+
 function getTradeReward(tradeType: 'gemstone' | 'boost' | 'special'): TradeReward {
     const items = ItemDataClass.getAllItems();
     const avgCost = Math.floor(items.reduce((sum, i) => sum + i.cost, 0) / items.length);
@@ -65,7 +78,7 @@ function getTradeReward(tradeType: 'gemstone' | 'boost' | 'special'): TradeRewar
         case 'gemstone':
             return { type: 'gemstone', amount: Math.floor(avgCost * 0.75), iconFrame: 4 };
         case 'boost':
-            return { type: 'hp', amount: Math.floor(avgCost * 0.12), iconFrame: 0 };
+            return { type: 'boost', amount: Math.floor(avgCost * 0.12), iconFrame: -1, boostLabel: 'EXTRA BOOST' };
         case 'special':
             return { type: 'special', amount: 3, iconFrame: scFrame };
     }
@@ -296,18 +309,33 @@ function openTradeCard(
         .setDepth(301)
         .setAlpha(0);
 
-    const rewardIcon = scene.add.sprite(0, 0, 'currency', reward.iconFrame)
-        .setOrigin(0, 0.5);
-    tradeInfoRightContainer.add(rewardIcon);
+    if (reward.type === 'boost') {
+        const discoveredRunes = RuneData.getInstance().getDiscoveredDefinitions();
+        const selectedRune = discoveredRunes.length > 0 ? discoveredRunes[selectedRuneIndex % discoveredRunes.length] : null;
+        const label = selectedRune ? getBoostLabel(selectedRune.effectType) : 'EXTRA BOOST';
+        const boostText = scene.add.text(0, 0, label, {
+            fontFamily: FONT_FAMILY,
+            fontSize: '7px',
+            color: '#66ff66',
+            shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 2, fill: true },
+            resolution: 2
+        }).setOrigin(0, 0.5);
+        tradeInfoRightContainer.add(boostText);
+        tradeInfoRightContainer.setData('boostText', boostText);
+    } else {
+        const rewardIcon = scene.add.sprite(0, 0, 'currency', reward.iconFrame)
+            .setOrigin(0, 0.5);
+        tradeInfoRightContainer.add(rewardIcon);
 
-    const rewardAmount = scene.add.text(18, 0, `+${reward.amount}`, {
-        fontFamily: FONT_FAMILY,
-        fontSize: '10px',
-        color: '#66ff66',
-        shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 2, fill: true },
-        resolution: 2
-    }).setOrigin(0, 0.5);
-    tradeInfoRightContainer.add(rewardAmount);
+        const rewardAmount = scene.add.text(18, 0, `+${reward.amount}`, {
+            fontFamily: FONT_FAMILY,
+            fontSize: '10px',
+            color: '#66ff66',
+            shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 2, fill: true },
+            resolution: 2
+        }).setOrigin(0, 0.5);
+        tradeInfoRightContainer.add(rewardAmount);
+    }
 
     const hintText = scene.add.text(0, 24, 'CLICK CARD\nTO SWITCH', {
         fontFamily: FONT_FAMILY,
@@ -383,7 +411,7 @@ function createCenterRuneDisplay(scene: Phaser.Scene, cardX: number, cardY: numb
         return;
     }
 
-    centerRuneContainer = scene.add.container(cardX, cardY)
+    centerRuneContainer = scene.add.container(cardX + 2, cardY - 10)
         .setScrollFactor(0)
         .setDepth(302);
 
@@ -418,6 +446,13 @@ function updateCenterRuneDisplay(scene: Phaser.Scene, cardX: number, cardY: numb
 
     centerRuneText.setText(selectedRune.letter);
     centerRuneNameText.setText(selectedRune.name);
+
+    if (tradeInfoRightContainer && activeRewardCached && activeRewardCached.type === 'boost') {
+        const boostText = tradeInfoRightContainer.getData('boostText') as Phaser.GameObjects.Text;
+        if (boostText) {
+            boostText.setText(getBoostLabel(selectedRune.effectType));
+        }
+    }
 
     if (tradeTooltip && tradeTooltip.visible) {
         showRuneTooltip(scene, cardX, cardY);
@@ -460,6 +495,10 @@ function onConfirmTrade(): void {
 
     hideRuneTooltip();
 
+    if (activeRewardCached.type === 'boost') {
+        activeRewardCached.boostLabel = getBoostLabel(selectedRune.effectType);
+    }
+
     executeTradeWithAnim(scene, activeTradeCached, activeRewardCached, selectedRune.letter, activeSetCinematic);
 }
 
@@ -471,48 +510,79 @@ function showRuneTooltip(scene: Phaser.Scene, cardX: number, cardY: number): voi
 
     const selectedRune = discoveredRunes[selectedRuneIndex % discoveredRunes.length];
 
-    const covColor = covenantColorHex();
-    const tooltipX = cardX - 80;
-    const tooltipY = cardY;
+    const tooltipX = cardX - 95;
+    const tooltipY = cardY - 10;
 
     tradeTooltip = scene.add.container(tooltipX, tooltipY)
         .setScrollFactor(0)
-        .setDepth(350);
+        .setDepth(350)
+        .setAlpha(0);
 
-    const bgImage = scene.add.image(0, 0, 'trade-ui')
-        .setOrigin(0.5, 0.5)
-        .setScale(1);
+    let yPos = -20;
 
-    const nameText = scene.add.text(5, -18, selectedRune.name, {
-        fontFamily: FONT_FAMILY,
-        fontSize: '10px',
-        color: covColor,
-        resolution: 2
-    }).setOrigin(0.6, 0.5);
-
-    const translationText = scene.add.text(5, -7, `"${selectedRune.translation}"`, {
-        fontFamily: FONT_FAMILY,
-        fontSize: '7px',
-        color: '#aaaaaa',
-        fontStyle: 'italic',
-        resolution: 2
-    }).setOrigin(0.6, 0.5);
-
-    const typeText = scene.add.text(5, 4, selectedRune.effectType.toUpperCase(), {
+    const typeText = scene.add.text(0, yPos, selectedRune.effectType.toUpperCase(), {
         fontFamily: FONT_FAMILY,
         fontSize: '7px',
         color: getEffectColor(selectedRune.effectType),
-        resolution: 2
-    }).setOrigin(0.6, 0.5);
+        resolution: 2,
+        align: 'center'
+    }).setOrigin(0.5, 0.5);
+    yPos += 14;
 
-    const powerText = scene.add.text(5, 15, `Power: ${selectedRune.basePower}`, {
+    const powerText = scene.add.text(0, yPos, `Power: ${selectedRune.basePower}`, {
         fontFamily: FONT_FAMILY,
-        fontSize: '7px',
+        fontSize: '6px',
         color: '#cccccc',
-        resolution: 2
-    }).setOrigin(0.6, 0.5);
+        resolution: 2,
+        align: 'center'
+    }).setOrigin(0.5, 0.5);
+    yPos += 14;
 
-    tradeTooltip.add([bgImage, nameText, translationText, typeText, powerText]);
+    let statusText: Phaser.GameObjects.Text | null = null;
+    if (selectedRune.statusEffect) {
+        statusText = scene.add.text(0, yPos, selectedRune.statusEffect.toUpperCase(), {
+            fontFamily: FONT_FAMILY,
+            fontSize: '6px',
+            color: '#ffaa00',
+            resolution: 2,
+            align: 'center'
+        }).setOrigin(0.5, 0.5);
+        yPos += 12;
+    }
+
+    let explanationText: Phaser.GameObjects.Text | null = null;
+    const appliesMatch = selectedRune.description.match(/Applies.*/);
+    if (appliesMatch) {
+        explanationText = scene.add.text(0, yPos, appliesMatch[0], {
+            fontFamily: FONT_FAMILY,
+            fontSize: '5px',
+            color: '#999999',
+            resolution: 2,
+            align: 'center',
+            wordWrap: { width: 82 }
+        }).setOrigin(0.5, 0);
+        yPos += explanationText.height + 4;
+    }
+
+    const topY = -20;
+    const totalH = yPos - topY + 8;
+    const centerY = topY + (yPos - topY) / 2 - 4;
+
+    const bg = scene.add.rectangle(0, centerY, 90, totalH, 0x000000, 0.85)
+        .setOrigin(0.5, 0.5)
+        .setStrokeStyle(1, 0x847E87);
+
+    const children: Phaser.GameObjects.GameObject[] = [bg, typeText, powerText];
+    if (statusText) children.push(statusText);
+    if (explanationText) children.push(explanationText);
+    tradeTooltip.add(children);
+
+    scene.tweens.add({
+        targets: tradeTooltip,
+        alpha: 1,
+        duration: 200,
+        ease: 'Sine.easeIn'
+    });
 }
 
 function hideRuneTooltip(): void {
@@ -595,9 +665,17 @@ function executeTradeWithAnim(
         case 'special':
             playerData.updateSpecialCurrency(reward.amount);
             break;
-        case 'hp':
-            playerData.heal(reward.amount);
+        case 'boost': {
+            const buffValue = reward.boostLabel || '+1 Boost';
+            playerData.addBuff({
+                id: `trade_${runeLetter.toLowerCase()}`,
+                name: 'Extra Buff',
+                desc: `Trade - ${buffValue}`,
+                frame: 9,
+                duration: -1
+            });
             break;
+        }
     }
 
     trade.completed = true;
@@ -702,7 +780,8 @@ function showTradeRewardPopup(scene: Phaser.Scene, reward: TradeReward, runeLett
             .setOrigin(1, 0.5)
             .setScale(1);
     } else {
-        gainText = scene.add.text(0, 20, `+${reward.amount} HP`, {
+        const boostLabel = reward.boostLabel || 'EXTRA BOOST';
+        gainText = scene.add.text(0, 20, boostLabel, {
             fontFamily: FONT_FAMILY,
             fontSize: '24px',
             color: '#44ff44',
@@ -711,7 +790,8 @@ function showTradeRewardPopup(scene: Phaser.Scene, reward: TradeReward, runeLett
         }).setOrigin(1, 0.5).setScale(0.5);
         gainIcon = scene.add.sprite(-gainText.width * 0.5 - 5, 20, 'currency', 0)
             .setOrigin(1, 0.5)
-            .setScale(1);
+            .setScale(1)
+            .setAlpha(0);
     }
 
     container.add([gainText, gainIcon]);

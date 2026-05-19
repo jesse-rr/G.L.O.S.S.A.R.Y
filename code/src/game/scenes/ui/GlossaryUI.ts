@@ -5,6 +5,7 @@ import {
     cleanupAnimations
 } from '../../utils/ScrambleAnimation';
 import { GlossaryProloguePage } from './glossary/GlossaryProloguePage';
+import { GlossaryPlayerPage } from './glossary/GlossaryPlayerPage';
 import { GlossaryRunesPage } from './glossary/GlossaryRunesPage';
 import { GlossaryItemsPage } from './glossary/GlossaryItemsPage';
 import { GlossaryBestiaryPage } from './glossary/GlossaryBestiaryPage';
@@ -16,7 +17,7 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     public detailsContainer!: GameObjects.Container | null;
     public currentSelectionId: string | number | null = null;
     private currentPage: number = 0;
-    private readonly totalPages: number = 7;
+    private readonly totalPages: number = 8;
     private prevArrow!: GameObjects.Text;
     private nextArrow!: GameObjects.Text;
     private prevHitZone!: GameObjects.Rectangle;
@@ -199,16 +200,18 @@ export class GlossaryUI extends Scene implements ScrambleContext {
         if (page === 0) {
             this.renderFrontPageSection();
         } else if (page === 1) {
-            this.renderInfoPage2();
+            this.renderPlayerPage();
         } else if (page === 2) {
-            this.renderRunesSection();
+            this.renderInfoPage2();
         } else if (page === 3) {
-            this.renderItemsSection();
+            this.renderRunesSection();
         } else if (page === 4) {
-            this.renderBestiarySection();
+            this.renderItemsSection();
         } else if (page === 5) {
-            this.renderLocationsSection();
+            this.renderBestiarySection();
         } else if (page === 6) {
+            this.renderLocationsSection();
+        } else if (page === 7) {
             this.renderLocationsPage2();
         }
 
@@ -238,13 +241,18 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     }
 
     private switchSection(index: number) {
-        const pageMap: Record<number, number> = { 0: 0, 1: 2, 2: 3, 3: 4, 4: 5 };
+        const pageMap: Record<number, number> = { 0: 0, 1: 3, 2: 4, 3: 5, 4: 6 };
         this.navigateToPage(pageMap[index] ?? index);
     }
 
     private renderFrontPageSection() {
         const prologuePage = new GlossaryProloguePage(this, this.contentContainer);
         prologuePage.renderFrontPage(this.scale.width / 2, this.scale.height);
+    }
+
+    private renderPlayerPage() {
+        const playerPage = new GlossaryPlayerPage(this, this.contentContainer);
+        playerPage.render(this.scale.width / 2, this.scale.height);
     }
 
     private renderInfoPage2() {

@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { InputKeys } from '../../constants';
+import { PlayerData } from '../../data/PlayerData';
 
 const BG_FRAME_RATE = 8;
 const SELECTOR_FRAME_RATE = 10;
@@ -16,9 +17,10 @@ const CANVAS_SCALE = 2;
 
 const BUTTONS = [
     { label: 'NEW SAVE', srcX: 79, srcY: 178, srcW: 90, srcH: 22 },
-    { label: 'MULTIPLAYER', srcX: 95, srcY: 210, srcW: 126, srcH: 22 },
-    { label: 'HELP', srcX: 55, srcY: 242, srcW: 48, srcH: 22 },
-    { label: 'EXIT', srcX: 55, srcY: 274, srcW: 44, srcH: 22 },
+    { label: 'CONTINUE', srcX: 79, srcY: 210, srcW: 90, srcH: 22 },
+    { label: 'MULTIPLAYER', srcX: 95, srcY: 242, srcW: 126, srcH: 22 },
+    { label: 'HELP', srcX: 55, srcY: 274, srcW: 48, srcH: 22 },
+    { label: 'EXIT', srcX: 55, srcY: 306, srcW: 44, srcH: 22 },
 ] as const;
 
 const BUTTON_LEFT_X = 34;
@@ -34,6 +36,10 @@ export class MainMenu extends Phaser.Scene {
     private selectedButton: number = 0;
     private stopTimer?: Phaser.Time.TimerEvent;
     private inputLocked = false;
+    private confirmContainer?: Phaser.GameObjects.Container;
+    private confirmSelectionIndex = 1;
+    private confirmBtnRect?: Phaser.GameObjects.Rectangle;
+    private cancelBtnRect?: Phaser.GameObjects.Rectangle;
 
     constructor() {
         super('MainMenu');
@@ -74,6 +80,11 @@ export class MainMenu extends Phaser.Scene {
         const buttonLeft = BUTTON_LEFT_X * CANVAS_SCALE;
         for (let i = 0; i < BUTTONS.length; i++) {
             const btn = BUTTONS[i];
+
+            if (btn.label === 'CONTINUE' && !this.hasExistingGame()) {
+                continue;
+            }
+
             const cx = buttonLeft + (btn.srcW * CANVAS_SCALE) / 2;
             const cy = btn.srcY * CANVAS_SCALE;
             const bw = btn.srcW * CANVAS_SCALE;
@@ -82,6 +93,8 @@ export class MainMenu extends Phaser.Scene {
             const zone = this.add.zone(cx, cy, bw, bh)
                 .setOrigin(0.5, 0.5)
                 .setInteractive({ cursor: 'pointer' });
+
+            this.add.rectangle(cx, cy, bw, bh).setStrokeStyle(1, 0xff00ff).setOrigin(0.5);
 
             zone.on('pointerover', () => {
                 this.positionSelector(i);
@@ -96,31 +109,192 @@ export class MainMenu extends Phaser.Scene {
 
         this.positionSelector(0);
 
-        this.input.keyboard!.on(InputKeys.UP, () => this.moveSelection(-1));
-        this.input.keyboard!.on(InputKeys.DOWN, () => this.moveSelection(1));
-        this.input.keyboard!.on(InputKeys.ENTER, () => this.onButtonClick(BUTTONS[this.selectedButton].label));
+        this.input.keyboard!.on(InputKeys.UP, () => this.moveSelection(-1, false));
+        this.input.keyboard!.on(InputKeys.DOWN, () => this.moveSelection(1, false));
+        this.input.keyboard!.on(InputKeys.LEFT, () => this.moveSelection(-1, true));
+        this.input.keyboard!.on(InputKeys.RIGHT, () => this.moveSelection(1, true));
+        this.input.keyboard!.on(InputKeys.ENTER, () => {
+            if (this.confirmContainer) {
+                if (this.confirmSelectionIndex === 0) {
+                    this.confirmContainer.destroy();
+                    this.confirmContainer = undefined;
+                    this.startNewGame();
+                } else {
+                    this.confirmContainer.destroy();
+                    this.confirmContainer = undefined;
+                    this.inputLocked = false;
+                }
+            } else {
+                this.onButtonClick(BUTTONS[this.selectedButton].label);
+            }
+        });
         this.input.keyboard!.on(InputKeys.HELP, () => this.onButtonClick('HELP'));
+        this.input.keyboard!.on(InputKeys.BACK, () => {
+            if (this.confirmContainer) {
+                this.confirmContainer.destroy();
+                this.confirmContainer = undefined;
+                this.inputLocked = false;
+            }
+        });
 
         this.scale.on('resize', this.resize, this);
         this.playCurrentAnim();
     }
 
+    private hasExistingGame(): boolean {
+        return !!localStorage.getItem('glossary_player_data');
+    }
+
+    private startNewGame() {
+        this.inputLocked = true;
+        this.scene.launch('TransitionScene', { targetScene: 'Covenant', currentScene: 'MainMenu' });
+    }
+
+    private showConfirmOverlay() {
+        if (this.confirmContainer) return;
+        this.inputLocked = true;
+
+        const overlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.8)
+            .setOrigin(0, 0)
+            .setInteractive();
+
+        this.confirmContainer = this.add.container(0, 0).setDepth(100);
+        this.confirmContainer.add(overlay);
+
+        const cx = this.scale.width / 2;
+        const cy = this.scale.height / 2;
+
+        const box = this.add.rectangle(cx, cy, 340, 140, 0x111111, 1)
+            .setStrokeStyle(2, 0x444444);
+        this.confirmContainer.add(box);
+
+        const text = this.add.text(cx, cy - 30, 'YOU ALREADY HAVE A SAVE.', {
+            fontFamily: 'VCRosdNEUE', fontSize: '18px', color: '#ffffff'
+        }).setOrigin(0.5);
+
+        const subtext = this.add.text(cx, cy - 10, 'STARTING A NEW GAME WILL OVERWRITE IT.', {
+            fontFamily: 'VCRosdNEUE', fontSize: '12px', color: '#aaaaaa'
+        }).setOrigin(0.5);
+
+        this.confirmContainer.add([text, subtext]);
+
+        this.confirmBtnRect = this.add.rectangle(cx - 70, cy + 35, 120, 30, 0x444444)
+            .setInteractive({ cursor: 'pointer' });
+        const confirmText = this.add.text(cx - 70, cy + 35, 'CONFIRM', {
+            fontFamily: 'VCRosdNEUE', fontSize: '16px', color: '#ffffff'
+        }).setOrigin(0.5);
+
+        this.cancelBtnRect = this.add.rectangle(cx + 70, cy + 35, 120, 30, 0x444444)
+            .setInteractive({ cursor: 'pointer' });
+        const cancelText = this.add.text(cx + 70, cy + 35, 'CANCEL', {
+            fontFamily: 'VCRosdNEUE', fontSize: '16px', color: '#ffffff'
+        }).setOrigin(0.5);
+
+        this.confirmContainer.add([this.confirmBtnRect, confirmText, this.cancelBtnRect, cancelText]);
+
+        this.confirmSelectionIndex = 1;
+        this.updateConfirmSelection();
+
+        this.confirmBtnRect.on('pointerover', () => {
+            this.confirmSelectionIndex = 0;
+            this.updateConfirmSelection();
+        });
+        
+        this.cancelBtnRect.on('pointerover', () => {
+            this.confirmSelectionIndex = 1;
+            this.updateConfirmSelection();
+        });
+
+        this.confirmBtnRect.on('pointerdown', () => {
+            this.confirmContainer!.destroy();
+            this.confirmContainer = undefined;
+            this.startNewGame();
+        });
+
+        this.cancelBtnRect.on('pointerdown', () => {
+            this.confirmContainer!.destroy();
+            this.confirmContainer = undefined;
+            this.inputLocked = false;
+        });
+    }
+
+    private addColorTween(rect: Phaser.GameObjects.Rectangle, targetColor: number) {
+        if (!rect) return;
+        const startColor = rect.fillColor;
+        if (startColor === targetColor) return;
+
+        const startRGB = Phaser.Display.Color.IntegerToColor(startColor);
+        const endRGB = Phaser.Display.Color.IntegerToColor(targetColor);
+
+        if (rect.getData('colorTween')) {
+            (rect.getData('colorTween') as Phaser.Tweens.Tween).stop();
+        }
+
+        const tween = this.tweens.addCounter({
+            from: 0,
+            to: 100,
+            duration: 150,
+            ease: 'Sine.easeInOut',
+            onUpdate: (tw) => {
+                const val = tw.getValue();
+                const colorObject = Phaser.Display.Color.Interpolate.ColorWithColor(startRGB, endRGB, 100, val);
+                const color = Phaser.Display.Color.GetColor(colorObject.r, colorObject.g, colorObject.b);
+                rect.setFillStyle(color);
+            }
+        });
+        rect.setData('colorTween', tween);
+    }
+
+    private updateConfirmSelection() {
+        if (!this.confirmContainer || !this.confirmBtnRect || !this.cancelBtnRect) return;
+
+        if (this.confirmSelectionIndex === 0) {
+            this.addColorTween(this.confirmBtnRect, 0x2e662a);
+            this.addColorTween(this.cancelBtnRect, 0x444444);
+        } else {
+            this.addColorTween(this.confirmBtnRect, 0x444444);
+            this.addColorTween(this.cancelBtnRect, 0x8a2323);
+        }
+    }
+
     private onButtonClick(label: string) {
         if (this.inputLocked) return;
         switch (label) {
-            case BUTTONS[0].label:
-                this.inputLocked = true;
-                this.scene.launch('TransitionScene', { targetScene: 'Covenant', currentScene: 'MainMenu' });
+            case 'NEW SAVE':
+                if (this.hasExistingGame()) {
+                    this.showConfirmOverlay();
+                } else {
+                    this.startNewGame();
+                }
                 break;
-            case BUTTONS[1].label:
+            case 'CONTINUE':
+                if (this.hasExistingGame()) {
+                    this.inputLocked = true;
+                    const pData = PlayerData.getInstance();
+                    if (pData.inCombat) {
+                        this.scene.launch('TransitionScene', { 
+                            targetScene: 'CombatScene', 
+                            currentScene: 'MainMenu', 
+                            targetData: { encounterTier: pData.combatTier, mapKey: pData.lastMap, enemyId: pData.combatEnemyId } 
+                        });
+                    } else {
+                        this.scene.launch('TransitionScene', { 
+                            targetScene: 'LevelScene', 
+                            currentScene: 'MainMenu', 
+                            targetData: { mapKey: pData.lastMap, spawnX: pData.lastX, spawnY: pData.lastY } 
+                        });
+                    }
+                }
+                break;
+            case 'MULTIPLAYER':
                 this.scene.pause();
                 this.scene.launch('Multiplayer');
                 break;
-            case BUTTONS[2].label:
+            case 'HELP':
                 this.scene.pause();
                 this.scene.launch('Help');
                 break;
-            case BUTTONS[3].label:
+            case 'EXIT':
                 localStorage.clear();
                 window.location.reload();
                 break;
@@ -156,8 +330,23 @@ export class MainMenu extends Phaser.Scene {
         this.playCurrentAnim();
     }
 
-    private moveSelection(dir: number) {
+    private moveSelection(dir: number, isHorizontal: boolean = false) {
+        if (this.confirmContainer) {
+            if (isHorizontal) {
+                this.confirmSelectionIndex = (this.confirmSelectionIndex === 0) ? 1 : 0;
+                this.updateConfirmSelection();
+            }
+            return;
+        }
+
+        if (isHorizontal) return;
+
         this.selectedButton = Phaser.Math.Wrap(this.selectedButton + dir, 0, BUTTONS.length);
+
+        if (BUTTONS[this.selectedButton].label === 'CONTINUE' && !this.hasExistingGame()) {
+            this.selectedButton = Phaser.Math.Wrap(this.selectedButton + dir, 0, BUTTONS.length);
+        }
+
         this.positionSelector(this.selectedButton);
     }
 

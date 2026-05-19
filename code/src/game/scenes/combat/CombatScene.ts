@@ -21,10 +21,13 @@ export class CombatScene extends Phaser.Scene {
     private playerPanelSystem: PlayerPanelSystem | null = null;
     private encounterTier: number = 1;
     private encounterMapKey: string = '';
+    private targetEnemyId: string | null = null;
     private enemySprite: Phaser.GameObjects.Sprite | null = null;
     private enemyHpText: Phaser.GameObjects.Text | null = null;
     private playerRect: Phaser.GameObjects.Rectangle | null = null;
     private abilityBtnSprite: Phaser.GameObjects.Sprite | null = null;
+    private abilityBtnText: Phaser.GameObjects.Text | null = null;
+    private abilityWobbleTween: Phaser.Tweens.Tween | null = null;
     private isAnimating: boolean = false;
     private overlayContainer: Phaser.GameObjects.Container | null = null;
     private enemyStatusContainer: Phaser.GameObjects.Container | null = null;
@@ -81,7 +84,7 @@ export class CombatScene extends Phaser.Scene {
             frameWidth: 16, frameHeight: 16
         });
         this.load.spritesheet('special-attack-btn', 'assets/exports/UI/Special-Attack-Btn.png', {
-            frameWidth: 80, frameHeight: 80
+            frameWidth: 64, frameHeight: 64
         });
         this.load.spritesheet('status-btn', 'assets/exports/UI/Status-Btn.png', {
             frameWidth: 32, frameHeight: 32
@@ -89,17 +92,25 @@ export class CombatScene extends Phaser.Scene {
     }
 
     create(data?: any) {
-        this.encounterTier = data?.encounterTier || 1;
+        this.playerData = this.registry.get('playerData') as PlayerData;
+        this.encounterTier = data?.encounterTier || this.playerData.combatTier || 1;
         this.encounterMapKey = data?.mapKey || '';
+        this.targetEnemyId = data?.enemyId || null;
+        
         if (this.encounterMapKey) {
             localStorage.setItem('glossary_combat_return_map', this.encounterMapKey);
         }
+        
         this.cameras.main.setBackgroundColor('#FFFFFF');
-        this.playerData = this.registry.get('playerData') as PlayerData;
         this.combatTimer = 0;
         this.isAnimating = false;
 
         this.initCombatSystem();
+        
+        this.playerData.inCombat = true;
+        this.playerData.combatTier = this.encounterTier;
+        this.playerData.combatEnemyId = this.targetEnemyId;
+        this.playerData.save();
 
         if (!this.anims.exists('chain-anim')) {
             this.anims.create({
@@ -193,16 +204,23 @@ export class CombatScene extends Phaser.Scene {
         createVignette(this);
 
         this.updateTurnIndicator('YOUR TURN - Select Runes');
+        this.updateStatusEffects();
     }
 
-    private pickEnemyFromBestiary(): { name: string; hp: number; attack: number; defense: number; texture: string; frame: number } {
-        const tierEnemies = BESTIARY.filter(e => e.tier === this.encounterTier);
-        const pool = tierEnemies.length > 0 ? tierEnemies : BESTIARY.filter(e => e.tier === 1);
-        const pick = pool[Math.floor(Math.random() * pool.length)];
+    private pickEnemyFromBestiary(): { id: string, name: string; hp: number; attack: number; defense: number; texture: string; frame: number } {
+        let pick = BESTIARY.find(e => e.id === this.targetEnemyId);
+        
+        if (!pick) {
+            const tierEnemies = BESTIARY.filter(e => e.tier === this.encounterTier);
+            const pool = tierEnemies.length > 0 ? tierEnemies : BESTIARY.filter(e => e.tier === 1);
+            pick = pool[Math.floor(Math.random() * pool.length)];
+        }
 
         BestiaryData.getInstance().discoverEntity(pick.id);
+        this.targetEnemyId = pick.id;
 
         return {
+            id: pick.id,
             name: pick.name,
             hp: pick.hp,
             attack: pick.baseDamage,
@@ -230,7 +248,7 @@ export class CombatScene extends Phaser.Scene {
 
         const enemyDef = this.pickEnemyFromBestiary();
         const enemies: CombatEnemy[] = [{
-            id: 'enemy-0',
+            id: enemyDef.id,
             name: enemyDef.name,
             stats: { hp: enemyDef.hp, maxHp: enemyDef.hp, attack: enemyDef.attack, defense: enemyDef.defense },
             targetPlayerId: 'local',
@@ -339,19 +357,42 @@ export class CombatScene extends Phaser.Scene {
 
     private createAbilityButton(): void {
         const covenant = this.playerData!.covenant;
-        const frame = covenant === 'phoenix' ? 0 : covenant === 'snake' ? 1 : 2;
 
-        const btnX = this.scale.width - 30;
-        const btnY = this.scale.height - 100;
+        const btnX = this.scale.width - 50;
+        const btnY = this.scale.height - 90;
 
-        this.abilityBtnSprite = this.add.sprite(btnX, btnY, 'special-attack-btn', frame)
-            .setOrigin(1, 0.5).setScrollFactor(0).setScale(2)
+        if (!this.anims.exists('ability-btn-loop')) {
+            this.anims.create({
+                key: 'ability-btn-loop',
+                frames: this.anims.generateFrameNumbers('special-attack-btn', { start: 0, end: 5 }),
+                frameRate: 8,
+                repeat: -1
+            });
+        }
+
+        this.abilityBtnSprite = this.add.sprite(btnX, btnY, 'special-attack-btn', 0)
+            .setOrigin(1, 0.5).setScrollFactor(0).setScale(2).setDepth(100)
             .setInteractive({ useHandCursor: true });
+
+        const loreLabel = covenant === 'snake' ? "Special:\nRewind"
+            : covenant === 'phoenix' ? 'Special:\nPyre'
+                : "Special:\nRoar";
+
+        this.abilityBtnText = this.add.text(btnX - 64, btnY, loreLabel, {
+            fontFamily: FONT_FAMILY,
+            fontSize: '14px',
+            color: '#cccccc',
+            align: 'center',
+            resolution: 2
+        }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(101);
 
         this.refreshAbilityVisual();
 
         this.abilityBtnSprite.on('pointerover', () => {
-            if (this.canUseAbility()) this.abilityBtnSprite?.setAlpha(1);
+            if (this.canUseAbility() && this.abilityBtnSprite) {
+                this.abilityBtnSprite.stop();
+                this.abilityBtnSprite.setFrame(0);
+            }
         });
         this.abilityBtnSprite.on('pointerout', () => this.refreshAbilityVisual());
         this.abilityBtnSprite.on('pointerdown', () => this.onAbilityClick());
@@ -367,12 +408,42 @@ export class CombatScene extends Phaser.Scene {
 
     private refreshAbilityVisual(): void {
         if (!this.abilityBtnSprite) return;
+
+        const btnX = this.scale.width - 50;
+        const btnY = this.scale.height - 90;
+
         if (this.canUseAbility()) {
             this.abilityBtnSprite.clearTint();
-            this.abilityBtnSprite.setAlpha(0.85);
+            this.abilityBtnSprite.setAlpha(1);
+            if (this.abilityBtnText) this.abilityBtnText.setAlpha(1);
+
+            if (!this.abilityBtnSprite.anims.isPlaying || this.abilityBtnSprite.anims.currentAnim?.key !== 'ability-btn-loop') {
+                this.abilityBtnSprite.play('ability-btn-loop');
+            }
+            if (!this.abilityWobbleTween || !this.abilityWobbleTween.isPlaying()) {
+                this.abilityBtnSprite.setPosition(btnX, btnY);
+                if (this.abilityBtnText) this.abilityBtnText.setPosition(btnX - 64, btnY);
+                this.abilityWobbleTween = this.tweens.add({
+                    targets: [this.abilityBtnSprite, this.abilityBtnText].filter(Boolean),
+                    y: btnY - 2,
+                    duration: 800,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+            }
         } else {
-            this.abilityBtnSprite.setTint(0x555555);
-            this.abilityBtnSprite.setAlpha(0.4);
+            this.abilityBtnSprite.stop();
+            this.abilityBtnSprite.setFrame(0);
+            this.abilityBtnSprite.clearTint();
+            this.abilityBtnSprite.setAlpha(0.6);
+            if (this.abilityBtnText) this.abilityBtnText.setAlpha(0.6);
+            if (this.abilityWobbleTween) {
+                this.abilityWobbleTween.stop();
+                this.abilityWobbleTween = null;
+            }
+            this.abilityBtnSprite.setPosition(btnX, btnY);
+            if (this.abilityBtnText) this.abilityBtnText.setPosition(btnX - 64, btnY);
         }
     }
 
@@ -392,12 +463,7 @@ export class CombatScene extends Phaser.Scene {
         }
 
         if (success && this.abilityBtnSprite) {
-            this.tweens.add({
-                targets: this.abilityBtnSprite,
-                scaleX: 1.3, scaleY: 1.3,
-                duration: 150, yoyo: true, ease: 'Quad.easeOut',
-                onComplete: () => this.refreshAbilityVisual()
-            });
+            this.refreshAbilityVisual();
         }
     }
 
@@ -447,7 +513,7 @@ export class CombatScene extends Phaser.Scene {
         this.time.delayedCall(400, () => {
             const damage = this.combatSystem!.executePlayerAttack('local');
             if (damage > 0 && this.enemySprite) {
-                this.enemySprite.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
+                this.enemySprite.setTint(0xff0000);
                 this.tweens.add({
                     targets: this.enemySprite,
                     x: this.enemySprite.x + 10,
@@ -554,6 +620,12 @@ export class CombatScene extends Phaser.Scene {
 
     private showCombatEnd(result: string): void {
         this.syncPlayerDataFromCombat();
+        
+        if (this.playerData) {
+            this.playerData.inCombat = false;
+            this.playerData.combatEnemyId = null;
+            this.playerData.save();
+        }
 
         const centerX = this.scale.width / 2;
         const centerY = this.scale.height / 2;

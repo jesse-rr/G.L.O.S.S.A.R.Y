@@ -81,15 +81,6 @@ export class LocationData {
 
     private constructor() {
         this.load();
-        if (this.discoveredLocations.size === 0) {
-            const settlements = ['settlement_abandoned', 'settlement_mechanic', 'settlement_desert'];
-            const randomIndex = Math.floor(Math.random() * settlements.length);
-            const chosenSettlement = settlements[randomIndex];
-            const chosenBoss = chosenSettlement.replace('settlement', 'boss');
-            this.discoveredLocations.add(chosenSettlement);
-            this.discoveredLocations.add(chosenBoss);
-            this.save();
-        }
     }
 
     public static getInstance(): LocationData {

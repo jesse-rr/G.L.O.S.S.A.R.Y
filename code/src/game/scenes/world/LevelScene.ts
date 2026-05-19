@@ -8,6 +8,7 @@ import { BossButtonState, createBossButtons, handleBossButtonInteraction } from 
 import { ChestState, createChests, handleChestInteraction } from '../../systems/ChestSystem';
 import { TradeState, createTrades, handleTradeInteraction } from "../../systems/TradeSystem";
 import { PortalSystem } from '../../systems/PortalSystem';
+import { PlayerData } from '../../data/PlayerData';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -131,7 +132,7 @@ export class LevelScene extends Phaser.Scene {
             frameWidth: 160,
             frameHeight: 190
         });
-        this.load.image('trade-ui', 'assets/exports/UI/Trade-UI.png');
+
     }
 
     create() {
@@ -249,6 +250,20 @@ export class LevelScene extends Phaser.Scene {
             if (!this.scene.isActive('GlossaryUI')) {
                 this.scene.pause();
                 this.scene.launch('GlossaryUI', { previousScene: 'LevelScene', isPaused: true });
+            }
+        });
+
+        this.time.addEvent({
+            delay: 1000,
+            loop: true,
+            callback: () => {
+                if (this.player && this.player.active) {
+                    const pd = PlayerData.getInstance();
+                    pd.lastMap = this.mapKey;
+                    pd.lastX = this.player.x;
+                    pd.lastY = this.player.y;
+                    pd.save();
+                }
             }
         });
 
