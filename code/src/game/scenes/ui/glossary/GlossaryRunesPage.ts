@@ -33,9 +33,14 @@ export class GlossaryRunesPage {
             this.container.add(box);
 
             const isUnlocked = RuneData.getInstance().isDiscovered(def.letter);
-            const runeText = this.scene.add.text(x, y, def.letter, {
-                fontFamily: RUNE_FONT, fontSize: '76px', color: '#000000'
-            }).setOrigin(0.5).setAlpha(isUnlocked ? 0.7 : 0.3);
+            const boxW = box.displayWidth;
+            const boxH = box.displayHeight;
+            const runeText = this.scene.add.text(0, 0, def.letter, {
+                fontFamily: RUNE_FONT, fontSize: '76px', color: '#000000',
+                fixedWidth: boxW, fixedHeight: boxH,
+                align: 'center',
+                padding: { top: (boxH - 76) / 2 }
+            }).setOrigin(0.5).setPosition(x, y).setAlpha(isUnlocked ? 0.7 : 0.3);
 
             box.on('pointerover', () => box.setAlpha(1));
             box.on('pointerout', () => box.setAlpha(0.5));

@@ -149,17 +149,9 @@ export function resolveCombo(chain: string[]): ChainCombo | null {
     if (defs.length < 2) return null;
 
     const types = defs.map(d => d.cardType);
-    const hasBase = types.includes('base');
-    if (!hasBase) return null;
-
-    const hasUnique = types.includes('unique');
     const sortedChainStr = Array.from(uniqueRunes).sort().join(',');
 
     const predefined = PREDEFINED_COMBOS.find(c => [...c.runes].sort().join(',') === sortedChainStr);
-
-    if (hasUnique && !predefined) {
-        return null;
-    }
 
     const effectTypes = defs.map(d => d.effectType);
     const names = defs.map(d => d.name);
