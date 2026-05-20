@@ -59,39 +59,29 @@ export class GlossaryCombosPage {
         const leftPageX = centerX - 500;
         const rightPageX = centerX + 80;
         const topY = height - 660;
-        const startY = topY + 230;
-        const spacingY = 25;
+        const spacingY = 27;
 
         const leftInfoLayout = this.scene.add.image(leftPageX - 90, topY + 20, 'book-layout-2').setOrigin(0).setAlpha(0.5);
         const leftDescLayout = this.scene.add.image(leftPageX - 90, topY + 200, 'book-layout-3').setOrigin(0).setAlpha(0.5);
-        const rightInfoLayout = this.scene.add.image(rightPageX - 90, topY + 20, 'book-layout-2').setOrigin(0).setAlpha(0.5);
-        const rightDescLayout = this.scene.add.image(rightPageX - 90, topY + 200, 'book-layout-3').setOrigin(0).setAlpha(0.5);
+        const rightDescLayout = this.scene.add.image(rightPageX - 75, topY + 20, 'book-layout-3').setOrigin(0).setAlpha(0.5).setScale(1.0, 1.35);
 
         const leftTitle = this.scene.add.text(leftPageX + 210, topY + 120, 'Combos', {
             fontFamily: TITLE_FONT, fontSize: '82px', color: '#000000'
         }).setOrigin(0.5).setAlpha(0.8);
 
-        const rightTitle = this.scene.add.text(rightPageX + 210, topY + 120, 'Combos II', {
-            fontFamily: TITLE_FONT, fontSize: '82px', color: '#000000'
-        }).setOrigin(0.5).setAlpha(0.8);
-
-        this.container.add([leftInfoLayout, leftDescLayout, rightInfoLayout, rightDescLayout, leftTitle, rightTitle]);
+        this.container.add([leftInfoLayout, leftDescLayout, rightDescLayout, leftTitle]);
 
         const runeData = RuneData.getInstance();
         const playerData = PlayerData.getInstance();
         const playerRunes = playerData.runes;
 
         PREDEFINED_COMBOS.forEach((combo, index) => {
-            const isLeft = index < 16;
-            const itemIndex = isLeft ? index : index - 16;
+            const isLeft = index < 12;
+            const itemIndex = isLeft ? index : index - 12;
             const pageX = isLeft ? leftPageX : rightPageX;
 
-            const isLeftAlign = itemIndex % 2 === 0;
-            const x = isLeftAlign ? pageX - 25 : pageX + 445;
-            const originX = isLeftAlign ? 0 : 1;
-            const alignStyle = isLeftAlign ? 'left' : 'right';
-
-            const y = startY + itemIndex * spacingY;
+            const x = pageX - 25;
+            const y = isLeft ? (topY + 276 + itemIndex * spacingY) : (topY + 67 + itemIndex * spacingY);
 
             const isUnlocked = combo.runes.every(r => runeData.isDiscovered(r));
             const hasAccess = combo.runes.every(r => {
@@ -108,32 +98,46 @@ export class GlossaryCombosPage {
             if (isUnlocked) {
                 const namePart = combo.name;
                 const partsPart = defs.map(d => d ? d.name : '').join(' + ');
-                const accessPart = hasAccess ? '(Available)' : '(Missing)';
-                const fullText = `${namePart} - ${partsPart}: ${power} ${typeLabel} ${accessPart}`;
+                const descPart = `${partsPart} (${power} ${typeLabel})`;
+                const alpha = hasAccess ? 0.7 : 0.4;
 
-                const textObj = this.scene.add.text(x, y, fullText, {
+                const nameTextObj = this.scene.add.text(x, y, namePart, {
                     fontFamily: FONT_FAMILY,
-                    fontSize: '12px',
+                    fontSize: '18px',
                     color: '#000000',
-                    align: alignStyle,
-                    wordWrap: { width: 330 }
-                }).setOrigin(originX, 0).setAlpha(hasAccess ? 0.75 : 0.45);
+                    fontStyle: 'bold'
+                }).setOrigin(0).setAlpha(alpha);
 
-                this.container.add(textObj);
+                const descTextObj = this.scene.add.text(pageX + 415, y, descPart, {
+                    fontFamily: FONT_FAMILY,
+                    fontSize: '18px',
+                    color: '#000000'
+                }).setOrigin(1, 0).setAlpha(alpha);
+
+                this.container.add([nameTextObj, descTextObj]);
             } else {
+                const namePart = combo.name;
                 const partsPart = combo.runes.join(' + ');
-                const rawText = `${combo.name} - ${partsPart}: ${power} ${typeLabel}`;
-                const runicText = convertToRunicWords(rawText);
+                const descPart = `${partsPart} (${power} ${typeLabel})`;
+                
+                const nameRunic = convertToRunicWords(namePart);
+                const descRunic = convertToRunicWords(descPart);
+                const alpha = 0.7;
 
-                const textObj = this.scene.add.text(x, y, runicText, {
+                const nameTextObj = this.scene.add.text(x, y, nameRunic, {
                     fontFamily: RUNE_FONT,
-                    fontSize: '14px',
+                    fontSize: '18px',
                     color: '#000000',
-                    align: alignStyle,
-                    wordWrap: { width: 330 }
-                }).setOrigin(originX, 0).setAlpha(0.6).setStroke('#000000', 1);
+                    fontStyle: 'bold'
+                }).setOrigin(0).setAlpha(alpha).setStroke('#000000', 1);
 
-                this.container.add(textObj);
+                const descTextObj = this.scene.add.text(pageX + 415, y, descRunic, {
+                    fontFamily: RUNE_FONT,
+                    fontSize: '18px',
+                    color: '#000000'
+                }).setOrigin(1, 0).setAlpha(alpha).setStroke('#000000', 1);
+
+                this.container.add([nameTextObj, descTextObj]);
             }
         });
     }
