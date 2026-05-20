@@ -43,8 +43,12 @@ export class GlossaryUI extends Scene implements ScrambleContext {
         this.load.image('book-layout-2', 'assets/exports/UI/Book-Layout-2.png');
         this.load.image('book-layout-3', 'assets/exports/UI/Book-Layout-3.png');
         this.load.image('book-layout-4', 'assets/exports/UI/Book-Layout-4.png');
+        this.load.image('book-layout-5', 'assets/exports/UI/Book-Layout-5.png');
         this.load.spritesheet('rune-overlay', 'assets/exports/UI/Combat-Overlay-Rune.png', {
             frameWidth: 48, frameHeight: 64
+        });
+        this.load.spritesheet('book-chains', 'assets/exports/UI/Book-v2-Chains-Sheet.png', {
+            frameWidth: 281, frameHeight: 296
         });
         this.load.spritesheet('bookmarks-ui', 'assets/exports/UI/Bookmarks-UI.png', {
             frameWidth: 17, frameHeight: 22
@@ -201,11 +205,11 @@ export class GlossaryUI extends Scene implements ScrambleContext {
         if (page === 0) {
             this.renderFrontPageSection();
         } else if (page === 1) {
-            this.renderPlayerPage();
+            this.renderInfoPage2();
         } else if (page === 2) {
             this.renderCombosSection();
         } else if (page === 3) {
-            this.renderInfoPage2();
+            this.renderPlayerPage();
         } else if (page === 4) {
             this.renderRunesSection();
         } else if (page === 5) {

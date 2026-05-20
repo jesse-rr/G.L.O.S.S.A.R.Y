@@ -97,48 +97,118 @@ function pickRandom<T>(arr: T[]): T {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function resolveCombo(chain: string[]): ChainCombo | null {
+export interface PredefinedCombo {
+    id: string;
+    name: string;
+    runes: string[];
+}
+
+export const PREDEFINED_COMBOS: PredefinedCombo[] = [
+    { id: 'fire_storm', name: 'Fire Storm', runes: ['F', 'I', 'A'] },
+    { id: 'abyssal_strike', name: 'Abyssal Strike', runes: ['N', 'J', 'Y'] },
+    { id: 'titan_defense', name: 'Titan Defense', runes: ['B', 'K', 'Y'] },
+    { id: 'sun_blessing', name: 'Sun Blessing', runes: ['B', 'L', 'S'] },
+    { id: 'piercing_rift', name: 'Piercing Rift', runes: ['C', 'O', 'Q'] },
+    { id: 'infinite_echo', name: 'Infinite Echo', runes: ['A', 'E', 'W'] },
+    { id: 'shattering_cinder', name: 'Shattering Cinder', runes: ['X', 'I', 'G'] },
+    { id: 'phoenix_ward', name: 'Phoenix Ward', runes: ['B', 'P', 'Y'] },
+    { id: 'blood_lust', name: 'Blood Lust', runes: ['A', 'D', 'I'] },
+    { id: 'grave_call', name: 'Grave Call', runes: ['N', 'G', 'S'] },
+    { id: 'runic_strike', name: 'Runic Strike', runes: ['C', 'K', 'Q'] },
+    { id: 'gale_force', name: 'Gale Force', runes: ['A', 'R', 'E'] },
+    { id: 'star_mending', name: 'Star Mending', runes: ['B', 'O', 'P'] },
+    { id: 'iron_guard', name: 'Iron Guard', runes: ['B', 'K', 'P'] },
+    { id: 'venomous_fang', name: 'Venomous Fang', runes: ['C', 'J', 'Q'] },
+    { id: 'soul_siphon', name: 'Soul Siphon', runes: ['N', 'D', 'W'] },
+    { id: 'cursed_ember', name: 'Cursed Ember', runes: ['F', 'J', 'I'] },
+    { id: 'shadow_veil', name: 'Shadow Veil', runes: ['N', 'U', 'S'] },
+    { id: 'glacial_aegis', name: 'Glacial Aegis', runes: ['B', 'R', 'P'] },
+    { id: 'divine_light', name: 'Divine Light', runes: ['B', 'H', 'Y'] },
+    { id: 'void_bridge', name: 'Void Bridge', runes: ['C', 'E', 'S'] },
+    { id: 'earth_slam', name: 'Earth Slam', runes: ['A', 'K', 'Y'] },
+    { id: 'phoenix_pyre', name: 'Phoenix Pyre', runes: ['F', 'I', 'P'] },
+    { id: 'temporal_shift', name: 'Temporal Shift', runes: ['A', 'W', 'S'] },
+    { id: 'frozen_wrath', name: 'Frozen Wrath', runes: ['R', 'G', 'Q'] },
+    { id: 'lumina_shield', name: 'Lumina Shield', runes: ['B', 'L', 'P'] },
+    { id: 'silent_hex', name: 'Silent Hex', runes: ['C', 'Q', 'G'] },
+    { id: 'vanguard_crest', name: 'Vanguard Crest', runes: ['B', 'K', 'S'] },
+    { id: 'acid_spray', name: 'Acid Spray', runes: ['C', 'J', 'W'] },
+    { id: 'ember_blast', name: 'Ember Blast', runes: ['F', 'O', 'I'] },
+    { id: 'echoing_purify', name: 'Echoing Purify', runes: ['F', 'E', 'O'] },
+    { id: 'celestial_will', name: 'Celestial Will', runes: ['A', 'V', 'W'] }
+];
+
+export function resolveCombo(chain: string[]): ChainCombo | null {
     if (chain.length < 2) return null;
 
-    const defs = chain.map(l => RUNE_DEFINITIONS.find(r => r.letter === l.toUpperCase())).filter(Boolean) as RuneDefinition[];
+    const upperChain = chain.map(l => l.toUpperCase());
+    const uniqueRunes = new Set(upperChain);
+    if (uniqueRunes.size !== chain.length) return null;
+
+    const defs = Array.from(uniqueRunes).sort().map(l => RUNE_DEFINITIONS.find(r => r.letter === l)).filter(Boolean) as RuneDefinition[];
     if (defs.length < 2) return null;
 
     const types = defs.map(d => d.cardType);
     const hasBase = types.includes('base');
-
     if (!hasBase) return null;
 
-    const typeKey = getTypeKey(types);
+    const hasUnique = types.includes('unique');
+    const sortedChainStr = Array.from(uniqueRunes).sort().join(',');
+
+    const predefined = PREDEFINED_COMBOS.find(c => [...c.runes].sort().join(',') === sortedChainStr);
+
+    if (hasUnique && !predefined) {
+        return null;
+    }
+
     const effectTypes = defs.map(d => d.effectType);
     const names = defs.map(d => d.name);
+    const description = names.join(' + ');
+
+    if (predefined) {
+        const uniqueCount = types.filter(t => t === 'unique').length;
+        const baseCount = types.filter(t => t === 'base').length;
+        const boostCount = types.filter(t => t === 'boost').length;
+
+        let bonusPower = 15 + uniqueCount * 5 + baseCount * 3 + boostCount * 2;
+
+        return {
+            name: predefined.name,
+            bonusPower,
+            description
+        };
+    }
+
+    const typeKey = getTypeKey(types);
+    const seedString = sortedChainStr;
+    let seed = 0;
+    for (let i = 0; i < seedString.length; i++) {
+        seed = seed * 31 + seedString.charCodeAt(i);
+    }
+    const pseudoRandom = () => {
+        seed = (seed * 9301 + 49297) % 233280;
+        return Math.abs(seed / 233280);
+    };
+    function pickDeterministic<T>(arr: T[]): T {
+        return arr[Math.floor(pseudoRandom() * arr.length)];
+    }
 
     let prefix: string;
     let bonusPower: number;
 
     if (chain.length === 2) {
-        const nameList = COMBO_NAMES_2[typeKey] || ['Linked'];
-        prefix = pickRandom(nameList);
-
-        const baseCount = types.filter(t => t === 'base').length;
-        const uniqueCount = types.filter(t => t === 'unique').length;
-        bonusPower = 3 + baseCount * 2 + uniqueCount * 3;
+        prefix = pickDeterministic(COMBO_NAMES_2[typeKey] || ['Linked']);
+        bonusPower = 5;
     } else {
-        const nameList = COMBO_NAMES_3[typeKey] || ['Convergence'];
-        prefix = pickRandom(nameList);
-
-        const baseCount = types.filter(t => t === 'base').length;
-        const uniqueCount = types.filter(t => t === 'unique').length;
-        const boostCount = types.filter(t => t === 'boost').length;
-        bonusPower = 5 + baseCount * 3 + uniqueCount * 4 + boostCount * 2;
+        prefix = pickDeterministic(COMBO_NAMES_3[typeKey] || ['Convergence']);
+        bonusPower = 10;
     }
 
     const primaryEffect = effectTypes.find(e => e === 'damage') || effectTypes[0];
-    const flavor = pickRandom(EFFECT_FLAVOR[primaryEffect] || ['Power']);
-    const comboName = `${prefix} ${flavor}`;
-    const description = names.join(' + ');
+    const flavor = pickDeterministic(EFFECT_FLAVOR[primaryEffect] || ['Power']);
 
     return {
-        name: comboName,
+        name: `${prefix} ${flavor}`,
         bonusPower,
         description
     };

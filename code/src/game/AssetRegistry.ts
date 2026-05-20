@@ -15,6 +15,7 @@ export const TextureKeys = {
     BOOK_LAYOUT_2: 'book-layout-2',
     BOOK_LAYOUT_3: 'book-layout-3',
     BOOK_LAYOUT_4: 'book-layout-4',
+    BOOK_LAYOUT_5: 'book-layout-5',
     PLAYER_UI: 'player-ui',
     RUNE_OVERLAY: 'rune-overlay',
     CHAIN_LINK: 'chain-link',

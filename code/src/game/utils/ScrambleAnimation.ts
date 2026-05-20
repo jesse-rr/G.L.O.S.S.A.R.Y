@@ -45,8 +45,10 @@ export function playScrambleAnimation(
                 const targetText = finalTexts[index];
 
                 if (easedProgress > 0.3) {
-                    textObj.setFontFamily(FONT_FAMILY);
-                    textObj.setStroke('#000000', 0);
+                    if (textObj.name !== 'runic_symbol') {
+                        textObj.setFontFamily(FONT_FAMILY);
+                        textObj.setStroke('#000000', 0);
+                    }
                 }
 
                 const revealProgress = easedProgress;
@@ -70,8 +72,10 @@ export function playScrambleAnimation(
                 texts.forEach((textObj, index) => {
                     if (!textObj || !textObj.active) return;
                     textObj.setText(finalTexts[index]);
-                    textObj.setFontFamily(FONT_FAMILY);
-                    textObj.setStroke('#000000', 0);
+                    if (textObj.name !== 'runic_symbol') {
+                        textObj.setFontFamily(FONT_FAMILY);
+                        textObj.setStroke('#000000', 0);
+                    }
                 });
                 if (onComplete) onComplete();
             }

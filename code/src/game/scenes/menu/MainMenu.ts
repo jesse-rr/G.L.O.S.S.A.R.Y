@@ -1,6 +1,10 @@
 import * as Phaser from 'phaser';
 import { InputKeys } from '../../constants';
 import { PlayerData } from '../../data/PlayerData';
+import { ItemData } from '../../data/ItemData';
+import { RuneData } from '../../data/RuneData';
+import { LocationData } from '../../data/LocationData';
+import { BestiaryData } from '../../data/BestiaryData';
 
 const BG_FRAME_RATE = 8;
 const SELECTOR_FRAME_RATE = 10;
@@ -145,6 +149,12 @@ export class MainMenu extends Phaser.Scene {
 
     private startNewGame() {
         this.inputLocked = true;
+        try { PlayerData.getInstance().reset(); } catch (_e) {}
+        try { ItemData.getInstance().reset(); } catch (_e) {}
+        try { RuneData.getInstance().reset(); } catch (_e) {}
+        try { LocationData.getInstance().reset(); } catch (_e) {}
+        try { BestiaryData.getInstance().reset(); } catch (_e) {}
+        localStorage.removeItem('glossary_selected_items');
         this.scene.launch('TransitionScene', { targetScene: 'Covenant', currentScene: 'MainMenu' });
     }
 

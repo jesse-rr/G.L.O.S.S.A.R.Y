@@ -5,6 +5,7 @@ import { RuneData } from '../../../data/RuneData';
 import { BestiaryData, BESTIARY } from '../../../data/BestiaryData';
 import { ItemData } from '../../../data/ItemData';
 import { LocationData, SETTLEMENTS, BOSSES, HUBS } from '../../../data/LocationData';
+import { getSelectedItems } from './GlossaryItemsPage';
 
 export class GlossaryPlayerPage {
     private scene: Phaser.Scene;
@@ -105,9 +106,7 @@ export class GlossaryPlayerPage {
         this.container.add(rightTitle);
 
         const playerData = PlayerData.getInstance();
-
         const completedTradesCount = this.getCompletedTradesCount();
-
         const covenantDisplay = playerData.covenant.charAt(0).toUpperCase() + playerData.covenant.slice(1);
 
         const rightCenter = rightPageX + 210;
@@ -136,52 +135,34 @@ export class GlossaryPlayerPage {
 
         ry += 16;
         const equipTitle = this.scene.add.text(rightCenter, ry, 'Equipped Items', {
-            fontFamily: FONT_FAMILY, fontSize: '20px', color: '#000000'
+            fontFamily: FONT_FAMILY, fontSize: '18px', color: '#000000'
         }).setOrigin(0.5, 0.5).setAlpha(0.8);
         this.container.add(equipTitle);
 
         ry += 32;
 
-        const equippedItems = playerData.items.slice(0, 2);
+        const equippedIds = getSelectedItems();
 
-        if (equippedItems.length === 0) {
+        if (equippedIds.length === 0) {
             const emptyText = this.scene.add.text(rightCenter, ry, '— No items equipped —', {
-                fontFamily: FONT_FAMILY, fontSize: '16px', color: '#000000'
+                fontFamily: FONT_FAMILY, fontSize: '15px', color: '#000000'
             }).setOrigin(0.5, 0.5).setAlpha(0.4);
             this.container.add(emptyText);
         } else {
-            for (let i = 0; i < 2; i++) {
-                const slotY = ry + i * 50;
-                const slotBg = this.scene.add.rectangle(rightCenter, slotY, contentW, 40, 0x000000, 0.05).setOrigin(0.5, 0.5);
-                this.container.add(slotBg);
+            const names = equippedIds.map(id => {
+                const itemDef = ItemData.getItem(parseInt(id));
+                return itemDef ? `[${itemDef.name}]` : `[Item #${id}]`;
+            }).join('   ');
 
-                if (i < equippedItems.length) {
-                    const itemDef = ItemData.getItem(parseInt(equippedItems[i].id));
-                    const itemName = itemDef ? itemDef.name : equippedItems[i].id;
-                    const itemAbility = itemDef ? itemDef.ability : '';
-
-                    if (itemDef) {
-                        const itemIcon = this.scene.add.sprite(rLabelX + 16, slotY, 'items', ItemData.getItemFrame(itemDef.id))
-                            .setScale(0.45).setAlpha(0.8);
-                        this.container.add(itemIcon);
-                    }
-
-                    const nameText = this.scene.add.text(rLabelX + 40, slotY - 6, itemName, {
-                        fontFamily: FONT_FAMILY, fontSize: '16px', color: '#000000'
-                    }).setOrigin(0, 0.5).setAlpha(0.7);
-
-                    const abilityText = this.scene.add.text(rLabelX + 40, slotY + 10, itemAbility, {
-                        fontFamily: FONT_FAMILY, fontSize: '13px', color: '#000000'
-                    }).setOrigin(0, 0.5).setAlpha(0.4);
-
-                    this.container.add([nameText, abilityText]);
-                } else {
-                    const emptySlot = this.scene.add.text(rightCenter, slotY, `Slot ${i + 1} — Empty`, {
-                        fontFamily: FONT_FAMILY, fontSize: '15px', color: '#000000'
-                    }).setOrigin(0.5, 0.5).setAlpha(0.3);
-                    this.container.add(emptySlot);
-                }
-            }
+            const itemsText = this.scene.add.text(rightCenter, ry, names, {
+                fontFamily: FONT_FAMILY,
+                fontSize: '15px',
+                color: '#000000',
+                fontStyle: 'bold',
+                align: 'center',
+                wordWrap: { width: contentW }
+            }).setOrigin(0.5, 0.5).setAlpha(0.7);
+            this.container.add(itemsText);
         }
     }
 

@@ -38,7 +38,7 @@ export class GlossaryLocationsPage {
             const explanationStr = def.description;
 
             const title = this.scene.add.text(x + 230, y + 30, useRunic ? convertToRunicWords(titleStr) : titleStr, {
-                fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '22px', color: '#000000',
+                fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '18px', color: '#000000',
                 wordWrap: { width: 270 }, lineSpacing: 3
             }).setAlpha(0.7);
 
@@ -106,7 +106,7 @@ export class GlossaryLocationsPage {
             const explanationStr = def.description;
 
             const title = this.scene.add.text(x + 230, y + 30, useRunic ? convertToRunicWords(titleStr) : titleStr, {
-                fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '22px', color: '#000000',
+                fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '18px', color: '#000000',
                 wordWrap: { width: 270 }, lineSpacing: 3
             }).setAlpha(0.7);
 

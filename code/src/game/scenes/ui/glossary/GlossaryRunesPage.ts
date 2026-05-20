@@ -82,21 +82,21 @@ export class GlossaryRunesPage {
         }).setOrigin(0.5).setAlpha(0.7);
 
         const typeText = this.scene.add.text(textCenterX, 110, useRunic ? convertToRunicWords(typeStr) : typeStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '20px', color: '#000000'
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '18px', color: '#000000'
         }).setOrigin(0.5).setAlpha(0.7);
 
         const effectText = this.scene.add.text(textCenterX, 140, useRunic ? convertToRunicWords(effectStr) : effectStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '20px', color: '#000000'
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '18px', color: '#000000'
         }).setOrigin(0.5).setAlpha(0.7);
 
         const powerText = this.scene.add.text(textCenterX, 170, useRunic ? convertToRunicWords(powerStr) : powerStr, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '20px', color: '#000000'
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '18px', color: '#000000'
         }).setOrigin(0.5).setAlpha(0.7);
 
         const descLayout = this.scene.add.image(-90, 200, 'book-layout-3').setOrigin(0).setAlpha(0.5);
 
         const explanation = this.scene.add.text(210, 400, useRunic ? convertToRunicWords(explanationOriginal) : explanationOriginal, {
-            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '22px', color: '#000000',
+            fontFamily: useRunic ? RUNE_FONT : FONT_FAMILY, fontSize: '18px', color: '#000000',
             wordWrap: { width: 480 }, lineSpacing: 10, align: 'center'
         }).setOrigin(0.5).setAlpha(0.7);
 
