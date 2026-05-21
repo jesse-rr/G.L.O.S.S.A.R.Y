@@ -1,119 +1,112 @@
 # Architecture & Folder Structure
 
-This document outlines the architecture and project structure of G.L.O.S.S.A.R.Y.
+This document outlines the architecture, systems, and folder layout of **G.L.O.S.S.A.R.Y.**
 
-<details>
-<summary><b>📂 Root Directory</b></summary>
+---
 
-- `lobby-server.js` - A lightweight Node.js Express/HTTP server used for Multiplayer matchmaking and Room Discovery. Handles heartbeats and cleans up dead servers.
-- `package.json` - Project dependencies and npm scripts.
-- `index.html` - The main entry point for the Vite build.
-</details>
+## Folder Directory Details
 
-<details>
-<summary><b>📂 src/game (Core Architecture)</b></summary>
+### 📂 Root Directory
+* `lobby-server.js` - A lightweight Node.js Express/HTTP server used for P2P multiplayer matchmaking and room discovery. Handles heartbeats and cleans up stale room listings.
+* `package.json` - Project metadata, build commands, and npm script dependencies.
+* `index.html` - The HTML entry point for the Vite bundler.
 
-The primary game source code built with Phaser 3 and TypeScript.
+---
 
-- `main.ts` - Bootstraps the Phaser Game instance and registers all scenes. Configures `Scale.FIT` for pixel-perfect viewport scaling.
-- `constants.ts` - Global configuration variables (resolutions, frames, random names, `FONT_FAMILY`).
-- `types.ts` - Centralized type definitions (`CovenantType`, `CardType`, `EffectType`), depth/timing enums (`Depth`, `Timing`), and game constants (`TILE_SIZE`, `PLAYER_SPEED`, `SPAWN_OFFSET`, covenant color maps).
-- `AssetRegistry.ts` - Typed string constants for all texture keys (`TextureKeys`), map keys (`MapKeys`), animation keys (`AnimationKeys`), and font keys (`FontKeys`).
-- `EventBus.ts` - Global event emitter with typed `GameEvents` constants for decoupled communication between scenes and data classes.
-- `NetworkManager.ts` - Singleton handling PeerJS WebRTC connections, broadcasting messages, and communicating with the Lobby Server.
-</details>
+### 📂 src/game (Core Setup)
+The primary source code built with Phaser 3 and TypeScript.
+* `main.ts` - Instantiates the global Phaser Game configuration. Registers all scenes and configures `Scale.FIT` for viewport responsiveness.
+* `constants.ts` - Houses design tokens, HSL palette mapping, control layouts (`InputKeys`), frame boundaries, and typography.
+* `types.ts` - Shared typescript interfaces and type definitions (e.g. `CovenantType`, depths, speed vectors).
+* `AssetRegistry.ts` - Strongly-typed static dictionaries mapping strings to textures, tilemaps, animations, and sound effects to prevent magic-string asset errors.
+* `EventBus.ts` - Global custom event bus orchestrating decoupled state communication across scenes.
+* `NetworkManager.ts` - Decoupled WebRTC P2P multiplayer networking manager (using PeerJS) for low-latency syncing of positions, active rune chains, and covenant selections.
 
-<details>
-<summary><b>📂 src/game/data (State Management)</b></summary>
+---
 
-These classes act as centralized singletons or data registries for the game's state.
+### 📂 src/game/data (State Management)
+State engines implemented as singletons that preserve progression and manage local storage.
+* `BestiaryData.ts` - Tracks discovered enemies and manages bestiary details.
+* `ItemData.ts` - Catalog of the 12 collectible items, buying cost, rarity tiers, and description lore.
+* `LocationData.ts` - Tracks visited settlements, boss maps, and unlocked portal coordinates.
+* `MultiplayerData.ts` - Synced lobby settings, room tokens, and shared network states.
+* `PlayerData.ts` - Core attributes of the player (HP, maxHP, Covenants, Gemstones, active stat trades, and inventory).
+* `RuneData.ts` - Manages the player's runic vocabulary, discoveries, and combinatorial chain resolver calculations.
+* `UserData.ts` - Tracks achievements, control mappings, audio levels, and permanent player unlocks.
 
-- `BestiaryData.ts` - Manages unlocked enemies and bestiary configurations.
-- `ItemData.ts` - Manages unlocked artifacts and relics.
-- `LocationData.ts` - Tracks discovered settlements and boss locations.
-- `MultiplayerData.ts` - Handles lobby metadata, active rooms, and randomly generated shared runes for the session.
-- `PlayerData.ts` - Core combat stats, HP, Covenant selection, and the canonical `CovenantType` definition.
-- `RuneData.ts` - Manages the player's unlocked Rune inventory and combinatorial chain logic.
-- `UserData.ts` - Tracks permanent meta-progression across runs (achievements, settings, discovered items/runes/enemies).
-</details>
+---
 
-<details>
-<summary><b>📂 src/game/scenes (Game Scenes)</b></summary>
+### 📂 src/game/combat (Combat Core Engine)
+Encapsulates all logic and interfaces relating to combat.
+* `CombatSystem.ts` - Central math and phase state machine. Processes rounds, status effects, damage calculations, and Covenant ability expenditures.
+* `CombatHUD.ts` - Manages the combat screen text displays, combat phase banners, HP/shield bars, and real-time damage formula previews.
+* `StatusEffectUI.ts` - Renders interactive, animated status badges above players and enemies indicating stacks, durations, and mechanics on hover.
 
-Scenes are organized into domain-specific subdirectories:
+---
 
-### `scenes/menu/` — Navigation & Flow
-- `Boot.ts` - Initial asset loading and caching. Launches `NotificationOverlay` and `MainMenu`.
-- `MainMenu.ts` - The entry screen and navigation hub with animated background and selector.
-- `Multiplayer.ts` - The server browser and lobby creation UI. Connects to `lobby-server.js`.
-- `Covenant.ts` - The multiplayer waiting room where players lock in their characters/covenants and synchronize cursors via P2P.
+### 📂 src/game/systems (Game Exploration & UI Systems)
+Reusable modules representing dedicated interactable game components.
+* `BossButtonSystem.ts` - Spawns and manages interactive boss challenge triggers at the end of exploration maps.
+* `ChestSystem.ts` - Processes environmental chest interactions, opening animations, and gemstone reward distribution.
+* `CollisionParser.ts` - Parses complex polyline, polygon, ellipse, and rectangle physics boundaries from Tiled JSON directly into Matter.js bodies.
+* `DoorSystem.ts` - Renders, animates, and controls locked gates, hold-to-interact sensors, and portal triggers.
+* `InteractSystem.ts` - Manages exploration prompts (e.g., "?" or "[E] Interact") that pop up near chests, doors, and NPCs.
+* `LightSystem.ts` - Integrates ambient environment overlays representing a long, gradual day/night cycle.
+* `PlayerPanelSystem.ts` - UI panel showing co-op allies, active status effects, and currently constructed rune chains.
+* `PortalSystem.ts` - Manages map traversal gates and spatial transition triggers.
+* `RunePickerSystem.ts` - Implements the circular rune picking deck, hand scaling, combo resolution visual effects, and chain locking.
+* `TradeSystem.ts` - Powers the interactive trading card carousel interface where players purchase permanent stat upgrades using Gemstones or Special Currency.
 
-### `scenes/world/` — Exploration
-- `LevelScene.ts` - The top-down exploration phase, handling tilemaps, collisions, portals, doors, and entity interaction. Delegates to `CollisionParser`, `DoorSystem`, and `GeometryUtils`.
-- `TransitionScene.ts` - Handles visual fade-ins and fade-outs between scenes with a static `isPlaying` guard to prevent replay.
+---
 
-### `scenes/combat/` — Battle
-- `CombatScene.ts` - The turn-based battle engine. Delegates rune chain mechanics to `RunePickerSystem` and ally display to `PlayerPanelSystem`.
+### 📂 src/game/utils (Lightweight Helpers)
+* `AchievementNotification.ts` - Formats overlay banners celebrating new discoveries.
+* `Cat.ts` - Easter egg cat character logic.
+* `GeometryUtils.ts` - Mathematical utilities enforcing clockwise winding coordinates for Matter.js shapes.
+* `ScrambleAnimation.ts` - Handles runic scrambling and character-by-character textual reveal effects.
+* `ScreenShake.ts` - Camera shaking feedback for impacts and tremors.
+* `TweenUtils.ts` - Standardized ease configurations for cards, sliding books, and UI banners.
+* `Vignette.ts` - Adds an atmospheric shadow border enhancing depth in dungeon biomes.
 
-### `scenes/ui/` — Overlays & UI
-- `GlossaryUI.ts` - The interactive lore book displaying discovered Runes, Bestiary, Items, and Maps. Uses `ScrambleAnimation` for runic reveal effects.
-- `AchievementsUI.ts` - Displays achievement progress and unlocked badges.
-- `Achievements.ts` - Achievement scene launcher.
-- `Help.ts` - In-game instructions and tutorial panels.
-- `Settings.ts` / `SettingsUI.ts` - Game configuration overlays (VSync, controls).
-- `ControlsUI.ts` - Key binding display overlay.
-- `NotificationOverlay.ts` - Persistent notification toasts for achievements and discoveries.
-</details>
+---
 
-<details>
-<summary><b>📂 src/game/systems (Reusable Game Systems)</b></summary>
+### 📂 src/game/scenes (Phaser Game Scenes)
 
-Extracted, focused modules that encapsulate specific game logic:
+#### 📂 scenes/menu/
+* `Boot.ts` - Initial load screen caching raw assets, spritesheets, and font maps.
+* `MainMenu.ts` - Title screen featuring neon highlights and option panels.
+* `Multiplayer.ts` - Interactive room search browser and matchmaking lobby.
+* `Covenant.ts` - Interactive selection altar where players choose their philosophy (Snake, Phoenix, Dragon) and synchronize state.
 
-- `CollisionParser.ts` - Parses Tiled collision and stair object layers into Matter.js physics bodies (polygons, polylines, ellipses, rectangles).
-- `DoorSystem.ts` - Door creation, interaction detection, cinematic opening animation, and collision body management.
-- `RunePickerSystem.ts` - Rune picker layout, chain building, combo detection, and the converge-and-resolve animation sequence.
-- `PlayerPanelSystem.ts` - Ally player icons with hover tooltips showing stats, chains, and covenant.
-</details>
+#### 📂 scenes/world/
+* `LevelScene.ts` - Manages the exploration phase, physics world steps, tileset collisions, and interactive objects.
+* `TransitionScene.ts` - High-quality transition wipes separating exploration, menus, and battles.
 
-<details>
-<summary><b>📂 src/game/utils (Shared Utilities)</b></summary>
+#### 📂 scenes/combat/
+* `CombatScene.ts` - Operates the active combat overlay, instantiating enemies, triggering damage animations, and coordinating with `CombatSystem` and systems layers.
 
-Pure functions and lightweight helpers:
+#### 📂 scenes/ui/
+* `Achievements.ts` / `AchievementsUI.ts` - Grid representing badge accomplishments and metadata.
+* `ControlsUI.ts` - Keyboard mappings guide.
+* `Help.ts` - Comprehensive page showing mechanical guides, rules, and basic controls.
+* `ItemModal.ts` - Detailed tooltip modal for inspected trade items.
+* `NotificationOverlay.ts` - UI broker distributing discovery popups.
+* `Settings.ts` / `SettingsUI.ts` - General gameplay and audio adjustments.
+* `GlossaryUI.ts` - The primary lore book. Spawns a beautiful, dual-page book layout that hosts several page scenes.
 
-- `GeometryUtils.ts` - Polygon winding (clockwise enforcement), point deduplication, and sensor body creation for Tiled polygons.
-- `ScrambleAnimation.ts` - Runic-to-text scramble reveal animation, cleanup lifecycle, and `convertToRunicWords` text transformer.
-- `Vignette.ts` - Creates configurable vignette overlays (normal and dark variants).
-- `ScreenShake.ts` - Camera shake utility.
-- `AchievementNotification.ts` - Helper for showing rune discovery notifications.
-- `Cat.ts` - Easter egg cat sprite with spin animation sequence.
-</details>
-
-<details>
-<summary><b>📂 src/game/combat (Combat Logic)</b></summary>
-
-- `CombatSystem.ts` - Core turn-based combat engine managing players, enemies, rounds, and chain resolution.
-</details>
-
-<details>
-<summary><b>📂 public/assets (Static Assets)</b></summary>
-
-All static files exposed to the web client.
-
-- `exports/` - Contains subfolders for all specific sprites, animations, fonts, and UI elements.
-- `exports/Animations/` - Door sheets and symbol overlays.
-- `exports/Boss/` - Boss and protagonist spritesheets.
-- `exports/characters/` - Enemy spritesheets (Cultist, Golem, Rationalist, Scavenger, Slime, Wisp).
-- `exports/Covenant/` - Character cards, backgrounds, and glint effects.
-- `exports/Maps/` - Tiled JSON map files (central-hub, boss floors, settlements).
-- `exports/Objects/` - Monoliths, treasures, currency, items, glossary, and map outlines.
-- `exports/UI/` - Fonts (`VCRosdNEUE.ttf`, `RUNE.TTF`), cursor images, buttons, layouts, transitions, and combat overlays.
-- `exports/tileset/` - Environment tilesets (Abandoned, Desert, Mechanic, Summit, Objects).
-</details>
+#### 📂 scenes/ui/glossary/ (Lore Book Pages)
+* `GlossaryProloguePage.ts` - Narrative entry introduction recounting the fracturing of language and reality.
+* `GlossaryRunesPage.ts` - Discovered rune lexicon showing translations, card types, and descriptions.
+* `GlossaryCombosPage.ts` - Combos journal showing unlocked 3-rune legendary combinations.
+* `GlossaryBestiaryPage.ts` - List of defeated monsters, models, stats, and tactical advice.
+* `GlossaryItemsPage.ts` - Collectible item inventory and lore logging.
+* `GlossaryLocationsPage.ts` - Map outlines tracking discovered biomes, settlements, and portals.
+* `GlossaryPlayerPage.ts` - Progress dashboard displaying stats, covenant status, gemstone tallies, and trade summaries.
 
 ---
 
 ## Complete Folder Tree
+
 ```text
 src/game/
 ├── AssetRegistry.ts
@@ -124,7 +117,9 @@ src/game/
 ├── main.ts
 │
 ├── combat/
-│   └── CombatSystem.ts
+│   ├── CombatSystem.ts
+│   ├── CombatHUD.ts
+│   └── StatusEffectUI.ts
 │
 ├── data/
 │   ├── BestiaryData.ts
@@ -135,41 +130,59 @@ src/game/
 │   ├── RuneData.ts
 │   └── UserData.ts
 │
-├── scenes/
-│   ├── combat/
-│   │   └── CombatScene.ts
-│   ├── menu/
-│   │   ├── Boot.ts
-│   │   ├── Covenant.ts
-│   │   ├── MainMenu.ts
-│   │   └── Multiplayer.ts
-│   ├── ui/
-│   │   ├── Achievements.ts
-│   │   ├── AchievementsUI.ts
-│   │   ├── ControlsUI.ts
-│   │   ├── GlossaryUI.ts
-│   │   ├── Help.ts
-│   │   ├── NotificationOverlay.ts
-│   │   ├── Settings.ts
-│   │   └── SettingsUI.ts
-│   └── world/
-│       ├── LevelScene.ts
-│       └── TransitionScene.ts
-│
 ├── systems/
+│   ├── BossButtonSystem.ts
+│   ├── ChestSystem.ts
 │   ├── CollisionParser.ts
 │   ├── DoorSystem.ts
+│   ├── InteractSystem.ts
+│   ├── LightSystem.ts
 │   ├── PlayerPanelSystem.ts
-│   └── RunePickerSystem.ts
+│   ├── PortalSystem.ts
+│   ├── RunePickerSystem.ts
+│   └── TradeSystem.ts
 │
-└── utils/
-    ├── AchievementNotification.ts
-    ├── Cat.ts
-    ├── GeometryUtils.ts
-    ├── ScrambleAnimation.ts
-    ├── ScreenShake.ts
-    └── Vignette.ts
+├── utils/
+│   ├── AchievementNotification.ts
+│   ├── Cat.ts
+│   ├── GeometryUtils.ts
+│   ├── ScrambleAnimation.ts
+│   ├── ScreenShake.ts
+│   ├── TweenUtils.ts
+│   └── Vignette.ts
+│
+└── scenes/
+    ├── combat/
+    │   └── CombatScene.ts
+    ├── menu/
+    │   ├── Boot.ts
+    │   ├── Covenant.ts
+    │   ├── MainMenu.ts
+    │   └── Multiplayer.ts
+    ├── world/
+    │   ├── LevelScene.ts
+    │   └── TransitionScene.ts
+    └── ui/
+        ├── Achievements.ts
+        ├── AchievementsUI.ts
+        ├── ControlsUI.ts
+        ├── GlossaryUI.ts
+        ├── Help.ts
+        ├── ItemModal.ts
+        ├── NotificationOverlay.ts
+        ├── Settings.ts
+        ├── SettingsUI.ts
+        └── glossary/
+            ├── GlossaryBestiaryPage.ts
+            ├── GlossaryCombosPage.ts
+            ├── GlossaryItemsPage.ts
+            ├── GlossaryLocationsPage.ts
+            ├── GlossaryPlayerPage.ts
+            ├── GlossaryProloguePage.ts
+            └── GlossaryRunesPage.ts
 ```
+
+---
 
 ## System Architecture Diagram
 
@@ -205,16 +218,32 @@ graph TD
             SettingsUI
             NotificationOverlay
         end
+        
+        subgraph GlossaryPages [scenes/ui/glossary Pages]
+            GlossaryUI --> GlossaryProloguePage
+            GlossaryUI --> GlossaryRunesPage
+            GlossaryUI --> GlossaryCombosPage
+            GlossaryUI --> GlossaryBestiaryPage
+            GlossaryUI --> GlossaryItemsPage
+            GlossaryUI --> GlossaryLocationsPage
+            GlossaryUI --> GlossaryPlayerPage
+        end
     end
 
-    subgraph Systems [Game Systems]
+    subgraph Systems [Reusable Systems]
         CollisionParser
         DoorSystem
         RunePickerSystem
         PlayerPanelSystem
+        BossButtonSystem
+        ChestSystem
+        InteractSystem
+        LightSystem
+        PortalSystem
+        TradeSystem
     end
 
-    subgraph Data [Data Singletons]
+    subgraph Data [State Managers]
         PlayerData
         MultiplayerData
         RuneData
@@ -237,10 +266,19 @@ graph TD
 
     LevelScene --> CollisionParser
     LevelScene --> DoorSystem
+    LevelScene --> ChestSystem
+    LevelScene --> InteractSystem
+    LevelScene --> LightSystem
+    LevelScene --> PortalSystem
+    LevelScene --> BossButtonSystem
+    LevelScene --> TradeSystem
+    
     CombatScene --> RunePickerSystem
     CombatScene --> PlayerPanelSystem
+    CombatScene --> TradeSystem
+    
     Multiplayer -->|Matchmaking| NM
-    Covenant -->|P2P Cursors & State| NM
+    Covenant -->|P2P Sync| NM
     
     Scenes --> Data
     Scenes --> Core

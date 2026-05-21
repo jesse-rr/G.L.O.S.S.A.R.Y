@@ -1,197 +1,211 @@
-# G.L.O.S.S.A.R.Y. - Project Documentation
-**Author:** Jesse Ricardo Rogerio
-
-## 1. Overview
-
-### The Elevator Pitch
-A multiplayer exploration turn-based RPG where 1-3 players journey through distinct fractured realms, gather ancient knowledge, and unite to defeat a mythical god.
-
-### Project Description (Detailed)
-G.L.O.S.S.A.R.Y is a 2D exploration, turn-based multiplayer game with a Top-Down Pixel Art perspective. The player assumes the role of **The Shadow** — an undefined being seeking identity through ancient knowledge and ascension.
-
-The core gameplay revolves around exploring distinct maps (Desert, Abandoned, Mechanic), interacting with settlements, and finding written knowledge in the form of symbols that act as powerful abilities and effects. Players must conquer their respective middle bosses before joining forces in a final, conjoined battle against an ultimate endgame boss.
-
-The **Glossary system** records these discovered symbols, enemies, and knowledge. However, defeat at the hands of a boss resets the player and costs them a portion of this recorded knowledge (returning them to silhouettes).
-
-### Run Structure & Progression
-- **Multiplayer:** 1-3 players.
-- **Lives:** Each player has 3 lives.
-- **Covenants:** Players choose a Covenant defining their ability (e.g., Recursion, Domination, or Sacrifice) and unique resource currency.
-- **Map Distribution:** Each player explores a different, randomized map (Mechanic, Desert, or Abandoned).
-- **End State:** The game ends after the final conjoined boss fight at the Summit.
-- **Knowledge-Based Progression:** Players must explore settlements and find treasures to gain lost knowledge. Gathering this knowledge is mandatory to challenge the bosses. If a player loses to a middle boss, they respawn until they win but lose some knowledge (contents of their glossary).
+# G.L.O.S.S.A.R.Y. - Game Design Document (GDD)
+**Lead Designer & Developer:** Jesse Ricardo Rogerio  
+**Last Updated:** May 2026
 
 ---
 
-## 2. Theme / Setting / Genre
+## 1. Executive Summary
+
+### Elevator Pitch
+A cooperative, turn-based exploration RPG for 1–3 players. Awoken as nameless Shadows, players explore distinct fractured realms, gather ancient runic vocabulary, master combinations, and ascend together at the Summit to challenge a legendary deity.
+
+### Core Premise
+In the spirit of ancient myths and linguistic puzzles, **G.L.O.S.S.A.R.Y.** is a game about reclaiming lost meaning. Players explore a fractured, stylized world, translating forgotten runes into reality-bending combat chains. The interactive **Glossary** serves as the central progression tracker—recording discovered runes, item lore, bestiary entries, and locations. 
+
+---
+
+## 2. Setting & Theme
 
 | Category | Description |
 | :--- | :--- |
-| **Theme** | A search for Identity through lost knowledge and cooperative ascension. |
-| **Setting** | A mythological world featuring a Central Hub and distinct realms: Desert, Abandoned, and Mechanic. The journey culminates at the Summit. |
-| **Genre** | Exploration / Turn-Based RPG / Multiplayer |
-| **Visual Style** | Glowing Runes, Glitchy Distortions, Dungeon Stone Architecture, Dark Lighting, Top-Down Pixel Art. |
+| **Narrative Theme** | Reclaiming lost identity and meaning through the reconstruction of language. |
+| **Aesthetic Style** | Glowing runes, stone-carved architecture, rich dark-mode overlays, smooth gradients, and glitchy distortions signaling the fracturing of reality. |
+| **Realms** | **Central Hub**: The nexus of worlds.<br>**Desert**: Scorched, ancient sands.<br>**Abandoned**: Rainy, overgrown wasteland.<br>**Mechanic**: Grinding gears and geyser-powered steampunk labs.<br>**The Summit**: The absolute peak where the final god resides. |
+| **Genre** | Tactical Turn-Based Combat / Cooperative RPG / Exploration |
 
 ---
 
-## 3. Core Gameplay Mechanics
+## 3. Class Systems (The Covenants)
 
-### The Central Hub
-The Hub presents players with three distinct paths:
-- **Left:** Leads to a Settlement.
-- **Right:** Leads to unknown exploration areas or mysteries.
-- **Top:** Leads to the Boss room.
+At the start of the journey, players choose a philosophy by binding themselves to one of three powerful **Covenants**. Covenants govern the player's core identity, visual tint, and their unique **Covenant Ability**—which costs **3 Special Currency** to activate in combat.
 
-### Map & Settlement Exploration
-- **Realms:** Desert, Abandoned, and Mechanic maps. Each contains a Settlement and a Boss.
-- **Settlement Activities:**
-  - Talk to NPCs to gather lore and information.
-  - Find treasures and Relics to acquire essential lost knowledge. Completing the settlement exploration is required to challenge the boss.
-  - **Monoliths:** Ancient stones (Big and Small Ritualistic) embedded with runes. Clicking a monolith triggers a battle in an alternative reality. Winning grants the rune into the player's arsenal. At least one monolith battle exists per settlement, and these fights can be replayed.
-  - **Merchant:** A trader who buys and sells runes and items in exchange for Gemstones (the game's currency, obtained from battles, chests, and exploration).
+```mermaid
+graph TD
+    A[Covenants] --> B["Dragon (Domination)"]
+    A --> C["Phoenix (Sacrifice)"]
+    A --> D["Snake (Recursion)"]
+    
+    B --> B1["Ability: Intimidate (Roar)"]
+    B1 --> B2["Enemies deal -25% DMG for 3 rounds"]
+    
+    C --> C1["Ability: Burn (Pyre)"]
+    C1 --> C2["Consumes a rune to gain +50% DMG for the turn"]
+    
+    D --> D1["Ability: Rewind"]
+    D1 --> D2["Heals all damage taken during the previous round"]
+```
 
-### Combat & Runes
-- **Turn-Based Battles:** The player acts first, followed by the enemy. Chains cannot be interrupted except by rare status effects.
-- **Rune Chain Construction:** Players draw up to 7 Runes in their hand and can construct a linear Chain of 1–7 Runes. 
-- **Translations & Execution:** Each Rune has a "Translation" (e.g., Strength increases damage, Pierce ignores defense, Echo repeats an effect). Order matters: effects resolve strictly left to right, with earlier runes modifying the later ones. There are no branching paths.
-- **Identified vs. Unidentified Runes:**
-  - *Unidentified:* Found on maps and have a chance to fail (no effect or reduced effect) during combat. The failure rate increases as difficulty scales.
-  - *Identified:* Once won in a Monolith battle, its Translation is permanently revealed. Identified runes never fail and operate at full strength.
-- **Relics:** Players can equip up to 3 active Relics at once. These modify gameplay (e.g., altering rune behavior, increasing hand efficiency, amplifying covenant currency).
-
-### Multiplayer Boss Progression
-- **Middle Bosses:** Each player must conquer the boss of their respective map.
-- **Reality Fracturing:** Whenever a player successfully defeats their middle boss, the shared world experiences a sudden tremor and begins to visually glitch. This effect represents reality shifting and destabilizing—akin to the fracturing of the Tower of Babel—as the players approach ascension.
-- **The Summit (Endgame):** Once all players defeat their middle bosses, they travel to the Summit. Here, they enter a conjoined cooperative battle against an endgame boss of their choice (Phoenix, Dragon, or Snake).
-
-### Covenant Selection
-At the start, players choose a philosophy which dictates their unique ability and how they generate their resource currency:
-- **Coil (Recursion):** Uses *Echoes* (gained by identifying symbols/runes). Ability: Rewind.
-- **Crown (Dominance):** Uses *Blood* (gained through sacrificial kills or decisive actions). Ability: Command Enemy (turns an enemy into a temporary ally).
-- **Ash (Sacrifice):** Uses *Fire* (gained through enemy defeat and destructive actions). Ability: Revive.
-*Players can activate these abilities during their turn once sufficient currency is accumulated.*
+### The Three Covenants:
+1. **Dragon (Domination)**
+   - **Color Aesthetic**: Bold, vibrant Orange/Gold.
+   - **Ability: Intimidate**: Player lets loose a fearsome *Roar* in combat.
+   - **Effect**: Reduces all incoming damage from enemies by **25%** (`damageModifier = 0.75`) for 3 rounds.
+2. **Phoenix (Sacrifice)**
+   - **Color Aesthetic**: Fiery, luminous Red/Magenta.
+   - **Ability: Burn**: Player triggers a blinding *Pyre* by burning a selected rune.
+   - **Effect**: Grants the player **+50% Attack Power** (`multiplier *= 1.5`) for the current turn.
+3. **Snake (Recursion)**
+   - **Color Aesthetic**: Toxic, deep Emerald Green.
+   - **Ability: Rewind**: Player bends time backwards.
+   - **Effect**: Instantly restores HP equal to the **total damage taken in the last enemy attack phase**.
 
 ---
 
-## 4. Targeted Platforms & Monetization
+## 4. Turn-Based Combat System
 
-- **Platform:** PC (Multiplayer focus).
-- **Model:** Premium (One-time purchase). No microtransactions.
+Combat is a highly tactical, turn-based puzzle centered around **Rune Chains**.
 
----
+```
+    [Player Select Phase] ──> [Player Attack Phase] ──> [Enemy Attack Phase] ──> [Resolution Phase]
+            │                          │                         │                      │
+     Form 1-3 Rune chain        Execute DMG / Heal /     Apply slow/dazed misses   Tick DoTs & decrement
+    & use Covenant ability       DEF, trigger status     or weakened regular hits    buff/debuff timers
+```
 
-## 5. Influences
+### The Combat Loop
+1. **Player Select Phase**: The player reviews their hand of discovered runes. They construct a chain of up to **3 unique runes** and/or invoke their Covenant Ability. A dynamic preview panel displays the precise outcome (damage, healing, defense) before committing.
+2. **Player Attack Phase**: The player's chain executes from left to right. Healing and defense (temporary shields) activate immediately, followed by damage and status applications.
+3. **Enemy Attack Phase**: Enemies strike their target player. If affected by debuffs like *Slow* or *Dazed*, they may skip turns or miss entirely.
+4. **Resolution Phase**: Damage-over-time effects (Venom, Ignite) tick. Active buff and debuff counters decrement. If any combatants have fainted, the system resolves victory or defeat.
 
-- **Slay the Spire:** Major influence on the turn-based combat system, rune chain (deck) construction, and the run-based structure where knowledge is gathered over time.
-- **Hyper Light Drifter:** Heavy inspiration for the assets feeling, atmospheric visual storytelling, vibrant maps, and a sense of mysterious, ancient technology mixed with mythical elements.
-- **Tunic:** Inspiration for the hidden knowledge system, manual-based discovery, and piecing together a language using a book (the Glossary) as it updates.
-- **Cooperative Multiplayer Games:** Shared endgame goals and conjoined boss fights.
-- **Mythology:** Concepts of ancient knowledge, runes, and divine beasts (Phoenix, Dragon, Snake).
-- **Babylon & The Tower of Babel:** Inspiration for the thematic loss of knowledge, the fracturing of reality, and the quest to reclaim lost meaning.
+### The Precise Damage Formula
+$$\text{Damage} = \max\left(1, \lfloor(\text{Player Base Attack} + \text{Rune Power} + \text{Trade Buffs} + \text{Combo Bonus}) \times \text{Multipliers}\rfloor - \text{Enemy Defense}\right)$$
 
----
-
-## 6. Story & Atmosphere
-
-### Detailed Narrative
-The Shadows awaken in the Central Hub, seeking purpose and identity. Through a physical **Glossary**, they record the reality they uncover. They must venture into three distinct realms—a desolate Desert, an Abandoned wasteland, and a Mechanic labyrinth—each harboring lost knowledge and powerful runes.
-
-As they uncover symbols and interact with the remnants of these worlds within Settlements, they rebuild their understanding of the world. After conquering the guardians of these realms, the Shadows unite at the Summit to face a mythical being (Phoenix, Dragon, or Snake) to achieve ultimate ascension.
+*Note: Enemy defense is ignored entirely if the enemy is afflicted with the **Shatter** debuff.*
 
 ---
 
-## 7. Assets Needed
+## 5. Runic Vocabulary & Status Effects
 
-Based on the `public/assets/exports` directory and original concepts, the assets are separated into the following categories:
+All runes are permanent discoveries cataloged in the Glossary. They fall into three card rarities: **Base** (foundational), **Boost** (amplifying), and **Unique** (reality-bending).
 
-### UI
-- HUD elements, Glossary Pages, Menus, Achievement popups, Settings, Help Page, Etc...
-- Folder: `UI`
-- Fonts & XMLs (`VCRosdNEUE.ttf`, `VCRosdNEUE.png`, `VCRosdNEUE.xml`).
-
-### Characters
-- **Protagonist:** The Shadow (Sprites for 1-3 players).
-- **NPCs:** Merchant (with Abandoned Campsite/Tent).
-- Folder: `characters`
-- Models: `cat.glb` (3D model reference/misc character).
-
-### Bosses & Enemies
-- **Middle Bosses:** Guardians of the Desert, Abandoned, and Mechanic maps.
-- **Endgame Bosses:** Phoenix, Dragon, Snake.
-- **Basic Enemies:** Green/Blue Slimes, Stone/Runic Golems, Hooded/Zealous Cultists, Faint/Soul Wisps, Dungeon Scavenger, Carrion Stalker.
-- Folder: `Boss`
-
-### Effects & Objects
-- **Objects:** Treasures, chests, Monoliths (Big and Small Ritualistic), items, Runes (Glowing in different colors for each biome), flags, hanging chains, torches.
-- Folder: `Objects`
-- **Misc:** Miscellaneous visual effects and audio (e.g., `cat-meme.mp3`).
-- Folder: `misc`
-
-### Environments & Maps
-- **Maps:** Layouts for Central Hub, Desert, Abandoned, Mechanic realms, and The Summit.
-- Folder: `Maps`
-- **Tilesets:** Stone architecture (Cracked, Runic, Shifted, Rocky), Walls (Carved, Wrap Around), Broken Columns, Broken Staircases, Vines, Mushrooms, Fireflies. 
-- Folder: `tileset`
-- **Backgrounds:** Environments for battle scenes, alternative realities, and exploration.
-- Folder: `backgrounds`
-
-### Animations
-- Combat effects, movement cycles, environment animations.
-- Folder: `Animations`
-
-### Audio & Sound Design
-- **Ambient:** 
-  - *Desert/Lower Areas:* Dungeon themes, dark ambiance, water droplets, winds.
-  - *Abandoned/Mid Areas:* Rainy, puddles, winds, birds.
-  - *Mechanic/Upper Areas:* Mechanical grinding, pumps, geysers, hot water.
-- **Combat/Interactions:** Hit/collision sounds, injured/death sounds, 3 unique Boss Themes (Coil, Ash, Crown).
-
-### Covenants
-- **Covenant:** Icons, visual effects, and UI specific to Coil, Crown, and Ash choices.
-- Folder: `Covenant`
+### Runic Vocabulary Index
+* **A** (Aether - Base, DMG 8): Raw titantic strength.
+* **B** (Basalt - Base, DEF 6): Unyielding defensive barrier.
+* **C** (Cipher - Base, DMG 10): Penetrating obsidian spearhead. Applies **Shatter**.
+* **D** (Dusk - Boost, HEAL 5): Eclipsed siphoning of life. Applies **Venom**.
+* **E** (Echo - Unique, UTIL 0): Eternal repeating loop. Applies **Overcharge** (if chain is exactly 3).
+* **F** (Fyre - Base, DMG 12): Primordial volcanic wrath. Applies **Ignite**.
+* **G** (Glyph - Boost, DEBUFF 4): Royal marked sentence. Applies **Dazed**.
+* **H** (Hallow - Boost, HEAL 7): Solar purging light.
+* **I** (Ignis - Unique, DMG 9): Inside combustion spark. Applies **Ignite**.
+* **J** (Jinx - Boost, DEBUFF 6): Probability twisting curse. Applies **Venom**.
+* **K** (Kael - Base, DEF 8): Resolve and spirit fortifier. Applies **Fortify**.
+* **L** (Lux - Boost, HEAL 6): Crystallized star beacon.
+* **M** (Morth - Base, DEBUFF 7): Decaying temporal acceleration. Applies **Weaken**.
+* **N** (Nyx - Base, DMG 11): Shadow void ambush. Applies **Dazed**.
+* **O** (Orin - Boost, BUFF 0): Amplifying choir horn. Applies **Overcharge** (if chain is exactly 3).
+* **P** (Prism - Unique, DEF 5): Reflective glass barrier.
+* **Q** (Quell - Unique, DEBUFF 3): Sound and will silencer. Applies **Dazed**.
+* **R** (Rime - Base, DMG 7): Eternal glacial cold. Applies **Slow**.
+* **S** (Sigil - Unique, UTIL 0): Binding warden's seal. Applies **Slow**.
+* **T** (Thorn - Base, DEF 9): Retaliatory briar shield.
+* **U** (Umbra - Boost, BUFF 4): Obscuring trickster shroud. Applies **Dazed**.
+* **V** (Vox - Boost, BUFF 5): Authoritative command.
+* **W** (Wyrd - Unique, UTIL 0): Seer's pre-written destiny. Applies **Overcharge** (if chain is exactly 3).
+* **X** (Xael - Base, DMG 14): Destructive siege resonance. Applies **Shatter**.
+* **Y** (Ymir - Unique, DEF 10): Resilient survival resolve. Applies **Fortify**.
+* **Z** (Zeph - Unique, UTIL 0): The forbidden coordinate of the Summit.
 
 ---
 
-## 8. Schedule and Milestones
+### Status Effects Encyclopedia
 
-### Milestone 1: Core Foundation of Assets/Code
-- Develop the core foundational architecture.
-- Integrate initial assets including maps, character sprites, and base animations.
-- Set up multiplayer networking (1-3 players) and the Central Hub environment.
+#### Player Buffs
+* **Overcharge**: Increases attack damage by **+50%** (`multiplier *= 1.5`) for 2 turns. Triggered by E, O, or W in a 3-rune chain.
+* **Fortify**: Boosts all active defense values by **+50%** for 2 turns. Triggered by K or Y.
+* **Pyre**: Phoenix Covenant exclusive. Grants **+50%** attack damage for the current turn.
+* **Roar**: Dragon Covenant exclusive. Shields the team, forcing enemies to deal **-25%** damage for 3 turns.
 
-### Milestone 2: Ambiance and Environment Polish
-- Implement collision systems across all maps.
-- Add environmental effects like slow movement zones, vignette effects, and overall ambiance adjustments.
-- Ensure the aesthetic of the Desert, Abandoned, and Mechanic maps matches the desired mood.
-
-### Milestone 3: Combat System
-- Fully flesh out the turn-based combat system.
-- Implement the Monolith "alternative reality" battle system.
-- Integrate the Glossary, Runes, and Knowledge system into active gameplay.
-
-### Milestone 4: Multiplayer Progression & Bosses
-- Fully integrate the 1-3 player cooperative experience.
-- Implement all middle bosses and the conjoined endgame bosses (Phoenix, Dragon, Snake).
-- Implement the death penalty system and the mandatory settlement exploration logic.
-
-### Milestone 5: Music & SFX
-- Implement background music for maps, battles, and the Hub.
-- Add sound effects for combat, UI interactions, environment ambience, and the Merchant/NPC interactions.
-
-### Milestone 6: Polishing
-- Final audio balancing, combat tuning, and UI polishing.
-- Comprehensive bug fixing across all maps and multiplayer states.
-- Final playtesting and optimization for a smooth PC release.
+#### Enemy Debuffs (Status Ailments)
+* **Ignite**: Deals **5** fire damage at the start of each round for 3 turns.
+* **Venom**: Deals stacking poison damage equal to `stacks * 2` at the start of each round for 3 turns.
+* **Dazed**: Causes the enemy to have a flat **50% chance to miss** their attacks for 2 turns.
+* **Shatter**: Bypasses all defense, reducing the target's defense stat to **0** for 2 turns.
+* **Slow**: Paralyzes the enemy, forcing them to **skip every other attack** for 3 turns.
+* **Weaken**: Debilitates the enemy, reducing their dealt attack damage by **50%** for 2 turns.
 
 ---
 
-## 9. Team & Roles
+## 6. Runic Combinations (Combos)
 
-- **Lead Developer & Game Designer:** Jesse Ricardo Rogerio
-  - Architecture, Multiplayer Networking, Core Combat Systems, UI/UX, and Game Logic.
-- **Artist & Animator:** Jesse Ricardo Rogerio
-  - Pixel art, tilesets, environments, character sprites, and animations.
-- **Audio & Sound Design:** Jesse Ricardo Rogerio
-  - SFX generation, ambient soundscapes, and combat feedback.
+Chaining runes triggers harmonic amplification. Combos are split into two categories:
 
-*(Note: As a solo developer project or core team, roles are consolidated to ensure a cohesive vision across all mechanics.)*
+### A. Predefined Legendary Combos
+There are **32 legendary 3-rune combinations** encoded into the game's fabric. Executing one of these grants a huge dynamic power bonus that scales based on the card types in the chain:
+$$\text{Bonus Power} = 15 + (\text{Unique Runes} \times 5) + (\text{Base Runes} \times 3) + (\text{Boost Runes} \times 2)$$
+
+#### List of Predefined Combos:
+* **Fire Storm** (`F + I + A`): Raging inferno blast.
+* **Abyssal Strike** (`N + J + Y`): Relentless void strike.
+* **Titan Defense** (`B + K + Y`): Immovable earthen wall.
+* **Sun Blessing** (`B + L + S`): Pure solar recovery.
+* **Piercing Rift** (`C + O + Q`): Silent defensive rupture.
+* **Infinite Echo** (`A + E + W`): Endless repeating strikes.
+* **Shattering Cinder** (`X + I + G`): Blasting armor to dust.
+* **Phoenix Ward** (`B + P + Y`): Sacred shield of flame.
+* **Blood Lust** (`A + D + I`): High-risk siphoning strike.
+* **Grave Call** (`N + G + S`): Spectral calling of the abyss.
+* **Runic Strike** (`C + K + Q`): Sealed piercing attack.
+* **Gale Force** (`A + R + E`): Fast frozen cascade.
+* **Star Mending** (`B + O + P`): Celestial shielding and recovery.
+* **Iron Guard** (`B + K + P`): Imperial fortress ward.
+* **Venomous Fang** (`C + J + Q`): Piercing venom strike.
+* **Soul Siphon** (`N + D + W`): Shadows drawing vitality.
+* **Cursed Ember** (`F + J + I`): Corrupt burning strikes.
+* **Shadow Veil** (`N + U + S`): Complete illusionary shroud.
+* **Glacial Aegis** (`B + R + P`): Absolute mirror frost.
+* **Divine Light** (`B + H + Y`): Ultimate recovery ward.
+* **Void Bridge** (`C + E + S`): Spatial warping puncture.
+* **Earth Slam** (`A + K + Y`): Crushing tectonic blast.
+* **Phoenix Pyre** (`F + I + P`): Blazing final strike.
+* **Temporal Shift** (`A + W + S`): Shifting destiny boundaries.
+* **Frozen Wrath** (`R + G + Q`): Calming winter freeze.
+* **Lumina Shield** (`B + L + P`): Shielding solar light.
+* **Silent Hex** (`C + Q + G`): Disruptive piercing hex.
+* **Vanguard Crest** (`B + K + S`): Shielding vanguard warden.
+* **Acid Spray** (`C + J + W`): Caustic armor melt.
+* **Ember Blast** (`F + O + I`): Pure exploding combustion.
+* **Echoing Purify** (`F + E + O`): Repeated volcanic purification.
+* **Celestial Will** (`A + V + W`): Sovereignty of the stars.
+
+### B. Generic Combos
+If a chain does not match a predefined formula, the system procedurally generates a dynamic title based on the rune card types and primary effect, granting a flat bonus:
+* **2-Rune Chains**: Dynamic prefix (e.g. *Dual*, *Resonant*, *Harmonic*) + Flavor name (e.g. *Strike*, *Aegis*, *Blessing*). Grants **+5 Base Power**.
+* **3-Rune Chains**: Dynamic prefix (e.g. *Primal Surge*, *Trinity Force*, *Exotic Sync*) + Flavor name. Grants **+10 Base Power**.
+
+---
+
+## 7. World Progression & Systems
+
+### Central Hub & Explorations
+The Hub links to three paths leading to distinct biome settlements.
+* **Settlements**: Inhabitants trade, recount history, and offer quests. Exploration is crucial to locating Monoliths and chests.
+* **Chests**: Contain Gemstones (base currency) and Special Currency.
+* **Monoliths**: Large and small runic monuments. Interacting with them initiates a battle in an alternative, high-contrast reality. Defeating the Monolith's guardian permanently **discovers** a rune, adding it to the combat pool.
+* **Trades**: Trade points allow players to buy permanent stat boosts (+2 Damage, +2 Defense, +2 Healing) in exchange for Gemstones and Special Currency. 
+
+### Permanent Collectibles (Items)
+There are **12 rare and legendary items** found in chests or purchased from elite merchants. Discovered items are preserved in the Glossary's item logs as monuments to progress:
+* **Namaste** (Common): Monk beads whispering calm.
+* **Runefall** (Epic): Suspiciously familiar thunder hammer.
+* **Seraph's Plume** (Legendary): Feather of absolute rebirth.
+* **Echojar of The Damned** (Rare): Sealed screaming jar of siphoned souls.
+* **Reversed Scale** (Epic): Golden scale of mirrored punishment.
+* **404: Not Found** (Rare): Map depicting non-existent coordinates.
+* **Schizostone** (Mythic): A rock that talks incessantly.
+* **The Archive** (Legendary): Mystical wildcard deck.
+* **Second Amendment** (Mythic): Lead projectile dispenser.
+* **Fog of War** (Epic): Pixel glasses of absolute confidence.
+* **Broken Crown** (Legendary): Crown of a sorrowful mad king.
+* **VoidFrame** (Rare): Event horizon vacuum frame.
