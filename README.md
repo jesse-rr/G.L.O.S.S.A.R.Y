@@ -29,8 +29,10 @@ For the full architecture and folder breakdown, see [`docs/ARCH.md`](docs/ARCH.m
 ## Running
 
 ```bash
+git clone https://github.com/jesse-rr/G.L.O.S.S.A.R.Y
+cd G.L.O.S.S.A.R.Y
 cd code
-npm install
+npm i
 npm run dev
 ```
 
