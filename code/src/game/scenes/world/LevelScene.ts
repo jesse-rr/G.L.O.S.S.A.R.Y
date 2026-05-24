@@ -603,7 +603,7 @@ export class LevelScene extends Phaser.Scene {
             case 'desert-settlement': return 18;
             case 'mechanic-settlement': return 13;
             case 'summit-trade': return 4;
-            default: return 13;
+            default: return 14;
         }
     }
 }
