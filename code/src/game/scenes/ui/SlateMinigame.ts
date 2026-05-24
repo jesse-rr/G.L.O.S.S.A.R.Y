@@ -21,10 +21,11 @@ export class SlateMinigame extends Scene {
         this.load.font(RUNE_FONT, 'assets/Models/exports/RUNE.TTF');
     }
 
-    create(data: { previousScene?: string; isPaused?: boolean; slateId?: string }) {
+    create(data: { previousScene?: string; isPaused?: boolean; slateId?: string; colorScheme?: string }) {
         this.previousScene = data?.previousScene || 'LevelScene';
         this.isPaused = !!data?.isPaused;
         this.requestedSlateId = data?.slateId || null;
+        const colorScheme = data?.colorScheme || 'dark';
 
         this.scene.bringToTop();
 
@@ -49,7 +50,7 @@ export class SlateMinigame extends Scene {
         if (this.requestedSlateId) {
             const slate = SLATE_DEFINITIONS.find(s => s.id === this.requestedSlateId);
             if (slate) {
-                this.openSlate(slate);
+                this.openSlate(slate, colorScheme);
             }
         }
 
@@ -58,7 +59,7 @@ export class SlateMinigame extends Scene {
         });
     }
 
-    private openSlate(slate: SlateDefinition): void {
+    private openSlate(slate: SlateDefinition, colorScheme: string): void {
         this.contentContainer.removeAll(true);
 
         const w = this.scale.width;
@@ -70,7 +71,8 @@ export class SlateMinigame extends Scene {
             slate,
             () => {
                 this.closeScene();
-            }
+            },
+            colorScheme
         );
 
         this.activeSlateSystem.create(w / 2, h / 2);

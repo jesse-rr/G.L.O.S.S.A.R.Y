@@ -30,13 +30,11 @@ export function createSlates(
 
         const physicalKey = `slate_physical_${mapKey}_${index}`;
 
-        // Get saved slate mapping if any
         const mappingStr = localStorage.getItem('glossary_physical_slate_mapping');
         const mapping = mappingStr ? JSON.parse(mappingStr) : {};
         let slateId = mapping[physicalKey] || '';
 
         if (!slateId) {
-            // Check Tiled properties
             if (obj.properties) {
                 const idProp = obj.properties.find((p: { name: string; value: unknown }) => p.name === 'slateId');
                 if (idProp && typeof idProp.value === 'string') {
@@ -61,7 +59,8 @@ export function handleSlateInteraction(
     wasInteractPressed: { value: boolean },
     isCinematic: boolean,
     isTeleporting: boolean,
-    isEntering: boolean
+    isEntering: boolean,
+    mapKey: string
 ): void {
     if (isTeleporting || isEntering || isCinematic) return;
 
@@ -74,25 +73,24 @@ export function handleSlateInteraction(
                 wasInteractPressed.value = true;
                 const progress = SlateProgress.getInstance();
 
-                // If this physical slate has no assigned ID yet, choose a random uncompleted one
                 if (!slate.slateId) {
                     const completedIds = progress.getCompletedSlates();
                     const uncompleted = SLATE_DEFINITIONS.filter(s => !completedIds.includes(s.id));
-                    
+
                     if (uncompleted.length > 0) {
                         const randomSlate = uncompleted[Math.floor(Math.random() * uncompleted.length)];
                         slate.slateId = randomSlate.id;
 
-                        // Save assignment
                         const mappingStr = localStorage.getItem('glossary_physical_slate_mapping');
                         const mapping = mappingStr ? JSON.parse(mappingStr) : {};
                         mapping[slate.physicalKey] = slate.slateId;
                         localStorage.setItem('glossary_physical_slate_mapping', JSON.stringify(mapping));
                     } else {
-                        // All are completed, assign default
                         slate.slateId = SLATE_DEFINITIONS[0].id;
                     }
                 }
+
+                const colorScheme = mapKey === 'hub' ? 'light' : 'dark';
 
                 if (progress.isCompleted(slate.slateId)) {
                     scene.scene.pause('LevelScene');
@@ -107,7 +105,8 @@ export function handleSlateInteraction(
                     scene.scene.launch('SlateMinigame', {
                         previousScene: 'LevelScene',
                         isPaused: true,
-                        slateId: slate.slateId
+                        slateId: slate.slateId,
+                        colorScheme: colorScheme
                     });
                 }
             }

@@ -52,6 +52,33 @@ export const ROOM_FIRST_WORDS: string[] = [
     'Divine', 'Demonic', 'Angelic', 'Infernal', 'Abysmal', 'Gilded', 'Tarnished', 'Polished'
 ];
 
+export const RAIDHO_CHAR = 'ᚱ';
+export const RAIDHO_START_COLOR = 0x99988c;
+export const RAIDHO_END_COLOR = 0x586a44;
+export const RAIDHO_FONT_SIZE = '40px';
+export const RAIDHO_HOLD_DURATION = 1500;
+export const RAIDHO_INTERACT_RANGE = 50;
+export const RAIDHO_MOUNT_OFFSET_Y = -3;
+export const MAX_FLOORS = 3;
+
+export const SETTLEMENT_ROTATION: string[] = [
+    'abandoned-settlement',
+    'desert-settlement',
+    'mechanic-settlement'
+];
+
+export const BOSS_FLOOR_ROTATION: string[] = [
+    'boss-floor-abandoned',
+    'boss-floor-desert',
+    'boss-floor-mechanic'
+];
+
+export const COVENANT_BASE_INDEX: Record<string, number> = {
+    snake: 0,
+    phoenix: 1,
+    dragon: 2
+};
+
 export const ROOM_SECOND_WORDS: string[] = [
     'Ascension', 'Covenant', 'Recursion', 'Dominance', 'Sacrifice', 'Godhood', 'Meaning',
     'Identity', 'Symbol', 'Translation', 'Knowledge', 'Reality', 'Forgotten', 'Unwritten',

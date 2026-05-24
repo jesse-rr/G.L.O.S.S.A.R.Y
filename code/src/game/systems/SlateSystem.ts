@@ -1,22 +1,7 @@
 import * as Phaser from 'phaser';
 import { FONT_FAMILY, RUNE_FONT } from '../constants';
 import { SlateDefinition, SlateFragment, SlateProgress } from '../data/SlateData';
-
-const SLATE_BG_COLOR = 0x2b2b2b;
-const SLATE_BORDER_COLOR = 0x5a5a5a;
-const SLOT_BG_COLOR = 0x1e1e1e;
-const SLOT_CORRECT_COLOR = 0x1a2a1a;
-const SLOT_HOVER_COLOR = 0x3a3a3a;
-const FRAGMENT_BG_COLOR = 0x333333;
-const FRAGMENT_DRAG_COLOR = 0x444444;
-const FRAGMENT_LOCKED_COLOR = 0x1a1a1a;
-const ACCENT_GLOW = 0x6a6a6a;
-const ACCENT_LOCKED = 0x3a5a3a;
-const TEXT_DIM = '#666666';
-const TEXT_RUNE = '#b8b0a8';
-const TEXT_TRANSLATED = '#e8dcc8';
-const TEXT_LORE = '#d4c4a0';
-const TITLE_COLOR = '#9a9a9a';
+import { SLATE_DARK_COLORS, SLATE_LIGHT_COLORS } from '../data/SlateData';
 
 interface FragmentSlot {
     container: Phaser.GameObjects.Container;
@@ -58,17 +43,20 @@ export class SlateSystem {
     private startY = 0;
     private activeTweens: Phaser.Tweens.Tween[] = [];
     private activeTimers: Phaser.Time.TimerEvent[] = [];
+    private colors: typeof SLATE_DARK_COLORS;
 
     constructor(
         scene: Phaser.Scene,
         parentContainer: Phaser.GameObjects.Container,
         slate: SlateDefinition,
-        onComplete?: () => void
+        onComplete?: () => void,
+        colorScheme?: string
     ) {
         this.scene = scene;
         this.parentContainer = parentContainer;
         this.slate = slate;
         this.onComplete = onComplete;
+        this.colors = colorScheme === 'light' ? SLATE_LIGHT_COLORS : SLATE_DARK_COLORS;
     }
 
     create(centerX: number, centerY: number): void {
@@ -78,14 +66,14 @@ export class SlateSystem {
         const totalHeight = 520;
         const totalWidth = 580;
 
-        const slateBg = this.scene.add.rectangle(0, 0, totalWidth, totalHeight, SLATE_BG_COLOR, 0.95)
-            .setStrokeStyle(2, SLATE_BORDER_COLOR);
+        const slateBg = this.scene.add.rectangle(0, 0, totalWidth, totalHeight, this.colors.SLATE_BG_COLOR, 0.95)
+            .setStrokeStyle(2, this.colors.SLATE_BORDER_COLOR);
         this.slateContainer.add(slateBg);
 
         this.titleText = this.scene.add.text(0, -totalHeight / 2 + 30, this.slate.title, {
             fontFamily: FONT_FAMILY,
             fontSize: '22px',
-            color: TITLE_COLOR,
+            color: this.colors.TITLE_COLOR,
             align: 'center',
             resolution: 2,
             letterSpacing: 6
@@ -111,14 +99,14 @@ export class SlateSystem {
 
         for (let i = 0; i < numFragments; i++) {
             const slotY = this.startY + i * (this.slotHeight + this.slotGap);
-            const slotBg = this.scene.add.rectangle(0, slotY, this.slotWidth, this.slotHeight, SLOT_BG_COLOR, 0.6)
+            const slotBg = this.scene.add.rectangle(0, slotY, this.slotWidth, this.slotHeight, this.colors.SLOT_BG_COLOR, 0.6)
                 .setStrokeStyle(1, 0x444444, 0.5);
             this.slateContainer.add(slotBg);
 
             const numIndicator = this.scene.add.text(
                 -this.slotWidth / 2 - 18, slotY,
                 `${i + 1}`,
-                { fontFamily: FONT_FAMILY, fontSize: '14px', color: TEXT_DIM, resolution: 2 }
+                { fontFamily: FONT_FAMILY, fontSize: '14px', color: this.colors.TEXT_DIM, resolution: 2 }
             ).setOrigin(0.5);
             this.slateContainer.add(numIndicator);
             this.numIndicators.push(numIndicator);
@@ -153,8 +141,8 @@ export class SlateSystem {
     ): void {
         const container = this.scene.add.container(0, slotY);
 
-        const bg = this.scene.add.rectangle(0, 0, this.slotWidth - 8, this.slotHeight - 6, FRAGMENT_BG_COLOR, 0.85)
-            .setStrokeStyle(1, ACCENT_GLOW, 0.3);
+        const bg = this.scene.add.rectangle(0, 0, this.slotWidth - 8, this.slotHeight - 6, this.colors.FRAGMENT_BG_COLOR, 0.85)
+            .setStrokeStyle(1, this.colors.ACCENT_GLOW, 0.3);
         container.add(bg);
 
         for (let d = 0; d < 3; d++) {
@@ -166,12 +154,13 @@ export class SlateSystem {
 
         const runicText = this.scene.add.text(0, 0, fragment.runic, {
             fontFamily: RUNE_FONT,
-            fontSize: '23px',
-            color: TEXT_RUNE,
+            fontSize: '22px',
+            color: this.colors.TEXT_RUNE,
             align: 'center',
-            resolution: 2,
-            stroke: '#000000',
-            strokeThickness: 2,
+            resolution: 3,
+            letterSpacing: 6,
+            stroke: '#1e1e1e',
+            strokeThickness: 2
         }).setOrigin(0.5).setName('runic_symbol');
         container.add(runicText);
 
@@ -180,7 +169,7 @@ export class SlateSystem {
         bg.on('pointerover', () => {
             const slot = this.fragmentSlots.find(s => s.bg === bg);
             if (!this.locked && this.dragIndex === -1 && slot && !slot.isLocked) {
-                bg.setFillStyle(SLOT_HOVER_COLOR, 0.9);
+                bg.setFillStyle(this.colors.SLOT_HOVER_COLOR, 0.9);
                 bg.setStrokeStyle(1, 0x888888, 0.6);
             }
         });
@@ -188,8 +177,8 @@ export class SlateSystem {
         bg.on('pointerout', () => {
             const slot = this.fragmentSlots.find(s => s.bg === bg);
             if (!this.locked && this.dragIndex === -1 && slot && !slot.isLocked) {
-                bg.setFillStyle(FRAGMENT_BG_COLOR, 0.85);
-                bg.setStrokeStyle(1, ACCENT_GLOW, 0.3);
+                bg.setFillStyle(this.colors.FRAGMENT_BG_COLOR, 0.85);
+                bg.setStrokeStyle(1, this.colors.ACCENT_GLOW, 0.3);
             }
         });
 
@@ -201,7 +190,7 @@ export class SlateSystem {
             this.dragIndex = this.fragmentSlots.indexOf(slot);
             this.dragOffsetY = pointer.y - this.slateContainer.y - container.y;
 
-            bg.setFillStyle(FRAGMENT_DRAG_COLOR, 0.95);
+            bg.setFillStyle(this.colors.FRAGMENT_DRAG_COLOR, 0.95);
             bg.setStrokeStyle(2, 0x888888, 0.8);
             container.setDepth(100);
         });
@@ -217,9 +206,9 @@ export class SlateSystem {
             const nearestSlot = this.getNearestSlotIndex(localY);
             this.slotZones.forEach((sz, idx) => {
                 if (idx === nearestSlot) {
-                    sz.bg.setFillStyle(SLOT_HOVER_COLOR, 0.5);
+                    sz.bg.setFillStyle(this.colors.SLOT_HOVER_COLOR, 0.5);
                 } else {
-                    sz.bg.setFillStyle(SLOT_BG_COLOR, 0.6);
+                    sz.bg.setFillStyle(this.colors.SLOT_BG_COLOR, 0.6);
                 }
             });
         });
@@ -238,14 +227,14 @@ export class SlateSystem {
                 this.swapFragments(currentSlotIndex, targetSlotIndex);
             }
 
-            slot.bg.setFillStyle(FRAGMENT_BG_COLOR, 0.85);
-            slot.bg.setStrokeStyle(1, ACCENT_GLOW, 0.3);
+            slot.bg.setFillStyle(this.colors.FRAGMENT_BG_COLOR, 0.85);
+            slot.bg.setStrokeStyle(1, this.colors.ACCENT_GLOW, 0.3);
             slot.container.setDepth(0);
 
             this.animateToPositions();
 
             this.slotZones.forEach(sz => {
-                sz.bg.setFillStyle(SLOT_BG_COLOR, 0.6);
+                sz.bg.setFillStyle(this.colors.SLOT_BG_COLOR, 0.6);
             });
 
             this.dragIndex = -1;
@@ -312,12 +301,12 @@ export class SlateSystem {
 
             frag.isLocked = true;
             frag.bg.disableInteractive();
-            frag.bg.setFillStyle(FRAGMENT_LOCKED_COLOR, 0.95);
-            frag.bg.setStrokeStyle(1, ACCENT_LOCKED, 0.7);
+            frag.bg.setFillStyle(this.colors.FRAGMENT_LOCKED_COLOR, 0.95);
+            frag.bg.setStrokeStyle(1, this.colors.ACCENT_LOCKED, 0.7);
             frag.runicText.setColor('#7a8a7a');
 
-            this.slotZones[slotIdx].bg.setFillStyle(SLOT_CORRECT_COLOR, 0.5);
-            this.slotZones[slotIdx].bg.setStrokeStyle(1, ACCENT_LOCKED, 0.4);
+            this.slotZones[slotIdx].bg.setFillStyle(this.colors.SLOT_CORRECT_COLOR, 0.5);
+            this.slotZones[slotIdx].bg.setStrokeStyle(1, this.colors.ACCENT_LOCKED, 0.4);
 
             const flashTween = this.scene.tweens.add({
                 targets: frag.bg,
@@ -366,7 +355,7 @@ export class SlateSystem {
         });
 
         this.slotZones.forEach(sz => {
-            sz.bg.setFillStyle(SLOT_CORRECT_COLOR, 0.6);
+            sz.bg.setFillStyle(this.colors.SLOT_CORRECT_COLOR, 0.6);
             const flashTween = this.scene.tweens.add({
                 targets: sz.bg,
                 alpha: { from: 0.4, to: 1 },
@@ -438,7 +427,7 @@ export class SlateSystem {
                 if (easedProgress > 0.3) {
                     runicText.setFontFamily(FONT_FAMILY);
                     runicText.setStroke('#000000', 0);
-                    runicText.setColor(TEXT_TRANSLATED);
+                    runicText.setColor(this.colors.TEXT_TRANSLATED);
                     runicText.setFontSize('18px');
                 }
 
@@ -459,11 +448,11 @@ export class SlateSystem {
                 if (elapsed === totalSteps) {
                     runicText.setText(finalText);
                     runicText.setFontFamily(FONT_FAMILY);
-                    runicText.setColor(TEXT_TRANSLATED);
+                    runicText.setColor(this.colors.TEXT_TRANSLATED);
                     runicText.setFontSize('18px');
                     runicText.setStroke('#000000', 0);
 
-                    frag.bg.setFillStyle(SLOT_CORRECT_COLOR, 0.7);
+                    frag.bg.setFillStyle(this.colors.SLOT_CORRECT_COLOR, 0.7);
                     frag.bg.setStrokeStyle(1, 0x4a7a4a, 0.6);
                 }
             }
@@ -519,7 +508,7 @@ export class SlateSystem {
         const loreText = this.scene.add.text(0, 0, this.slate.loreText, {
             fontFamily: FONT_FAMILY,
             fontSize: '16px',
-            color: TEXT_LORE,
+            color: this.colors.TEXT_LORE,
             align: 'center',
             wordWrap: { width: 460 },
             lineSpacing: 8,
@@ -533,7 +522,7 @@ export class SlateSystem {
         const completedLabel = this.scene.add.text(0, 165, 'press ESC to leave  •  this information can be found on the glossary info pages', {
             fontFamily: FONT_FAMILY,
             fontSize: '11px',
-            color: TEXT_DIM,
+            color: this.colors.TEXT_DIM,
             align: 'center',
             resolution: 2,
         }).setOrigin(0.5).setAlpha(0);
@@ -546,8 +535,6 @@ export class SlateSystem {
             ease: 'Sine.easeIn',
         });
         this.activeTweens.push(loreTween);
-
-
     }
 
     private shuffleArray<T>(arr: T[]): void {

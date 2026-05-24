@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { createVignette } from '../utils/Vignette';
 import { PlayerData } from '../data/PlayerData';
+import { COVENANT_BASE_INDEX } from '../constants';
 import { InteractSystem } from './InteractSystem';
 import { MatterScene } from '../types';
 import { fadeIn, fadeOutAndDestroy } from '../utils/TweenUtils';
@@ -47,10 +48,24 @@ export function createDoors(
             bodyRight = (scene as MatterScene).matter.add.rectangle(cx + 27, baseY, 10, 10, { isStatic: true });
         }
 
-        const covenant = PlayerData.getInstance().covenant;
         let symbolIndex = 0;
-        if (covenant === 'dragon') symbolIndex = 1;
-        else if (covenant === 'phoenix') symbolIndex = 2;
+        const mapKey = (scene as any).mapKey || '';
+        if (mapKey.includes('desert')) {
+            symbolIndex = 2;
+        } else if (mapKey.includes('mechanic')) {
+            symbolIndex = 1;
+        } else if (mapKey.includes('abandoned')) {
+            symbolIndex = 0;
+        } else {
+            const playerData = PlayerData.getInstance();
+            const covenant = playerData.covenant;
+            const baseIdx = COVENANT_BASE_INDEX[covenant] ?? 0;
+            const floorOffset = playerData.currentFloor - 1;
+            const rotatedIdx = (baseIdx + floorOffset) % 3;
+            if (rotatedIdx === 0) symbolIndex = 0;
+            else if (rotatedIdx === 1) symbolIndex = 2;
+            else if (rotatedIdx === 2) symbolIndex = 1;
+        }
 
         const symbolLeft = scene.add.sprite(cx, cy, 'door-symbol', symbolIndex).setDepth(8.1);
         symbolLeft.setCrop(0, 0, 32, 96);

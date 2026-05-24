@@ -288,11 +288,11 @@ export class GlossarySlatesPage {
         tempRune.destroy();
 
         const paraH = lines.length * 20;
-
+ 
         const headerH = 88;
         const rowsH = 6 * 24;
         const dividerH = 24;
-        const totalHeight = headerH + rowsH + dividerH + paraH;
+        const totalHeight = headerH + rowsH + dividerH + paraH + 20;
 
         let currentY = pageCenterY - (totalHeight / 2);
 
@@ -322,7 +322,7 @@ export class GlossarySlatesPage {
             const rowY = currentY + r * 24 + 12;
 
             const numStr = (r + 1).toString();
-            const numLine = this.scene.add.text(cx - 200, rowY, numStr, {
+            const numLine = this.scene.add.text(cx - 225, rowY, numStr, {
                 fontFamily: FONT_FAMILY,
                 fontSize: '13px',
                 color: '#000000',
@@ -330,7 +330,7 @@ export class GlossarySlatesPage {
             }).setOrigin(0.5).setAlpha(0.25);
             this.rightPageContainer.add(numLine);
 
-            const runicLine = this.scene.add.text(cx - 15, rowY, frag.runic, {
+            const runicLine = this.scene.add.text(cx - 40, rowY, frag.runic, {
                 fontFamily: RUNE_FONT,
                 fontSize: '17px',
                 color: '#000000',
@@ -339,17 +339,17 @@ export class GlossarySlatesPage {
                 strokeThickness: 1
             }).setOrigin(1, 0.5).setAlpha(0.45);
             this.rightPageContainer.add(runicLine);
-
+ 
             if (isCompleted) {
-                const transLine = this.scene.add.text(cx + 15, rowY, frag.translated, {
+                const transLine = this.scene.add.text(cx - 10, rowY, frag.translated, {
                     fontFamily: FONT_FAMILY,
                     fontSize: '16px',
                     color: '#000000',
                     align: 'left'
-                }).setOrigin(0, 0.5).setAlpha(0.85);
+                }).setOrigin(0, 0.5).setAlpha(0.45);
                 this.rightPageContainer.add(transLine);
             } else {
-                const dotsLine = this.scene.add.text(cx + 15, rowY, '...................', {
+                const dotsLine = this.scene.add.text(cx - 10, rowY, '...................', {
                     fontFamily: FONT_FAMILY,
                     fontSize: '16px',
                     color: '#000000',
@@ -359,8 +359,8 @@ export class GlossarySlatesPage {
             }
         });
 
-        currentY += rowsH;
-
+        currentY += rowsH + 20;
+ 
         const hDivider = this.scene.add.rectangle(cx, currentY + 5, 320, 1, 0x000000, 0.12);
         this.rightPageContainer.add(hDivider);
 

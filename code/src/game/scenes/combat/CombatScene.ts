@@ -219,7 +219,26 @@ export class CombatScene extends Phaser.Scene {
         if (!pick) {
             const tierEnemies = BESTIARY.filter(e => e.tier === this.encounterTier);
             const pool = tierEnemies.length > 0 ? tierEnemies : BESTIARY.filter(e => e.tier === 1);
-            pick = pool[Math.floor(Math.random() * pool.length)];
+            const battledNames = new Set<string>();
+            try {
+                const raw = localStorage.getItem('glossary_completed_combats');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    for (const mapKey of Object.keys(parsed)) {
+                        if (Array.isArray(parsed[mapKey])) {
+                            parsed[mapKey].forEach((c: any) => {
+                                if (c && c.enemyName) battledNames.add(c.enemyName.toLowerCase());
+                            });
+                        }
+                    }
+                }
+            } catch {}
+
+            let unbattled = pool.filter(e => !battledNames.has(e.name.toLowerCase()));
+            if (unbattled.length === 0) {
+                unbattled = pool;
+            }
+            pick = unbattled[Math.floor(Math.random() * unbattled.length)];
         }
 
         BestiaryData.getInstance().discoverEntity(pick.id);

@@ -34,6 +34,7 @@ export class PlayerData {
     inCombat: boolean = false;
     combatEnemyId: string | null = null;
     combatTier: number = 1;
+    currentFloor: number = 1;
     private static instance: PlayerData | null = null;
 
     static getInstance(): PlayerData {
@@ -177,6 +178,7 @@ export class PlayerData {
         this.inCombat = false;
         this.combatEnemyId = null;
         this.combatTier = 1;
+        this.currentFloor = 1;
         this.save();
     }
 
@@ -196,7 +198,8 @@ export class PlayerData {
             lastY: this.lastY,
             inCombat: this.inCombat,
             combatEnemyId: this.combatEnemyId,
-            combatTier: this.combatTier
+            combatTier: this.combatTier,
+            currentFloor: this.currentFloor
         };
     }
 
@@ -236,6 +239,7 @@ export class PlayerData {
         if (data.inCombat !== undefined) this.inCombat = data.inCombat;
         if (data.combatEnemyId !== undefined) this.combatEnemyId = data.combatEnemyId;
         if (data.combatTier !== undefined) this.combatTier = data.combatTier;
+        if (data.currentFloor !== undefined) this.currentFloor = data.currentFloor;
     }
 
     save(): void {

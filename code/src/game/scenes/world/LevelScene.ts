@@ -12,6 +12,7 @@ import { PortalSystem } from '../../systems/PortalSystem';
 import { PlayerData } from '../../data/PlayerData';
 import { CombatTrackerHUD } from '../../systems/CombatTrackerHUD';
 import { isPipeLayer, fillPipeLayer, hasReachedMaxCombats } from '../../systems/PipeSystem';
+import { RaidhoRuneSystem } from '../../systems/RaidhoRuneSystem';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -37,6 +38,7 @@ export class LevelScene extends Phaser.Scene {
     private settingsBtn!: Phaser.GameObjects.Sprite;
     private wasInteractPressed = { value: false };
     private combatTrackerHUD!: CombatTrackerHUD;
+    private raidhoRuneSystem?: RaidhoRuneSystem;
 
     constructor() {
         super('LevelScene');
@@ -48,14 +50,16 @@ export class LevelScene extends Phaser.Scene {
     private isEntering = false;
     private overrideSpawnX: number | null = null;
     private overrideSpawnY: number | null = null;
+    private isTeleportingFromRune = false;
 
-    init(data: { mapKey?: string, previousMap?: string, entryDirX?: number, entryDirY?: number, spawnX?: number, spawnY?: number }) {
+    init(data: { mapKey?: string, previousMap?: string, entryDirX?: number, entryDirY?: number, spawnX?: number, spawnY?: number, teleportFromRune?: boolean }) {
         this.mapKey = data?.mapKey || 'hub';
         this.previousMap = data?.previousMap || '';
         this.entryDirX = data?.entryDirX || 0;
         this.entryDirY = data?.entryDirY || 0;
         this.overrideSpawnX = data?.spawnX ?? null;
         this.overrideSpawnY = data?.spawnY ?? null;
+        this.isTeleportingFromRune = data?.teleportFromRune ?? false;
         this.isEntering = false;
         this.isCinematic = false;
         if (this.portalSystem) {
@@ -305,6 +309,10 @@ export class LevelScene extends Phaser.Scene {
 
         this.combatTrackerHUD = new CombatTrackerHUD(this, this.mapKey);
 
+        if (this.mapKey === 'hub' || this.mapKey === 'central-hub') {
+            this.raidhoRuneSystem = new RaidhoRuneSystem(this, 0, 0);
+        }
+
         this.matter.world.on('collisionstart', (event: any) => {
             event.pairs.forEach((pair: any) => {
                 const { bodyA, bodyB } = pair;
@@ -470,7 +478,11 @@ export class LevelScene extends Phaser.Scene {
         this.overrideSpawnY = null;
         this.player.setDepth(this.getPlayerDepth(mapKey));
 
-        this.cameras.main.fadeIn(800, 0, 0, 0);
+        if (this.isTeleportingFromRune) {
+            this.cameras.main.fadeIn(1200, 255, 255, 255);
+        } else {
+            this.cameras.main.fadeIn(800, 0, 0, 0);
+        }
 
         if (this.entryDirX !== 0 || this.entryDirY !== 0) {
             this.isEntering = true;
@@ -552,8 +564,21 @@ export class LevelScene extends Phaser.Scene {
             this.wasInteractPressed,
             this.isCinematic,
             this.portalSystem.getIsTeleporting(),
-            this.isEntering
+            this.isEntering,
+            this.mapKey
         );
+
+        if (this.raidhoRuneSystem) {
+            this.raidhoRuneSystem.update(
+                this.player,
+                this.interactKey.isDown,
+                delta,
+                this.isCinematic,
+                this.portalSystem.getIsTeleporting(),
+                this.isEntering,
+                (val) => { this.isCinematic = val; }
+            );
+        }
 
         this.currentSlowFactor = Phaser.Math.Linear(this.currentSlowFactor, this.targetSlowFactor, 0.05);
         const speed = 3 * this.currentSlowFactor;

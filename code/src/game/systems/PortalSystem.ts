@@ -1,5 +1,10 @@
 import * as Phaser from 'phaser';
 import { PlayerData } from '../data/PlayerData';
+import {
+    SETTLEMENT_ROTATION,
+    BOSS_FLOOR_ROTATION,
+    COVENANT_BASE_INDEX
+} from '../constants';
 
 export class PortalSystem {
     private scene: Phaser.Scene;
@@ -33,13 +38,15 @@ export class PortalSystem {
             let targetMap = '';
 
             if (mapKey === 'central-hub' || mapKey === 'hub') {
-                const covenant = PlayerData.getInstance().covenant;
+                const playerData = PlayerData.getInstance();
+                const baseIdx = COVENANT_BASE_INDEX[playerData.covenant] ?? 0;
+                const floorOffset = playerData.currentFloor - 1;
+                const rotatedIdx = (baseIdx + floorOffset) % 3;
+
                 if (y < -500) {
-                    targetMap = covenant === 'dragon' ? 'boss-floor-mechanic' :
-                        covenant === 'phoenix' ? 'boss-floor-desert' : 'boss-floor-abandoned';
+                    targetMap = BOSS_FLOOR_ROTATION[rotatedIdx];
                 } else if (x < -100) {
-                    targetMap = covenant === 'dragon' ? 'mechanic-settlement' :
-                        covenant === 'phoenix' ? 'desert-settlement' : 'abandoned-settlement';
+                    targetMap = SETTLEMENT_ROTATION[rotatedIdx];
                 } else if (x > 100) {
                     targetMap = 'summit-trade';
                 } else {

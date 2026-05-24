@@ -23,3 +23,8 @@ Follow these core principles when writing or refactoring code for this project.
 
 ## 6. Console Logging
 - **No unnecessary logs**: Remove all `console.log()` statements unless they are specifically catching and reporting actual `console.error()`.
+
+## 7. No Auto Testing or Browser Execution
+- Do not run build commands, package scripts, local servers, or automated tests.
+- Do not open browser pages or preview applications.
+- Only write or refactor the requested code and leave execution/testing to the user.

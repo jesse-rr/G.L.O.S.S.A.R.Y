@@ -12,6 +12,42 @@ export interface SlateDefinition {
     enticingLore: string;
 }
 
+export const SLATE_DARK_COLORS = {
+    SLATE_BG_COLOR: 0x2b2b2b,
+    SLATE_BORDER_COLOR: 0x5a5a5a,
+    SLOT_BG_COLOR: 0x1e1e1e,
+    SLOT_CORRECT_COLOR: 0x1a2a1a,
+    SLOT_HOVER_COLOR: 0x3a3a3a,
+    FRAGMENT_BG_COLOR: 0x333333,
+    FRAGMENT_DRAG_COLOR: 0x444444,
+    FRAGMENT_LOCKED_COLOR: 0x1a1a1a,
+    ACCENT_GLOW: 0x6a6a6a,
+    ACCENT_LOCKED: 0x3a5a3a,
+    TEXT_DIM: '#666666',
+    TEXT_RUNE: '#b8b0a8',
+    TEXT_TRANSLATED: '#e8dcc8',
+    TEXT_LORE: '#d4c4a0',
+    TITLE_COLOR: '#9a9a9a',
+};
+
+export const SLATE_LIGHT_COLORS = {
+    SLATE_BG_COLOR: 0x8a877a,
+    SLATE_BORDER_COLOR: 0x6e6e63,
+    SLOT_BG_COLOR: 0xa09d90,
+    SLOT_CORRECT_COLOR: 0x8fa38c,
+    SLOT_HOVER_COLOR: 0xb0ad9e,
+    FRAGMENT_BG_COLOR: 0x9a978a,
+    FRAGMENT_DRAG_COLOR: 0x8a877a,
+    FRAGMENT_LOCKED_COLOR: 0xadab9e,
+    ACCENT_GLOW: 0x737360,
+    ACCENT_LOCKED: 0x7a9976,
+    TEXT_DIM: '#5e5e56',
+    TEXT_RUNE: '#3b3b3b',
+    TEXT_TRANSLATED: '#2b2b2b',
+    TEXT_LORE: '#3b3b3b',
+    TITLE_COLOR: '#4a4a42',
+};
+
 export const SLATE_DEFINITIONS: SlateDefinition[] = [
     {
         id: 'slate_origin',
