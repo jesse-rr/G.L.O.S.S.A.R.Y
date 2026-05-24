@@ -10,6 +10,7 @@ import { TradeState, createTrades, handleTradeInteraction } from "../../systems/
 import { SlateState, createSlates, handleSlateInteraction } from '../../systems/SlateInteraction';
 import { PortalSystem } from '../../systems/PortalSystem';
 import { PlayerData } from '../../data/PlayerData';
+import { CombatTrackerHUD } from '../../systems/CombatTrackerHUD';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -34,6 +35,7 @@ export class LevelScene extends Phaser.Scene {
     private glossaryBtn!: Phaser.GameObjects.Sprite;
     private settingsBtn!: Phaser.GameObjects.Sprite;
     private wasInteractPressed = { value: false };
+    private combatTrackerHUD!: CombatTrackerHUD;
 
     constructor() {
         super('LevelScene');
@@ -134,7 +136,10 @@ export class LevelScene extends Phaser.Scene {
             frameWidth: 160,
             frameHeight: 190
         });
-
+        this.load.spritesheet('combat-symbol-ui', 'assets/Models/exports/UI/Combat-Symbol-UI.png', {
+            frameWidth: 32,
+            frameHeight: 32
+        });
     }
 
     create() {
@@ -296,6 +301,8 @@ export class LevelScene extends Phaser.Scene {
         });
 
         createVignette(this);
+
+        this.combatTrackerHUD = new CombatTrackerHUD(this, this.mapKey);
 
         this.matter.world.on('collisionstart', (event: any) => {
             event.pairs.forEach((pair: any) => {

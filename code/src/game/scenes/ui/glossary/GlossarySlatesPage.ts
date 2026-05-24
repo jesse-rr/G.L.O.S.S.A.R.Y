@@ -318,9 +318,6 @@ export class GlossarySlatesPage {
 
         currentY += headerH;
 
-        const vLine = this.scene.add.rectangle(cx, currentY + 5, 1, 144, 0x000000, 0.08);
-        this.rightPageContainer.add(vLine);
-
         slate.fragments.forEach((frag, r) => {
             const rowY = currentY + r * 24 + 12;
 

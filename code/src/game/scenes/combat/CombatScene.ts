@@ -36,6 +36,7 @@ export class CombatScene extends Phaser.Scene {
     private enemyTooltip: Phaser.GameObjects.Container | null = null;
     private enemyTooltipTitle: Phaser.GameObjects.Text | null = null;
     private enemyTooltipDesc: Phaser.GameObjects.Text | null = null;
+    private transitionStarted: boolean = false;
 
     constructor() {
         super('CombatScene');
@@ -107,6 +108,7 @@ export class CombatScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor('#FFFFFF');
         this.combatTimer = 0;
         this.isAnimating = false;
+        this.transitionStarted = false;
 
         this.initCombatSystem();
         
@@ -657,6 +659,35 @@ export class CombatScene extends Phaser.Scene {
 
     private showCombatEnd(result: string): void {
         this.syncPlayerDataFromCombat();
+
+        if (result === 'VICTORY' && this.playerData) {
+            const enemy = this.combatSystem ? this.combatSystem.getAllEnemies()[0] : null;
+            const enemyName = enemy ? enemy.name : 'Unknown Enemy';
+
+            const gems = this.encounterTier * 15 + Phaser.Math.Between(5, 15);
+            const specialCur = this.encounterTier;
+
+            this.playerData.gemstones += gems;
+            this.playerData.specialCurrency += specialCur;
+
+            const key = 'glossary_completed_combats';
+            let allCompleted: Record<string, any[]> = {};
+            try {
+                const existing = localStorage.getItem(key);
+                if (existing) allCompleted = JSON.parse(existing);
+            } catch {}
+
+            const mapList = allCompleted[this.encounterMapKey] || [];
+            if (mapList.length < 3) {
+                mapList.push({
+                    enemyName,
+                    gems,
+                    specialCur
+                });
+                allCompleted[this.encounterMapKey] = mapList;
+                localStorage.setItem(key, JSON.stringify(allCompleted));
+            }
+        }
         
         if (this.playerData) {
             this.playerData.inCombat = false;
@@ -686,6 +717,9 @@ export class CombatScene extends Phaser.Scene {
 
         bg.setInteractive();
         bg.on('pointerdown', () => {
+            if (this.transitionStarted) return;
+            this.transitionStarted = true;
+
             const returnMap = this.encounterMapKey || localStorage.getItem('glossary_combat_return_map') || 'hub';
             const savedX = localStorage.getItem('glossary_combat_player_x');
             const savedY = localStorage.getItem('glossary_combat_player_y');

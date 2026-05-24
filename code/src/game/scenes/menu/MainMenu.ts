@@ -5,6 +5,7 @@ import { ItemData } from '../../data/ItemData';
 import { RuneData } from '../../data/RuneData';
 import { LocationData } from '../../data/LocationData';
 import { BestiaryData } from '../../data/BestiaryData';
+import { SlateProgress } from '../../data/SlateData';
 
 const BG_FRAME_RATE = 8;
 const SELECTOR_FRAME_RATE = 10;
@@ -154,7 +155,13 @@ export class MainMenu extends Phaser.Scene {
         try { RuneData.getInstance().reset(); } catch (_e) {}
         try { LocationData.getInstance().reset(); } catch (_e) {}
         try { BestiaryData.getInstance().reset(); } catch (_e) {}
+        try { SlateProgress.getInstance().reset(); } catch (_e) {}
         localStorage.removeItem('glossary_selected_items');
+        localStorage.removeItem('glossary_physical_slate_mapping');
+        localStorage.removeItem('glossary_selected_slate_id');
+        localStorage.removeItem('glossary_completed_combats');
+        localStorage.removeItem('glossary_boss_presses');
+        localStorage.removeItem('glossary_last_floor');
         this.scene.launch('TransitionScene', { targetScene: 'Covenant', currentScene: 'MainMenu' });
     }
 

@@ -97,10 +97,16 @@ export class SlateSystem {
         this.startY = -slotsAreaHeight / 2 + 20;
 
         this.currentOrder = this.slate.fragments.map((_, i) => i);
-        this.shuffleArray(this.currentOrder);
-
-        while (this.isCorrectOrder()) {
+        let hasFixedPoint = true;
+        while (hasFixedPoint) {
             this.shuffleArray(this.currentOrder);
+            hasFixedPoint = false;
+            for (let i = 0; i < this.currentOrder.length; i++) {
+                if (this.currentOrder[i] === i) {
+                    hasFixedPoint = true;
+                    break;
+                }
+            }
         }
 
         for (let i = 0; i < numFragments; i++) {
