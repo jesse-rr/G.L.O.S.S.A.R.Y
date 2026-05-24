@@ -10,8 +10,6 @@ import { PlayerPanelSystem } from '../../systems/PlayerPanelSystem';
 import { BESTIARY, BestiaryData } from '../../data/BestiaryData';
 import { RuneData } from '../../data/RuneData';
 
-
-
 export class CombatScene extends Phaser.Scene {
     private playerData: PlayerData | null = null;
     private combatHUD: CombatHUD | null = null;
@@ -37,6 +35,7 @@ export class CombatScene extends Phaser.Scene {
     private enemyTooltipTitle: Phaser.GameObjects.Text | null = null;
     private enemyTooltipDesc: Phaser.GameObjects.Text | null = null;
     private transitionStarted: boolean = false;
+    private combatEnded: boolean = false;
 
     constructor() {
         super('CombatScene');
@@ -109,6 +108,7 @@ export class CombatScene extends Phaser.Scene {
         this.combatTimer = 0;
         this.isAnimating = false;
         this.transitionStarted = false;
+        this.combatEnded = false;
 
         this.initCombatSystem();
         
@@ -658,6 +658,9 @@ export class CombatScene extends Phaser.Scene {
     }
 
     private showCombatEnd(result: string): void {
+        if (this.combatEnded) return;
+        this.combatEnded = true;
+
         this.syncPlayerDataFromCombat();
 
         if (result === 'VICTORY' && this.playerData) {
@@ -678,7 +681,11 @@ export class CombatScene extends Phaser.Scene {
             } catch {}
 
             const mapList = allCompleted[this.encounterMapKey] || [];
-            if (mapList.length < 3) {
+            let globalTotal = 0;
+            for (const k of Object.keys(allCompleted)) {
+                if (Array.isArray(allCompleted[k])) globalTotal += allCompleted[k].length;
+            }
+            if (mapList.length < 3 && globalTotal < 3) {
                 mapList.push({
                     enemyName,
                     gems,

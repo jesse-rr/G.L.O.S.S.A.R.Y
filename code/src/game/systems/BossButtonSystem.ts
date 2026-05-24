@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { ScreenShake } from '../utils/ScreenShake';
 import { createVignette } from '../utils/Vignette';
 import { InteractSystem } from './InteractSystem';
+import { hasReachedMaxCombats } from './PipeSystem';
 
 const INTERACT_DISTANCE = 30;
 const SYMBOL_Y_OFFSET = -6;
@@ -70,25 +71,34 @@ export function createBossButtons(
         const cx = x + width / 2;
         const cy = y + height / 2;
 
-        const button = scene.add.sprite(cx, cy, textureKey, 0).setOrigin(0.5).setDepth(8);
+        const maxedOut = hasReachedMaxCombats();
 
-        const symbol = scene.add.sprite(cx, cy + SYMBOL_Y_OFFSET, 'btn-boss-symbol', 0).setOrigin(0.5).setDepth(8.1);
+        const button = scene.add.sprite(cx, cy, textureKey, maxedOut ? 2 : 0).setOrigin(0.5).setDepth(8);
 
-        const symbolGlow = scene.add.sprite(cx, cy + SYMBOL_Y_OFFSET, 'btn-boss-symbol', 0)
+        const symbolSinkOffset = maxedOut ? 2 : 0;
+        const symbol = scene.add.sprite(cx, cy + SYMBOL_Y_OFFSET + symbolSinkOffset, 'btn-boss-symbol', 0).setOrigin(0.5).setDepth(8.1);
+
+        const symbolGlow = scene.add.sprite(cx, cy + SYMBOL_Y_OFFSET + symbolSinkOffset, 'btn-boss-symbol', 0)
             .setOrigin(0.5)
             .setDepth(8.2)
             .setTint(0xffffff)
             .setAlpha(0);
         symbolGlow.setTintMode(Phaser.TintModes.FILL);
 
-        const glowTween = scene.tweens.add({
-            targets: symbolGlow,
-            alpha: 0.15,
-            duration: 3000,
-            ease: 'Sine.easeInOut',
-            yoyo: true,
-            repeat: -1
-        });
+        let glowTween: Phaser.Tweens.Tween;
+
+        if (maxedOut) {
+            glowTween = scene.tweens.add({ targets: symbolGlow, alpha: 0, duration: 1 });
+        } else {
+            glowTween = scene.tweens.add({
+                targets: symbolGlow,
+                alpha: 0.15,
+                duration: 3000,
+                ease: 'Sine.easeInOut',
+                yoyo: true,
+                repeat: -1
+            });
+        }
 
         buttons.push({
             button,
@@ -97,8 +107,8 @@ export function createBossButtons(
             glowTween,
             x: cx,
             y: cy,
-            symbolBaseY: cy + SYMBOL_Y_OFFSET,
-            pressed: false,
+            symbolBaseY: cy + SYMBOL_Y_OFFSET + symbolSinkOffset,
+            pressed: maxedOut,
             interactTimer: 0
         });
     });
@@ -118,7 +128,7 @@ export function handleBossButtonInteraction(
     mapKey: string,
     _delta: number
 ): void {
-    if (isTeleporting || isEntering || isCinematic) return;
+    if (isTeleporting || isEntering || isCinematic || hasReachedMaxCombats()) return;
 
     const animKey = `${BUTTON_PRESS_ANIM_KEY}-${mapKey}`;
 

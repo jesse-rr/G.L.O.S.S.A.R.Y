@@ -107,31 +107,31 @@ export const SLATE_DEFINITIONS: SlateDefinition[] = [
         id: 'slate_ancestry',
         title: 'Slate VII',
         fragments: [
-            { runic: 'Basalt Orin Aether', translated: 'Before the age of man' },
-            { runic: 'Dusk Kael Sigil', translated: 'the first builders rose' },
-            { runic: 'Glyph Thorn Lux', translated: 'shaping the core stone' },
-            { runic: 'Ymir Nyx Thorn', translated: 'with their bare hands' },
-            { runic: 'Cipher Fyre Morth', translated: 'We walk in their shadows' },
-            { runic: 'Jinx Prism Echo', translated: 'completely ignorant of the giants' },
+            { runic: 'Basalt Orin Aether', translated: 'Defeating enemies in combat' },
+            { runic: 'Dusk Kael Sigil', translated: 'gathers them back to the tower' },
+            { runic: 'Glyph Thorn Lux', translated: 'unlocking its dormant power' },
+            { runic: 'Ymir Nyx Thorn', translated: 'and restoring its functionality' },
+            { runic: 'Cipher Fyre Morth', translated: 'The core channels their essence' },
+            { runic: 'Jinx Prism Echo', translated: 'to re-energize the ancient pipes' },
         ],
-        loreText: 'Before the age of man, the first builders rose, shaping the core stone with their bare hands. They left behind the great ruins and the monuments that litter our horizons. We walk in their shadows, using their leftover sigils, completely ignorant of the giants who stood here first.',
-        location: 'Mechanic Settlement',
-        enticingLore: 'Basalt Orin Aether, Dusk Kael Sigil, Glyph Thorn Lux Ymir Nyx Thorn. They left behind the great ruins and the monuments that litter our horizons. Cipher Fyre Morth, using their leftover sigils, Jinx Prism Echo who stood here first.'
+        loreText: 'Defeating enemies in combat gathers them back to the tower, unlocking its dormant power and restoring its functionality. The core channels their essence to re-energize the ancient pipes, though the nature of this force remains unnamed.',
+        location: 'Central Hub - Pipe Chambers',
+        enticingLore: 'Basalt Orin Aether, Dusk Kael Sigil, Glyph Thorn Lux Ymir Nyx Thorn. The core channels their essence Cipher Fyre Morth, Jinx Prism Echo to re-energize the ancient pipes.'
     },
     {
         id: 'slate_void',
         title: 'Slate VIII',
         fragments: [
-            { runic: 'Nyx Cipher Morth', translated: 'In the deepest dark' },
-            { runic: 'Jinx Quell Basalt', translated: 'where light cannot reach' },
-            { runic: 'Umbra Echo Prism', translated: 'unseen horrors slumber' },
-            { runic: 'Xael Fyre Thorn', translated: 'waiting for the call' },
-            { runic: 'Lux Sigil Dusk', translated: 'the void is not empty' },
-            { runic: 'Aether Kael Ymir', translated: 'for the boundaries to collapse' },
+            { runic: 'Nyx Cipher Morth', translated: 'Every floor of this tower' },
+            { runic: 'Jinx Quell Basalt', translated: 'looks exactly the same' },
+            { runic: 'Umbra Echo Prism', translated: 'save for small settlements' },
+            { runic: 'Xael Fyre Thorn', translated: 'built in their ruins' },
+            { runic: 'Lux Sigil Dusk', translated: 'A spatial loop or recursion' },
+            { runic: 'Aether Kael Ymir', translated: 'carved into reality itself' },
         ],
-        loreText: 'In the deepest dark, where light cannot reach, unseen horrors slumber, waiting for the call. The void is not empty; it is merely silent, holding its breath until the runes fade enough for the boundaries to collapse.',
-        location: 'Mechanic Settlement - Power Core',
-        enticingLore: 'Nyx Cipher Morth, Jinx Quell Basalt, Umbra Echo Prism, Xael Fyre Thorn. Lux Sigil Dusk; it is merely silent, holding its breath until the runes fade enough Aether Kael Ymir.'
+        loreText: 'Every floor of this tower looks exactly the same, save for small settlements built in their ruins. It is a strange, unsettling phenomenon — as if a spatial loop or recursion was carved into reality itself by the builders.',
+        location: 'Central Hub - Pillar Hall',
+        enticingLore: 'Nyx Cipher Morth, Jinx Quell Basalt, Umbra Echo Prism, Xael Fyre Thorn. A spatial loop or recursion Lux Sigil Dusk; Aether Kael Ymir.'
     },
     {
         id: 'slate_eclipse',
@@ -182,16 +182,16 @@ export const SLATE_DEFINITIONS: SlateDefinition[] = [
         id: 'slate_whispers',
         title: 'Slate XII',
         fragments: [
-            { runic: 'Vox Echo Umbra', translated: 'Listen to the wind' },
-            { runic: 'Kael Dusk Prism', translated: 'carrying ancient secrets' },
-            { runic: 'Sigil Orin Wyrd', translated: 'through the hollow peaks' },
-            { runic: 'Basalt Jinx Thorn', translated: 'to those who listen' },
-            { runic: 'Nyx Cipher Fyre', translated: 'the world speaks softly' },
-            { runic: 'Lux Morth Aether', translated: 'that the modern kingdoms' },
+            { runic: 'Vox Echo Umbra', translated: 'These fillers and pillars' },
+            { runic: 'Kael Dusk Prism', translated: 'hold the weight of history' },
+            { runic: 'Sigil Orin Wyrd', translated: 'yet their stones are overwritten' },
+            { runic: 'Basalt Jinx Thorn', translated: 'as new scribes carve over old' },
+            { runic: 'Nyx Cipher Fyre', translated: 'Information is slowly forgotten' },
+            { runic: 'Lux Morth Aether', translated: 'replaced by transient memory' },
         ],
-        loreText: 'Listen to the wind carrying ancient secrets through the hollow peaks to those who listen. The world speaks softly, using rustling leaves and creaking stone to pass down warnings that the modern kingdoms have long since forgotten.',
-        location: 'Summit - Secret Chamber',
-        enticingLore: 'Vox Echo Umbra Kael Dusk Prism Sigil Orin Wyrd Basalt Jinx Thorn. Nyx Cipher Fyre, using rustling leaves and creaking stone to pass down warnings Lux Morth Aether have long since forgotten.'
+        loreText: 'These fillers and pillars hold the weight of history, yet their stones are overwritten as new scribes carve over old. Information is slowly forgotten, ground down into dust and replaced by transient memory.',
+        location: 'Central Hub - Pillar Bases',
+        enticingLore: 'Vox Echo Umbra Kael Dusk Prism Sigil Orin Wyrd Basalt Jinx Thorn. Nyx Cipher Fyre, ground down into dust and replaced by transient memory Lux Morth Aether.'
     },
 ];
 

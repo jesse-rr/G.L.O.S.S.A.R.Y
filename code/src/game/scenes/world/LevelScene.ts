@@ -11,6 +11,7 @@ import { SlateState, createSlates, handleSlateInteraction } from '../../systems/
 import { PortalSystem } from '../../systems/PortalSystem';
 import { PlayerData } from '../../data/PlayerData';
 import { CombatTrackerHUD } from '../../systems/CombatTrackerHUD';
+import { isPipeLayer, fillPipeLayer, hasReachedMaxCombats } from '../../systems/PipeSystem';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -401,6 +402,10 @@ export class LevelScene extends Phaser.Scene {
                     depthVal = this.getPlayerDepth(mapKey) - 1;
                 }
                 layer.setDepth(depthVal);
+
+                if (mapKey === 'central-hub' && isPipeLayer(layerData.name)) {
+                    fillPipeLayer(layer);
+                }
             }
         });
 
@@ -441,6 +446,18 @@ export class LevelScene extends Phaser.Scene {
         const slateLayer = map.objects.find(layer => layer.name.toLowerCase() === 'slates');
         if (slateLayer) {
             this.slates = createSlates(this, slateLayer, mapKey);
+        } else {
+            this.slates = [];
+        }
+
+        const fillersLayer = map.objects.find(layer => layer.name.toLowerCase() === 'fillers');
+        if (fillersLayer) {
+            const fillerSlates = createSlates(this, fillersLayer, mapKey);
+            const fillerIds = ['slate_ancestry', 'slate_void', 'slate_whispers'];
+            fillerSlates.forEach((slate, index) => {
+                slate.slateId = fillerIds[index % fillerIds.length];
+            });
+            this.slates.push(...fillerSlates);
         }
 
         const OFFSET = 54;
@@ -586,7 +603,7 @@ export class LevelScene extends Phaser.Scene {
             case 'desert-settlement': return 18;
             case 'mechanic-settlement': return 13;
             case 'summit-trade': return 4;
-            default: return 11;
+            default: return 13;
         }
     }
 }
