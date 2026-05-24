@@ -21,7 +21,7 @@ export class Cat extends Phaser.Scene {
   }
 
   preload() {
-    this.load.audio('catSpin', 'assets/exports/cat-meme.mp3');
+    this.load.audio('catSpin', 'assets/Models/exports/cat-meme.mp3');
   }
 
   create() {
@@ -49,7 +49,7 @@ export class Cat extends Phaser.Scene {
     light.position.set(5, 5, 5);
     this.threeScene.add(light);
 
-    new GLTFLoader().load('assets/exports/cat.glb', (gltf) => {
+    new GLTFLoader().load('assets/Models/exports/cat.glb', (gltf) => {
       this.model = gltf.scene;
       this.model.scale.setScalar(0.5);
       this.model.position.set(0, 0, 0);

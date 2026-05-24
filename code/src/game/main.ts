@@ -16,6 +16,7 @@ import { TransitionScene } from './scenes/world/TransitionScene';
 import { GlossaryUI } from './scenes/ui/GlossaryUI';
 import { NotificationOverlay } from './scenes/ui/NotificationOverlay';
 import { ItemModal } from './scenes/ui/ItemModal';
+import { SlateMinigame } from './scenes/ui/SlateMinigame';
 
 let useVsync = true;
 
@@ -68,7 +69,8 @@ const config: Phaser.Types.Core.GameConfig = {
         TransitionScene,
         GlossaryUI,
         NotificationOverlay,
-        ItemModal
+        ItemModal,
+        SlateMinigame
     ]
 };
 

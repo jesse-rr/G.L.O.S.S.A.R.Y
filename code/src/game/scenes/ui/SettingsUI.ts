@@ -24,8 +24,8 @@ export class SettingsUI extends Phaser.Scene {
     }
 
     preload() {
-        this.load.font(FONT_FAMILY, 'assets/exports/VCRosdNEUE.ttf');
-        this.load.spritesheet('ui-items', 'assets/exports/UI/UI-Items.png', {
+        this.load.font(FONT_FAMILY, 'assets/Models/exports/VCRosdNEUE.ttf');
+        this.load.spritesheet('ui-items', 'assets/Models/exports/UI/UI-Items.png', {
             frameWidth: 32,
             frameHeight: 32
         });

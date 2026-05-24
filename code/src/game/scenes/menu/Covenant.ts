@@ -43,19 +43,19 @@ export class Covenant extends Phaser.Scene {
     }
 
     preload() {
-        this.load.spritesheet('covenant-bg', 'assets/exports/Covenant/Covenant-Sheet-BG.png', {
+        this.load.spritesheet('covenant-bg', 'assets/Models/exports/Covenant/Covenant-Sheet-BG.png', {
             frameWidth: 640,
             frameHeight: 360
         });
-        this.load.spritesheet('dragon', 'assets/exports/Covenant/Dragon-Sheet.png', {
+        this.load.spritesheet('dragon', 'assets/Models/exports/Covenant/Dragon-Sheet.png', {
             frameWidth: CARD_FRAME_WIDTH,
             frameHeight: CARD_FRAME_HEIGHT
         });
-        this.load.spritesheet('snake', 'assets/exports/Covenant/Ouroborus-Sheet.png', {
+        this.load.spritesheet('snake', 'assets/Models/exports/Covenant/Ouroborus-Sheet.png', {
             frameWidth: CARD_FRAME_WIDTH,
             frameHeight: CARD_FRAME_HEIGHT
         });
-        this.load.spritesheet('phoenix', 'assets/exports/Covenant/Phoenix-Sheet.png', {
+        this.load.spritesheet('phoenix', 'assets/Models/exports/Covenant/Phoenix-Sheet.png', {
             frameWidth: CARD_FRAME_WIDTH,
             frameHeight: CARD_FRAME_HEIGHT
         });

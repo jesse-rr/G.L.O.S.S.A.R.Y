@@ -12,14 +12,14 @@ export class Help extends Phaser.Scene {
     }
 
     preload() {
-        this.load.font(FONT_FAMILY, 'assets/exports/VCRosdNEUE.ttf');
-        this.load.image('help-ui', 'assets/exports/UI/Help-UI.png');
-        this.load.image('settings-ui', 'assets/exports/UI/Settings-UI.png');
-        this.load.image('achievements-ui', 'assets/exports/UI/Achievements-UI.png');
-        this.load.image('controls-ui', 'assets/exports/UI/Controls-UI.png');
-        this.load.image('go-back-ui', 'assets/exports/UI/Go-Back-UI.png');
+        this.load.font(FONT_FAMILY, 'assets/Models/exports/VCRosdNEUE.ttf');
+        this.load.image('help-ui', 'assets/Models/exports/UI/Help-UI.png');
+        this.load.image('settings-ui', 'assets/Models/exports/UI/Settings-UI.png');
+        this.load.image('achievements-ui', 'assets/Models/exports/UI/Achievements-UI.png');
+        this.load.image('controls-ui', 'assets/Models/exports/UI/Controls-UI.png');
+        this.load.image('go-back-ui', 'assets/Models/exports/UI/Go-Back-UI.png');
 
-        this.load.spritesheet('ui-items', 'assets/exports/UI/UI-Items.png', {
+        this.load.spritesheet('ui-items', 'assets/Models/exports/UI/UI-Items.png', {
             frameWidth: 32,
             frameHeight: 32
         });

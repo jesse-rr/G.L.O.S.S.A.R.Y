@@ -8,8 +8,8 @@ export class Achievements extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('achievements-ui', 'assets/exports/UI/Achievements-UI.png');
-        this.load.image('go-back-ui', 'assets/exports/UI/Go-Back-UI.png');
+        this.load.image('achievements-ui', 'assets/Models/exports/UI/Achievements-UI.png');
+        this.load.image('go-back-ui', 'assets/Models/exports/UI/Go-Back-UI.png');
     }
 
     create() {

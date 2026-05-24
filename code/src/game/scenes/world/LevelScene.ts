@@ -7,6 +7,7 @@ import { DoorState, createDoors, handleDoorInteraction } from '../../systems/Doo
 import { BossButtonState, createBossButtons, handleBossButtonInteraction } from '../../systems/BossButtonSystem';
 import { ChestState, createChests, handleChestInteraction } from '../../systems/ChestSystem';
 import { TradeState, createTrades, handleTradeInteraction } from "../../systems/TradeSystem";
+import { SlateState, createSlates, handleSlateInteraction } from '../../systems/SlateInteraction';
 import { PortalSystem } from '../../systems/PortalSystem';
 import { PlayerData } from '../../data/PlayerData';
 
@@ -27,6 +28,7 @@ export class LevelScene extends Phaser.Scene {
     private bossButtons: BossButtonState[] = [];
     private chests: ChestState[] = [];
     private trades: TradeState[] = [];
+    private slates: SlateState[] = [];
     private interactKey!: Phaser.Input.Keyboard.Key;
     private isCinematic = false;
     private glossaryBtn!: Phaser.GameObjects.Sprite;
@@ -58,77 +60,77 @@ export class LevelScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('Abandoned-Floor.png', 'assets/exports/tileset/Abandoned-Floor.png');
-        this.load.image('Desert-Floor.png', 'assets/exports/tileset/Desert-Floor.png');
-        this.load.image('Mechanic-Floor.png', 'assets/exports/tileset/Mechanic-Floor.png');
-        this.load.image('Objects.png', 'assets/exports/tileset/Objects.png');
-        this.load.image('Summit-Floor.png', 'assets/exports/tileset/Summit-Floor.png');
+        this.load.image('Abandoned-Floor.png', 'assets/Models/exports/tileset/Abandoned-Floor.png');
+        this.load.image('Desert-Floor.png', 'assets/Models/exports/tileset/Desert-Floor.png');
+        this.load.image('Mechanic-Floor.png', 'assets/Models/exports/tileset/Mechanic-Floor.png');
+        this.load.image('Objects.png', 'assets/Models/exports/tileset/Objects.png');
+        this.load.image('Summit-Floor.png', 'assets/Models/exports/tileset/Summit-Floor.png');
 
-        this.load.tilemapTiledJSON('central-hub', 'assets/exports/Maps/central-hub.json');
-        this.load.tilemapTiledJSON('boss-floor-abandoned', 'assets/exports/Maps/boss-floor-abandoned.json');
-        this.load.tilemapTiledJSON('boss-floor-desert', 'assets/exports/Maps/boss-floor-desert.json');
-        this.load.tilemapTiledJSON('boss-floor-mechanic', 'assets/exports/Maps/boss-floor-mechanic.json');
+        this.load.tilemapTiledJSON('central-hub', 'assets/Models/exports/Maps/central-hub.json');
+        this.load.tilemapTiledJSON('boss-floor-abandoned', 'assets/Models/exports/Maps/boss-floor-abandoned.json');
+        this.load.tilemapTiledJSON('boss-floor-desert', 'assets/Models/exports/Maps/boss-floor-desert.json');
+        this.load.tilemapTiledJSON('boss-floor-mechanic', 'assets/Models/exports/Maps/boss-floor-mechanic.json');
 
-        this.load.tilemapTiledJSON('abandoned-settlement', 'assets/exports/Maps/abandoned-settlement.json');
-        this.load.tilemapTiledJSON('desert-settlement', 'assets/exports/Maps/desert-settlement.json');
-        this.load.tilemapTiledJSON('mechanic-settlement', 'assets/exports/Maps/mechanic-settlement.json');
+        this.load.tilemapTiledJSON('abandoned-settlement', 'assets/Models/exports/Maps/abandoned-settlement.json');
+        this.load.tilemapTiledJSON('desert-settlement', 'assets/Models/exports/Maps/desert-settlement.json');
+        this.load.tilemapTiledJSON('mechanic-settlement', 'assets/Models/exports/Maps/mechanic-settlement.json');
 
-        this.load.tilemapTiledJSON('summit-trade', 'assets/exports/Maps/summit-trade.json');
+        this.load.tilemapTiledJSON('summit-trade', 'assets/Models/exports/Maps/summit-trade.json');
 
-        this.load.spritesheet('door-sheet', 'assets/exports/Animations/Door-Sheet.png', {
+        this.load.spritesheet('door-sheet', 'assets/Models/exports/Animations/Door-Sheet.png', {
             frameWidth: 64,
             frameHeight: 96
         });
-        this.load.spritesheet('door-symbol', 'assets/exports/Animations/Door-Symbol.png', {
+        this.load.spritesheet('door-symbol', 'assets/Models/exports/Animations/Door-Symbol.png', {
             frameWidth: 64,
             frameHeight: 96
         });
 
-        this.load.spritesheet('protagonist', 'assets/exports/Boss/Protagonist-Sheet.png', {
+        this.load.spritesheet('protagonist', 'assets/Models/exports/Boss/Protagonist-Sheet.png', {
             frameWidth: 32,
             frameHeight: 32
         });
 
-        this.load.spritesheet('btn-boss-abandoned', 'assets/exports/Animations/Btn-Boss-Abandoned.png', {
+        this.load.spritesheet('btn-boss-abandoned', 'assets/Models/exports/Animations/Btn-Boss-Abandoned.png', {
             frameWidth: 64,
             frameHeight: 64
         });
-        this.load.spritesheet('btn-boss-desert', 'assets/exports/Animations/Btn-Boss-Desert.png', {
+        this.load.spritesheet('btn-boss-desert', 'assets/Models/exports/Animations/Btn-Boss-Desert.png', {
             frameWidth: 64,
             frameHeight: 64
         });
-        this.load.spritesheet('btn-boss-mechanic', 'assets/exports/Animations/Btn-Boss-Mechanic.png', {
+        this.load.spritesheet('btn-boss-mechanic', 'assets/Models/exports/Animations/Btn-Boss-Mechanic.png', {
             frameWidth: 64,
             frameHeight: 64
         });
-        this.load.spritesheet('btn-boss-summit', 'assets/exports/Animations/Btn-Boss-Summit.png', {
-            frameWidth: 64,
-            frameHeight: 64
-        });
-
-        this.load.spritesheet('btn-boss-symbol', 'assets/exports/Animations/Btn-Boss-Symbol.png', {
+        this.load.spritesheet('btn-boss-summit', 'assets/Models/exports/Animations/Btn-Boss-Summit.png', {
             frameWidth: 64,
             frameHeight: 64
         });
 
-        this.load.spritesheet('chests', 'assets/exports/Animations/Chests.png', {
+        this.load.spritesheet('btn-boss-symbol', 'assets/Models/exports/Animations/Btn-Boss-Symbol.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+
+        this.load.spritesheet('chests', 'assets/Models/exports/Animations/Chests.png', {
             frameWidth: 32,
             frameHeight: 48
         });
 
-        this.load.spritesheet('items', 'assets/exports/Objects/Items.png', {
+        this.load.spritesheet('items', 'assets/Models/exports/Objects/Items.png', {
             frameWidth: 64,
             frameHeight: 64
         });
 
-        this.load.image('interact-btn', 'assets/exports/UI/Interact-Btn.png');
-        this.load.image('achievement-ui', 'assets/exports/UI/Achievement-UI.png');
-        this.load.image('settings-btn', 'assets/exports/UI/Settings-Btn.png');
-        this.load.spritesheet('currency', 'assets/exports/Objects/Currency.png', {
+        this.load.image('interact-btn', 'assets/Models/exports/UI/Interact-Btn.png');
+        this.load.image('achievement-ui', 'assets/Models/exports/UI/Achievement-UI.png');
+        this.load.image('settings-btn', 'assets/Models/exports/UI/Settings-Btn.png');
+        this.load.spritesheet('currency', 'assets/Models/exports/Objects/Currency.png', {
             frameWidth: 16,
             frameHeight: 16
         });
-        this.load.spritesheet('trade', 'assets/exports/Animations/Trade.png', {
+        this.load.spritesheet('trade', 'assets/Models/exports/Animations/Trade.png', {
             frameWidth: 160,
             frameHeight: 190
         });
@@ -145,6 +147,7 @@ export class LevelScene extends Phaser.Scene {
         this.bossButtons = [];
         this.chests = [];
         this.trades = [];
+        this.slates = [];
 
         if (this.scene.isActive('CombatScene')) {
             this.scene.stop('CombatScene');
@@ -371,7 +374,27 @@ export class LevelScene extends Phaser.Scene {
 
         map.layers.forEach((layerData, i) => {
             const layer = map.createLayer(layerData.name, tilesets);
-            if (layer) layer.setDepth(i);
+            if (layer) {
+                let depthVal = i;
+                const props = layerData.properties;
+                if (props) {
+                    if (Array.isArray(props)) {
+                        const depthProp = props.find((p: any) => p && p.name === 'depth');
+                        if (depthProp && depthProp.value !== undefined) {
+                            depthVal = Number(depthProp.value);
+                        }
+                    } else if (typeof props === 'object') {
+                        const depthProp = (props as any)['depth'];
+                        if (depthProp !== undefined) {
+                            depthVal = Number(typeof depthProp === 'object' ? depthProp.value : depthProp);
+                        }
+                    }
+                }
+                if (layerData.name.toLowerCase().includes('slate')) {
+                    depthVal = this.getPlayerDepth(mapKey) - 1;
+                }
+                layer.setDepth(depthVal);
+            }
         });
 
         this.cameras.main.setZoom(2);
@@ -406,6 +429,11 @@ export class LevelScene extends Phaser.Scene {
         const tradeLayer = map.objects.find(layer => layer.name.toLowerCase() === 'trades');
         if (tradeLayer) {
             this.trades = createTrades(this, tradeLayer, mapKey);
+        }
+
+        const slateLayer = map.objects.find(layer => layer.name.toLowerCase() === 'slates');
+        if (slateLayer) {
+            this.slates = createSlates(this, slateLayer, mapKey);
         }
 
         const OFFSET = 54;
@@ -492,6 +520,17 @@ export class LevelScene extends Phaser.Scene {
             );
         }
 
+        handleSlateInteraction(
+            this,
+            this.slates,
+            this.player,
+            this.interactKey.isDown,
+            this.wasInteractPressed,
+            this.isCinematic,
+            this.portalSystem.getIsTeleporting(),
+            this.isEntering
+        );
+
         this.currentSlowFactor = Phaser.Math.Linear(this.currentSlowFactor, this.targetSlowFactor, 0.05);
         const speed = 3 * this.currentSlowFactor;
         const body = this.player.body as MatterJS.BodyType;
@@ -537,7 +576,7 @@ export class LevelScene extends Phaser.Scene {
             case 'boss-floor-desert': return 12;
             case 'boss-floor-mechanic': return 10;
             case 'abandoned-settlement': return 13;
-            case 'desert-settlement': return 13;
+            case 'desert-settlement': return 18;
             case 'mechanic-settlement': return 13;
             case 'summit-trade': return 4;
             default: return 11;

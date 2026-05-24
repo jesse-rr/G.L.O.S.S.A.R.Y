@@ -11,6 +11,7 @@ import { GlossaryItemsPage } from './glossary/GlossaryItemsPage';
 import { GlossaryBestiaryPage } from './glossary/GlossaryBestiaryPage';
 import { GlossaryLocationsPage } from './glossary/GlossaryLocationsPage';
 import { GlossaryCombosPage } from './glossary/GlossaryCombosPage';
+import { GlossarySlatesPage } from './glossary/GlossarySlatesPage';
 
 export class GlossaryUI extends Scene implements ScrambleContext {
     private previousScene = 'CombatScene';
@@ -18,7 +19,7 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     public detailsContainer!: GameObjects.Container | null;
     public currentSelectionId: string | number | null = null;
     private currentPage: number = 0;
-    private readonly totalPages: number = 9;
+    private readonly totalPages: number = 10;
     private prevArrow!: GameObjects.Text;
     private nextArrow!: GameObjects.Text;
     private prevHitZone!: GameObjects.Rectangle;
@@ -36,46 +37,49 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     }
 
     preload() {
-        this.load.font(FONT_FAMILY, 'assets/exports/VCRosdNEUE.ttf');
-        this.load.font(RUNE_FONT, 'assets/exports/RUNE.TTF');
-        this.load.image('book-ui', 'assets/exports/UI/Book-UI.png');
-        this.load.image('book-layout', 'assets/exports/UI/Book-Layout-1.png');
-        this.load.image('book-layout-2', 'assets/exports/UI/Book-Layout-2.png');
-        this.load.image('book-layout-3', 'assets/exports/UI/Book-Layout-3.png');
-        this.load.image('book-layout-4', 'assets/exports/UI/Book-Layout-4.png');
-        this.load.image('book-layout-5', 'assets/exports/UI/Book-Layout-5.png');
-        this.load.spritesheet('rune-overlay', 'assets/exports/UI/Combat-Overlay-Rune.png', {
+        this.load.font(FONT_FAMILY, 'assets/Models/exports/VCRosdNEUE.ttf');
+        this.load.font(RUNE_FONT, 'assets/Models/exports/RUNE.TTF');
+        this.load.image('book-ui', 'assets/Models/exports/UI/Book-UI.png');
+        this.load.image('book-layout', 'assets/Models/exports/UI/Book-Layout-1.png');
+        this.load.image('book-layout-2', 'assets/Models/exports/UI/Book-Layout-2.png');
+        this.load.image('book-layout-3', 'assets/Models/exports/UI/Book-Layout-3.png');
+        this.load.image('book-layout-4', 'assets/Models/exports/UI/Book-Layout-4.png');
+        this.load.image('book-layout-5', 'assets/Models/exports/UI/Book-Layout-5.png');
+        this.load.spritesheet('rune-overlay', 'assets/Models/exports/UI/Combat-Overlay-Rune.png', {
             frameWidth: 48, frameHeight: 64
         });
-        this.load.spritesheet('book-chains', 'assets/exports/UI/Book-v2-Chains-Sheet.png', {
+        this.load.spritesheet('book-chains', 'assets/Models/exports/UI/Book-v2-Chains-Sheet.png', {
             frameWidth: 281, frameHeight: 296
         });
-        this.load.spritesheet('bookmarks-ui', 'assets/exports/UI/Bookmarks-UI.png', {
+        this.load.spritesheet('bookmarks-ui', 'assets/Models/exports/UI/Bookmarks-UI.png', {
             frameWidth: 17, frameHeight: 22
         });
-        this.load.spritesheet('items', 'assets/exports/Objects/Items.png', {
+        this.load.spritesheet('items', 'assets/Models/exports/Objects/Items.png', {
             frameWidth: 64, frameHeight: 64
         });
-        this.load.spritesheet('glossary', 'assets/exports/Objects/Glossary.png', {
+        this.load.spritesheet('glossary', 'assets/Models/exports/Objects/Glossary.png', {
             frameWidth: 64, frameHeight: 64
         });
-        this.load.spritesheet('cultist', 'assets/exports/characters/Cultist-Sheet.png', { frameWidth: 57, frameHeight: 67 });
-        this.load.spritesheet('golem', 'assets/exports/characters/Golem-Sheet.png', { frameWidth: 57, frameHeight: 56 });
-        this.load.spritesheet('rationalist', 'assets/exports/characters/Rationalist-Sheet.png', { frameWidth: 59, frameHeight: 73 });
-        this.load.spritesheet('scavenger', 'assets/exports/characters/Scavenger-Sheet.png', { frameWidth: 59, frameHeight: 61 });
-        this.load.spritesheet('slime', 'assets/exports/characters/Slime-Sheet.png', { frameWidth: 32, frameHeight: 27 });
-        this.load.spritesheet('wisp', 'assets/exports/characters/Wisp-Sheet.png', { frameWidth: 27, frameHeight: 51 });
-        this.load.spritesheet('map-outlines', 'assets/exports/Objects/map-outlines.png', {
+        this.load.spritesheet('cultist', 'assets/Models/exports/characters/Cultist-Sheet.png', { frameWidth: 57, frameHeight: 67 });
+        this.load.spritesheet('golem', 'assets/Models/exports/characters/Golem-Sheet.png', { frameWidth: 57, frameHeight: 56 });
+        this.load.spritesheet('rationalist', 'assets/Models/exports/characters/Rationalist-Sheet.png', { frameWidth: 59, frameHeight: 73 });
+        this.load.spritesheet('scavenger', 'assets/Models/exports/characters/Scavenger-Sheet.png', { frameWidth: 59, frameHeight: 61 });
+        this.load.spritesheet('slime', 'assets/Models/exports/characters/Slime-Sheet.png', { frameWidth: 32, frameHeight: 27 });
+        this.load.spritesheet('wisp', 'assets/Models/exports/characters/Wisp-Sheet.png', { frameWidth: 27, frameHeight: 51 });
+        this.load.spritesheet('map-outlines', 'assets/Models/exports/Objects/map-outlines.png', {
             frameWidth: 192, frameHeight: 128
         });
-        this.load.spritesheet('map-boss-outlines', 'assets/exports/Objects/map-boss-outlines.png', {
+        this.load.spritesheet('map-boss-outlines', 'assets/Models/exports/Objects/map-boss-outlines.png', {
             frameWidth: 64, frameHeight: 128
         });
-        this.load.image('map-central-hub', 'assets/exports/Objects/map-central-hub.png');
-        this.load.image('map-trade-hub', 'assets/exports/Objects/map-trade-hub.png');
+        this.load.image('map-central-hub', 'assets/Models/exports/Objects/map-central-hub.png');
+        this.load.image('map-trade-hub', 'assets/Models/exports/Objects/map-trade-hub.png');
     }
 
     create(data: any) {
+        if (data && data.slateId) {
+            localStorage.setItem('glossary_selected_slate_id', data.slateId);
+        }
         this.previousScene = (data && data.previousScene) ? data.previousScene : 'CombatScene';
         const isPaused = data && data.isPaused;
         this.scene.bringToTop();
@@ -161,7 +165,8 @@ export class GlossaryUI extends Scene implements ScrambleContext {
             }
         });
 
-        this.navigateToPage(0);
+        const startPage = (data && typeof data.openPage === 'number') ? data.openPage : 0;
+        this.navigateToPage(startPage);
 
         const closeGlossary = () => {
             cleanupAnimations(this);
@@ -209,16 +214,18 @@ export class GlossaryUI extends Scene implements ScrambleContext {
         } else if (page === 2) {
             this.renderCombosSection();
         } else if (page === 3) {
-            this.renderPlayerPage();
+            this.renderSlatesSection();
         } else if (page === 4) {
-            this.renderRunesSection();
+            this.renderPlayerPage();
         } else if (page === 5) {
-            this.renderItemsSection();
+            this.renderRunesSection();
         } else if (page === 6) {
-            this.renderBestiarySection();
+            this.renderItemsSection();
         } else if (page === 7) {
-            this.renderLocationsSection();
+            this.renderBestiarySection();
         } else if (page === 8) {
+            this.renderLocationsSection();
+        } else if (page === 9) {
             this.renderLocationsPage2();
         }
 
@@ -248,7 +255,7 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     }
 
     private switchSection(index: number) {
-        const pageMap: Record<number, number> = { 0: 0, 1: 4, 2: 5, 3: 6, 4: 7 };
+        const pageMap: Record<number, number> = { 0: 0, 1: 5, 2: 6, 3: 7, 4: 8 };
         this.navigateToPage(pageMap[index] ?? index);
     }
 
@@ -295,5 +302,10 @@ export class GlossaryUI extends Scene implements ScrambleContext {
     private renderCombosSection() {
         const combosPage = new GlossaryCombosPage(this, this.contentContainer);
         combosPage.render(this.scale.width / 2, this.scale.height);
+    }
+
+    private renderSlatesSection() {
+        const slatesPage = new GlossarySlatesPage(this, this.contentContainer);
+        slatesPage.render(this.scale.width / 2, this.scale.height);
     }
 }

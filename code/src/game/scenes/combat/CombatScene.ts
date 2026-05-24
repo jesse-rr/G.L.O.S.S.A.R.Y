@@ -42,54 +42,54 @@ export class CombatScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.font(FONT_FAMILY, 'assets/exports/VCRosdNEUE.ttf');
-        this.load.font(RUNE_FONT, 'assets/exports/RUNE.TTF');
-        this.load.image('battle-ui', 'assets/exports/UI/Battle-UI.png');
-        this.load.image('book-ui', 'assets/exports/UI/Book-UI.png');
-        this.load.image('book-layout', 'assets/exports/UI/Book-Layout-1.png');
-        this.load.image('book-layout-2', 'assets/exports/UI/Book-Layout-2.png');
-        this.load.image('book-layout-3', 'assets/exports/UI/Book-Layout-3.png');
-        this.load.image('book-layout-4', 'assets/exports/UI/Book-Layout-4.png');
-        this.load.image('player-ui', 'assets/exports/UI/Player-UI.png');
-        this.load.spritesheet('rune-overlay', 'assets/exports/UI/Combat-Overlay-Rune.png', {
+        this.load.font(FONT_FAMILY, 'assets/Models/exports/VCRosdNEUE.ttf');
+        this.load.font(RUNE_FONT, 'assets/Models/exports/RUNE.TTF');
+        this.load.image('battle-ui', 'assets/Models/exports/UI/Battle-UI.png');
+        this.load.image('book-ui', 'assets/Models/exports/UI/Book-UI.png');
+        this.load.image('book-layout', 'assets/Models/exports/UI/Book-Layout-1.png');
+        this.load.image('book-layout-2', 'assets/Models/exports/UI/Book-Layout-2.png');
+        this.load.image('book-layout-3', 'assets/Models/exports/UI/Book-Layout-3.png');
+        this.load.image('book-layout-4', 'assets/Models/exports/UI/Book-Layout-4.png');
+        this.load.image('player-ui', 'assets/Models/exports/UI/Player-UI.png');
+        this.load.spritesheet('rune-overlay', 'assets/Models/exports/UI/Combat-Overlay-Rune.png', {
             frameWidth: 48, frameHeight: 64
         });
-        this.load.image('achievement-ui', 'assets/exports/UI/Achievement-UI.png');
-        this.load.image('settings-btn', 'assets/exports/UI/Settings-Btn.png');
-        this.load.spritesheet('chain-link', 'assets/exports/UI/Combat-Overlay-Chains.png', {
+        this.load.image('achievement-ui', 'assets/Models/exports/UI/Achievement-UI.png');
+        this.load.image('settings-btn', 'assets/Models/exports/UI/Settings-Btn.png');
+        this.load.spritesheet('chain-link', 'assets/Models/exports/UI/Combat-Overlay-Chains.png', {
             frameWidth: 64, frameHeight: 64
         });
-        this.load.spritesheet('bookmarks-ui', 'assets/exports/UI/Bookmarks-UI.png', {
+        this.load.spritesheet('bookmarks-ui', 'assets/Models/exports/UI/Bookmarks-UI.png', {
             frameWidth: 17, frameHeight: 22
         });
-        this.load.spritesheet('attack-selector', 'assets/exports/UI/Combat-Attack-Selector.png', {
+        this.load.spritesheet('attack-selector', 'assets/Models/exports/UI/Combat-Attack-Selector.png', {
             frameWidth: 64, frameHeight: 64
         });
-        this.load.spritesheet('items', 'assets/exports/Objects/Items.png', {
+        this.load.spritesheet('items', 'assets/Models/exports/Objects/Items.png', {
             frameWidth: 64, frameHeight: 64
         });
-        this.load.spritesheet('glossary', 'assets/exports/Objects/Glossary.png', {
+        this.load.spritesheet('glossary', 'assets/Models/exports/Objects/Glossary.png', {
             frameWidth: 64, frameHeight: 64
         });
-        this.load.spritesheet('cultist', 'assets/exports/characters/Cultist-Sheet.png', { frameWidth: 57, frameHeight: 67 });
-        this.load.spritesheet('golem', 'assets/exports/characters/Golem-Sheet.png', { frameWidth: 57, frameHeight: 56 });
-        this.load.spritesheet('rationalist', 'assets/exports/characters/Rationalist-Sheet.png', { frameWidth: 59, frameHeight: 73 });
-        this.load.spritesheet('scavenger', 'assets/exports/characters/Scavenger-Sheet.png', { frameWidth: 59, frameHeight: 61 });
-        this.load.spritesheet('slime', 'assets/exports/characters/Slime-Sheet.png', { frameWidth: 32, frameHeight: 27 });
-        this.load.spritesheet('wisp', 'assets/exports/characters/Wisp-Sheet.png', { frameWidth: 27, frameHeight: 51 });
-        this.load.spritesheet('map-outlines', 'assets/exports/Objects/map-outlines.png', {
+        this.load.spritesheet('cultist', 'assets/Models/exports/characters/Cultist-Sheet.png', { frameWidth: 57, frameHeight: 67 });
+        this.load.spritesheet('golem', 'assets/Models/exports/characters/Golem-Sheet.png', { frameWidth: 57, frameHeight: 56 });
+        this.load.spritesheet('rationalist', 'assets/Models/exports/characters/Rationalist-Sheet.png', { frameWidth: 59, frameHeight: 73 });
+        this.load.spritesheet('scavenger', 'assets/Models/exports/characters/Scavenger-Sheet.png', { frameWidth: 59, frameHeight: 61 });
+        this.load.spritesheet('slime', 'assets/Models/exports/characters/Slime-Sheet.png', { frameWidth: 32, frameHeight: 27 });
+        this.load.spritesheet('wisp', 'assets/Models/exports/characters/Wisp-Sheet.png', { frameWidth: 27, frameHeight: 51 });
+        this.load.spritesheet('map-outlines', 'assets/Models/exports/Objects/map-outlines.png', {
             frameWidth: 192, frameHeight: 128
         });
-        this.load.spritesheet('map-boss-outlines', 'assets/exports/Objects/map-boss-outlines.png', {
+        this.load.spritesheet('map-boss-outlines', 'assets/Models/exports/Objects/map-boss-outlines.png', {
             frameWidth: 64, frameHeight: 128
         });
-        this.load.spritesheet('currency', 'assets/exports/Objects/Currency.png', {
+        this.load.spritesheet('currency', 'assets/Models/exports/Objects/Currency.png', {
             frameWidth: 16, frameHeight: 16
         });
-        this.load.spritesheet('special-attack-btn', 'assets/exports/UI/Special-Attack-Btn.png', {
+        this.load.spritesheet('special-attack-btn', 'assets/Models/exports/UI/Special-Attack-Btn.png', {
             frameWidth: 64, frameHeight: 64
         });
-        this.load.spritesheet('status-btn', 'assets/exports/UI/Status-Btn.png', {
+        this.load.spritesheet('status-btn', 'assets/Models/exports/UI/Status-Btn.png', {
             frameWidth: 32, frameHeight: 32
         });
     }

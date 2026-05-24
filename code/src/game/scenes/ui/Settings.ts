@@ -8,8 +8,8 @@ export class Settings extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('settings-ui', 'assets/exports/UI/Settings-UI.png');
-        this.load.image('go-back-ui', 'assets/exports/UI/Go-Back-UI.png');
+        this.load.image('settings-ui', 'assets/Models/exports/UI/Settings-UI.png');
+        this.load.image('go-back-ui', 'assets/Models/exports/UI/Go-Back-UI.png');
     }
 
     create() {

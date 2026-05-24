@@ -9,26 +9,26 @@ export class Boot extends Scene {
     }
 
     preload() {
-        this.load.spritesheet('homeAnim', 'assets/exports/UI/Homescreen-BG-Sheet.png', {
+        this.load.spritesheet('homeAnim', 'assets/Models/exports/UI/Homescreen-BG-Sheet.png', {
             frameWidth: 640,
             frameHeight: 360,
         });
 
-        this.load.spritesheet('selectorAnim', 'assets/exports/UI/Homescreen-Selector-Sheet.png', {
+        this.load.spritesheet('selectorAnim', 'assets/Models/exports/UI/Homescreen-Selector-Sheet.png', {
             frameWidth: 32,
             frameHeight: 32,
         });
 
-        this.load.image('transition', 'assets/exports/UI/Transitions.png');
-        this.load.image('achievement-ui', 'assets/exports/UI/Achievement-UI.png');
-        this.load.spritesheet('glossary', 'assets/exports/Objects/Glossary.png', {
+        this.load.image('transition', 'assets/Models/exports/UI/Transitions.png');
+        this.load.image('achievement-ui', 'assets/Models/exports/UI/Achievement-UI.png');
+        this.load.spritesheet('glossary', 'assets/Models/exports/Objects/Glossary.png', {
             frameWidth: 64,
             frameHeight: 64
         });
 
-        this.load.font(RUNE_FONT, 'assets/exports/RUNE.TTF')
-        this.load.font(FONT_FAMILY, 'assets/exports/VCRosdNEUE.ttf')
-        this.load.font(TITLE_FONT, 'assets/exports/OldeEnglish.ttf')
+        this.load.font(RUNE_FONT, 'assets/Models/exports/RUNE.TTF')
+        this.load.font(FONT_FAMILY, 'assets/Models/exports/VCRosdNEUE.ttf')
+        this.load.font(TITLE_FONT, 'assets/Models/exports/OldeEnglish.ttf')
 
         this.registry.set('userData', UserData.getInstance());
         this.registry.set('playerData', PlayerData.getInstance());

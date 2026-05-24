@@ -14,11 +14,11 @@ export class Multiplayer extends Phaser.Scene {
     preload() {
         
 
-        this.load.image('multiplayer-bg', 'assets/exports/UI/Multiplayer-UI.png');
-        this.load.image('multiplayer-room-ui', 'assets/exports/UI/Multiplayer-Room-UI.png');
-        this.load.image('multiplayer-room-ui-2', 'assets/exports/UI/Multiplayer-Room-UI-2.png');
-        this.load.image('go-back-ui', 'assets/exports/UI/Go-Back-UI.png');
-        this.load.spritesheet('ui-items', 'assets/exports/UI/UI-Items.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.image('multiplayer-bg', 'assets/Models/exports/UI/Multiplayer-UI.png');
+        this.load.image('multiplayer-room-ui', 'assets/Models/exports/UI/Multiplayer-Room-UI.png');
+        this.load.image('multiplayer-room-ui-2', 'assets/Models/exports/UI/Multiplayer-Room-UI-2.png');
+        this.load.image('go-back-ui', 'assets/Models/exports/UI/Go-Back-UI.png');
+        this.load.spritesheet('ui-items', 'assets/Models/exports/UI/UI-Items.png', { frameWidth: 32, frameHeight: 32 });
     }
 
     create() {
