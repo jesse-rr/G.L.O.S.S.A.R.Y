@@ -6,6 +6,8 @@ import { CombatSystem, CombatPlayer, CombatEnemy } from '../../combat/CombatSyst
 import { CombatHUD } from '../../combat/CombatHUD';
 import { StatusEffectUI } from '../../combat/StatusEffectUI';
 import { RunePickerSystem } from '../../systems/RunePickerSystem';
+import { CombatInventoryUI } from '../../combat/CombatInventoryUI';
+import { getSelectedItems } from '../ui/glossary/GlossaryItemsPage';
 import { PlayerPanelSystem } from '../../systems/PlayerPanelSystem';
 import { BESTIARY, BestiaryData } from '../../data/BestiaryData';
 import { RuneData } from '../../data/RuneData';
@@ -16,6 +18,8 @@ export class CombatScene extends Phaser.Scene {
     private statusEffectUI: StatusEffectUI | null = null;
     private combatSystem: CombatSystem | null = null;
     private runePickerSystem: RunePickerSystem | null = null;
+    private inventoryUI: CombatInventoryUI | null = null;
+    private equippedItemStatus: Map<number, boolean> = new Map();
     private playerPanelSystem: PlayerPanelSystem | null = null;
     private encounterTier: number = 1;
     private encounterMapKey: string = '';
@@ -59,6 +63,7 @@ export class CombatScene extends Phaser.Scene {
         });
         this.load.image('achievement-ui', 'assets/Models/exports/UI/Achievement-UI.png');
         this.load.image('settings-btn', 'assets/Models/exports/UI/Settings-Btn.png');
+        this.load.image('inventory-btn', 'assets/Models/exports/UI/Inventory-Btn.png');
         this.load.spritesheet('chain-link', 'assets/Models/exports/UI/Combat-Overlay-Chains.png', {
             frameWidth: 64, frameHeight: 64
         });
@@ -121,6 +126,25 @@ export class CombatScene extends Phaser.Scene {
         this.combatEnded = false;
 
         this.initCombatSystem();
+
+        this.equippedItemStatus.clear();
+        const equippedIds = getSelectedItems();
+        equippedIds.forEach(idStr => {
+            this.equippedItemStatus.set(parseInt(idStr, 10), false);
+        });
+
+        if (this.equippedItemStatus.has(0)) {
+            this.equippedItemStatus.set(0, true);
+            const player = this.combatSystem ? this.combatSystem.getLocalPlayer() : null;
+            if (player) {
+                const healAmount = Math.floor(player.stats.maxHp * 0.2);
+                player.stats.hp = Math.min(player.stats.maxHp, player.stats.hp + healAmount);
+                this.time.delayedCall(400, () => {
+                    this.showFloatingText(200, 420, "Namaste: Cleanse & +20% HP!", "#00ff00");
+                    this.updatePlayerHp();
+                });
+            }
+        }
 
         this.playerData.inCombat = true;
         this.playerData.combatTier = this.encounterTier;
@@ -197,6 +221,17 @@ export class CombatScene extends Phaser.Scene {
             }
         });
 
+        const inventoryX = settingsX - 40;
+        const inventoryY = settingsY;
+        const inventoryBtn = this.add.image(inventoryX, inventoryY, 'inventory-btn')
+            .setOrigin(1, 1).setScrollFactor(0).setScale(1)
+            .setInteractive({ useHandCursor: true });
+        inventoryBtn.on('pointerover', () => inventoryBtn.setTint(0xaaaaaa));
+        inventoryBtn.on('pointerout', () => inventoryBtn.clearTint());
+        inventoryBtn.on('pointerdown', () => {
+            this.openInventoryPanel();
+        });
+
         this.input.keyboard!.on(InputKeys.HELP, () => {
             if (!this.scene.isPaused()) {
                 this.scene.pause();
@@ -219,8 +254,8 @@ export class CombatScene extends Phaser.Scene {
 
         createVignette(this);
 
-        this.updateTurnIndicator('YOUR TURN - Select Runes');
         this.updateStatusEffects();
+        this.updateTurnIndicator('YOUR TURN - Select Runes');
     }
 
     private pickEnemyFromBestiary(): { id: string, name: string; hp: number; attack: number; defense: number; texture: string; frame: number } {
@@ -307,6 +342,34 @@ export class CombatScene extends Phaser.Scene {
         });
 
         this.combatSystem.on('player_damaged', (e) => {
+            const player = this.combatSystem ? this.combatSystem.getLocalPlayer() : null;
+            if (player) {
+                if (this.equippedItemStatus.has(4) && !this.equippedItemStatus.get(4)) {
+                    this.equippedItemStatus.set(4, true);
+                    const reflectDmg = Math.floor(e.data.damage * 0.5);
+                    if (reflectDmg > 0) {
+                        const enemy = this.combatSystem!.getAllEnemies()[0];
+                        if (enemy) {
+                            enemy.stats.hp = Math.max(0, enemy.stats.hp - reflectDmg);
+                            this.time.delayedCall(400, () => {
+                                this.showFloatingText(this.scale.width - 200, 420, `Reflected ${reflectDmg} DMG!`, "#ffd700");
+                                this.updateEnemyHp();
+                            });
+                        }
+                    }
+                }
+                
+                if (player.stats.hp <= 0 && this.equippedItemStatus.has(2) && !this.equippedItemStatus.get(2)) {
+                    this.equippedItemStatus.set(2, true);
+                    const reviveHp = Math.floor(player.stats.maxHp * 0.3);
+                    player.stats.hp = reviveHp;
+                    this.time.delayedCall(300, () => {
+                        this.showFloatingText(200, 420, "Seraph's Plume Revived!", "#ffd700");
+                        this.updatePlayerHp();
+                        this.cameras.main.flash(500, 255, 215, 0);
+                    });
+                }
+            }
             this.updatePlayerHp();
             this.showDamageNumber(200, 250, e.data.damage, '#0000cc', '-');
         });
@@ -804,6 +867,37 @@ export class CombatScene extends Phaser.Scene {
             case 'unique': return 1;
             case 'base': return 2;
             default: return 2;
+        }
+    }
+
+    private openInventoryPanel(): void {
+        if (this.isAnimating) return;
+        this.inventoryUI = new CombatInventoryUI(this, this.equippedItemStatus, (itemId) => {
+            this.useActiveItem(itemId);
+        });
+        this.inventoryUI.show();
+    }
+
+    private useActiveItem(itemId: number): void {
+        if (!this.combatSystem || this.equippedItemStatus.get(itemId)) return;
+
+        if (itemId === 8) {
+            this.equippedItemStatus.set(8, true);
+            const enemy = this.combatSystem.getAllEnemies()[0];
+            if (enemy) {
+                enemy.stats.hp = Math.max(0, enemy.stats.hp - 35);
+                this.updateEnemyHp();
+                this.showFloatingText(this.scale.width - 200, 420, "Freedom Dispensed! 35 Piercing DMG", "#ffd700");
+                this.cameras.main.shake(200, 0.015);
+                
+                if (enemy.stats.hp <= 0) {
+                    this.time.delayedCall(400, () => {
+                        if (this.combatSystem) {
+                            this.combatSystem.checkCombatEnd();
+                        }
+                    });
+                }
+            }
         }
     }
 }
