@@ -60,14 +60,16 @@ export class RaidhoRuneSystem {
             fontFamily: RUNE_FONT,
             fontSize: RAIDHO_FONT_SIZE,
             color: color,
-            resolution: 2
+            resolution: 2,
+            metrics: { ascent: 34, descent: 6, fontSize: 40 }
         }).setOrigin(0.5).setDepth(12);
 
         this.glintOverlay = this.scene.add.text(this.mountX, this.mountY - 38, RAIDHO_CHAR, {
             fontFamily: RUNE_FONT,
             fontSize: RAIDHO_FONT_SIZE,
             color: '#ffffff',
-            resolution: 2
+            resolution: 2,
+            metrics: { ascent: 34, descent: 6, fontSize: 40 }
         }).setOrigin(0.5).setDepth(12).setAlpha(0);
     }
 

@@ -75,7 +75,7 @@ export class CombatInventoryUI {
             .setStrokeStyle(1, 0x847E87)
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true });
-        
+
         const closeText = this.scene.add.text(0, height / 2 - 35, 'CLOSE', {
             fontFamily: FONT_FAMILY,
             fontSize: '14px',
@@ -120,8 +120,8 @@ export class CombatInventoryUI {
         row.add(rowBg);
 
         const frame = ItemData.getItemFrame(def.id);
-        const itemIcon = this.scene.add.sprite(-210, 0, 'items', frame)
-            .setScale(1.2)
+        const itemIcon = this.scene.add.sprite(-200, -5, 'items', frame)
+            .setScale(1)
             .setOrigin(0.5);
         row.add(itemIcon);
 
@@ -134,17 +134,17 @@ export class CombatInventoryUI {
         };
         const rarityColor = rarityColors[def.rarity] || '#ffffff';
 
-        const nameText = this.scene.add.text(-170, -22, def.name.toUpperCase(), {
+        const nameText = this.scene.add.text(-150, -22, def.name.toUpperCase(), {
             fontFamily: FONT_FAMILY,
-            fontSize: '15px',
+            fontSize: '17px',
             color: rarityColor,
             fontStyle: 'bold'
         }).setOrigin(0, 0.5);
         row.add(nameText);
 
-        const effectText = this.scene.add.text(-170, 5, def.effectDescription, {
+        const effectText = this.scene.add.text(-150, -5, def.effectDescription, {
             fontFamily: FONT_FAMILY,
-            fontSize: '10px',
+            fontSize: '12px',
             color: '#cccccc',
             wordWrap: { width: 250 },
             lineSpacing: 2
@@ -157,7 +157,7 @@ export class CombatInventoryUI {
 
         if (isInteractiveActive) {
             if (isUsed) {
-                const usedText = this.scene.add.text(180, 0, 'USED', {
+                const usedText = this.scene.add.text(200, 0, 'USED', {
                     fontFamily: FONT_FAMILY,
                     fontSize: '13px',
                     color: '#ef4444',
@@ -165,12 +165,12 @@ export class CombatInventoryUI {
                 }).setOrigin(0.5);
                 row.add(usedText);
             } else {
-                const useBtn = this.scene.add.rectangle(180, 0, 75, 24, 0x9e2e2e)
+                const useBtn = this.scene.add.rectangle(200, 0, 75, 24, 0x9e2e2e)
                     .setStrokeStyle(1, 0xef4444)
                     .setOrigin(0.5)
                     .setInteractive({ useHandCursor: true });
-                
-                const useText = this.scene.add.text(180, 0, 'USE', {
+
+                const useText = this.scene.add.text(200, 0, 'USE', {
                     fontFamily: FONT_FAMILY,
                     fontSize: '12px',
                     color: '#ffffff',
@@ -193,7 +193,7 @@ export class CombatInventoryUI {
         } else if (isConsumable) {
             const statusLabel = isUsed ? 'CONSUMED' : 'READY';
             const statusColor = isUsed ? '#ef4444' : '#00ff00';
-            const statusText = this.scene.add.text(180, 0, statusLabel, {
+            const statusText = this.scene.add.text(200, 0, statusLabel, {
                 fontFamily: FONT_FAMILY,
                 fontSize: '13px',
                 color: statusColor,
@@ -203,7 +203,7 @@ export class CombatInventoryUI {
         } else {
             const statusLabel = isUsed ? 'TRIGGERED' : 'ACTIVE';
             const statusColor = isUsed ? '#847E87' : '#00ff00';
-            const statusText = this.scene.add.text(180, 0, statusLabel, {
+            const statusText = this.scene.add.text(200, 0, statusLabel, {
                 fontFamily: FONT_FAMILY,
                 fontSize: '13px',
                 color: statusColor,

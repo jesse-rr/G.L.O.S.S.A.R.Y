@@ -2,7 +2,7 @@ export class LightSystem {
     private overlay: Phaser.GameObjects.Rectangle;
     private minAlpha: number = 0;
     private maxAlpha: number = 0.5;
-    private duration: number = 900000;
+    private duration: number = 300000;
     private scene: Phaser.Scene;
     private static globalAlpha: number = 0;
     private static globalIsDarkening: boolean = true;
