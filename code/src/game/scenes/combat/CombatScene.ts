@@ -42,6 +42,9 @@ export class CombatScene extends Phaser.Scene {
     }
 
     preload() {
+        this.load.image('combat-bg-desert', 'assets/Models/exports/backgrounds/Desert-Floor.png');
+        this.load.image('combat-bg-abandoned', 'assets/Models/exports/backgrounds/Abandoned-Floor.png');
+        this.load.image('combat-bg-mechanic', 'assets/Models/exports/backgrounds/Mechanic-Floor.png');
         this.load.font(FONT_FAMILY, 'assets/Models/exports/VCRosdNEUE.ttf');
         this.load.font(RUNE_FONT, 'assets/Models/exports/RUNE.TTF');
         this.load.image('battle-ui', 'assets/Models/exports/UI/Battle-UI.png');
@@ -99,19 +102,26 @@ export class CombatScene extends Phaser.Scene {
         this.encounterTier = data?.encounterTier || this.playerData.combatTier || 1;
         this.encounterMapKey = data?.mapKey || '';
         this.targetEnemyId = data?.enemyId || null;
-        
+
         if (this.encounterMapKey) {
             localStorage.setItem('glossary_combat_return_map', this.encounterMapKey);
         }
-        
-        this.cameras.main.setBackgroundColor('#FFFFFF');
+
+        let bgKey = 'combat-bg-desert';
+        if (this.encounterMapKey.includes('abandoned')) {
+            bgKey = 'combat-bg-abandoned';
+        } else if (this.encounterMapKey.includes('mechanic')) {
+            bgKey = 'combat-bg-mechanic';
+        }
+
+        this.add.image(this.scale.width / 2, this.scale.height / 2, bgKey).setOrigin(0.5, 0.5).setDisplaySize(this.scale.width, this.scale.height).setScrollFactor(0);
         this.combatTimer = 0;
         this.isAnimating = false;
         this.transitionStarted = false;
         this.combatEnded = false;
 
         this.initCombatSystem();
-        
+
         this.playerData.inCombat = true;
         this.playerData.combatTier = this.encounterTier;
         this.playerData.combatEnemyId = this.targetEnemyId;
@@ -215,7 +225,7 @@ export class CombatScene extends Phaser.Scene {
 
     private pickEnemyFromBestiary(): { id: string, name: string; hp: number; attack: number; defense: number; texture: string; frame: number } {
         let pick = BESTIARY.find(e => e.id === this.targetEnemyId);
-        
+
         if (!pick) {
             const tierEnemies = BESTIARY.filter(e => e.tier === this.encounterTier);
             const pool = tierEnemies.length > 0 ? tierEnemies : BESTIARY.filter(e => e.tier === 1);
@@ -232,7 +242,7 @@ export class CombatScene extends Phaser.Scene {
                         }
                     }
                 }
-            } catch {}
+            } catch { }
 
             let unbattled = pool.filter(e => !battledNames.has(e.name.toLowerCase()));
             if (unbattled.length === 0) {
@@ -342,10 +352,10 @@ export class CombatScene extends Phaser.Scene {
 
     private createPlayerVisual(): void {
         const x = 200;
-        const y = 280;
+        const y = 450;
         const covenantColor = COVENANT_COLORS[this.playerData!.covenant] ?? 0xaaaaaa;
 
-        this.playerRect = this.add.rectangle(x, y, 60, 80, covenantColor, 1)
+        this.playerRect = this.add.rectangle(x, y, 75, 100, covenantColor, 1)
             .setStrokeStyle(3, 0x000000).setScrollFactor(0);
 
         this.playerStatusContainer = this.add.container(40, 95).setScrollFactor(0);
@@ -357,7 +367,7 @@ export class CombatScene extends Phaser.Scene {
         if (!enemy) return;
 
         const x = this.scale.width - 200;
-        const y = 260;
+        const y = 450;
 
         const idleKey = `enemy-idle-${enemy.texture}-${enemy.frame}`;
         if (!this.anims.exists(idleKey)) {
@@ -697,7 +707,7 @@ export class CombatScene extends Phaser.Scene {
             try {
                 const existing = localStorage.getItem(key);
                 if (existing) allCompleted = JSON.parse(existing);
-            } catch {}
+            } catch { }
 
             const mapList = allCompleted[this.encounterMapKey] || [];
             let globalTotal = 0;
@@ -714,7 +724,7 @@ export class CombatScene extends Phaser.Scene {
                 localStorage.setItem(key, JSON.stringify(allCompleted));
             }
         }
-        
+
         if (this.playerData) {
             this.playerData.inCombat = false;
             this.playerData.combatEnemyId = null;
