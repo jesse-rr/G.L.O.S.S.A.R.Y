@@ -415,7 +415,8 @@ function createCenterRuneDisplay(scene: Phaser.Scene, cardX: number, cardY: numb
         fontSize: '70px',
         color: '#cccccc',
         align: 'center',
-        resolution: 2
+        resolution: 2,
+        metrics: { ascent: 70, descent: 21, fontSize: 70 }
     }).setOrigin(0.5, 0.5);
     centerRuneContainer.add(centerRuneText);
 

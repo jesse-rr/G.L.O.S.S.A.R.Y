@@ -11,10 +11,24 @@ export class PortalSystem {
     private group: Phaser.GameObjects.Group;
     private isTeleporting: boolean = false;
     private teleportDirection: { x: number, y: number } = { x: 0, y: 0 };
+    private teleportSpeedModifier: number = 1;
+    private activeTweens: Phaser.Tweens.Tween[] = [];
+    private activeTimers: Phaser.Time.TimerEvent[] = [];
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.group = scene.add.group();
+    }
+
+    destroy(): void {
+        this.activeTweens.forEach(t => {
+            if (t) t.remove();
+        });
+        this.activeTweens = [];
+        this.activeTimers.forEach(t => {
+            if (t) t.destroy();
+        });
+        this.activeTimers = [];
     }
 
     createPortal(x: number, y: number, targetMap: string, width: number = 60, height: number = 60): void {
@@ -53,7 +67,8 @@ export class PortalSystem {
                     return;
                 }
             } else if (mapKey === 'merchant') {
-                targetMap = previousMap && previousMap.includes('-settlement') ? previousMap : 'hub';
+                const storedReturn = localStorage.getItem('glossary_merchant_return_map');
+                targetMap = previousMap && previousMap.includes('-settlement') ? previousMap : (storedReturn || 'hub');
             } else {
                 targetMap = 'hub';
             }
@@ -64,12 +79,32 @@ export class PortalSystem {
         });
     }
 
-    createMerchantPortal(mapKey: string): void {
-        if (!mapKey.includes('-settlement')) return;
-        this.createPortal(0, -500, 'merchant', 96, 32);
+    parseMerchantEntrances(merchantEntranceLayer: Phaser.Tilemaps.ObjectLayer | undefined): void {
+        if (!merchantEntranceLayer) return;
+
+        merchantEntranceLayer.objects.forEach((obj: any) => {
+            const x = obj.x || 0;
+            const y = obj.y || 0;
+            const width = obj.width || 60;
+            const height = obj.height || 60;
+            const cx = x + width / 2;
+            const cy = y + height / 2;
+
+            const portal = this.scene.add.rectangle(cx, cy, width, height, 0x000000, 0);
+            this.scene.matter.add.gameObject(portal, { isStatic: true, isSensor: true });
+            this.group.add(portal);
+            portal.setData('target', 'merchant');
+            portal.setData('isMerchantEntrance', true);
+        });
     }
 
-    calculateSpawn(portalsLayer: any, mapKey: string, previousMap: string, OFFSET: number): { x: number, y: number } {
+    calculateSpawn(
+        portalsLayer: Phaser.Tilemaps.ObjectLayer | undefined,
+        merchantEntranceLayer: Phaser.Tilemaps.ObjectLayer | undefined,
+        mapKey: string,
+        previousMap: string,
+        OFFSET: number
+    ): { x: number, y: number } {
         let spawnX = 0, spawnY = 0;
 
         if (mapKey === 'central-hub' || mapKey === 'hub') {
@@ -110,8 +145,16 @@ export class PortalSystem {
                 spawnY = (returnPortal.y || 0) + ph / 2 - OFFSET;
             }
         } else if (mapKey.includes('-settlement') && previousMap === 'merchant') {
-            spawnX = 0;
-            spawnY = -500 + OFFSET;
+            const entrance = merchantEntranceLayer?.objects[0];
+            if (entrance) {
+                const ew = entrance.width || 60;
+                const eh = entrance.height || 60;
+                spawnX = (entrance.x || 0) + ew / 2;
+                spawnY = (entrance.y || 0) + eh / 2 + OFFSET;
+            } else {
+                spawnX = 0;
+                spawnY = 0;
+            }
         } else {
             const returnPortal = portalsLayer?.objects[0];
             if (returnPortal) {
@@ -144,25 +187,53 @@ export class PortalSystem {
         const targetMap = portal.getData('target');
         if (targetMap) {
             this.isTeleporting = true;
+            if (targetMap === 'merchant') {
+                localStorage.setItem('glossary_merchant_return_map', mapKey);
+            }
 
             const px = (portal as Phaser.GameObjects.Rectangle).x;
             const py = (portal as Phaser.GameObjects.Rectangle).y;
 
-            let dirX = 0; let dirY = 0;
-            if (Math.abs(player.x - px) > Math.abs(player.y - py)) {
-                dirX = player.x < px ? 1 : -1;
+            let dirX = 0;
+            let dirY = 0;
+            const isMerchant = portal.getData('isMerchantEntrance');
+            if (isMerchant) {
+                dirX = 0;
+                dirY = -1;
             } else {
-                dirY = player.y < py ? 1 : -1;
+                if (Math.abs(player.x - px) > Math.abs(player.y - py)) {
+                    dirX = player.x < px ? 1 : -1;
+                } else {
+                    dirY = player.y < py ? 1 : -1;
+                }
             }
             this.teleportDirection = { x: dirX, y: dirY };
 
-            this.scene.time.delayedCall(100, () => {
-                this.scene.cameras.main.fadeOut(400, 0, 0, 0);
-            });
+            if (isMerchant) {
+                this.teleportSpeedModifier = 1;
 
-            this.scene.time.delayedCall(500, () => {
-                this.scene.scene.restart({ mapKey: targetMap, previousMap: mapKey, entryDirX: dirX, entryDirY: dirY });
-            });
+                const t1 = this.scene.time.delayedCall(300, () => {
+                    this.teleportSpeedModifier = 0;
+                    this.scene.cameras.main.fadeOut(300, 0, 0, 0);
+                });
+                this.activeTimers.push(t1);
+
+                const t2 = this.scene.time.delayedCall(600, () => {
+                    this.scene.scene.restart({ mapKey: targetMap, previousMap: mapKey, entryDirX: dirX, entryDirY: dirY });
+                });
+                this.activeTimers.push(t2);
+            } else {
+                this.teleportSpeedModifier = 1;
+                const t1 = this.scene.time.delayedCall(100, () => {
+                    this.scene.cameras.main.fadeOut(400, 0, 0, 0);
+                });
+                this.activeTimers.push(t1);
+
+                const t2 = this.scene.time.delayedCall(500, () => {
+                    this.scene.scene.restart({ mapKey: targetMap, previousMap: mapKey, entryDirX: dirX, entryDirY: dirY });
+                });
+                this.activeTimers.push(t2);
+            }
         }
     }
 
@@ -172,5 +243,9 @@ export class PortalSystem {
 
     getTeleportDirection(): { x: number, y: number } {
         return this.teleportDirection;
+    }
+
+    getTeleportSpeedModifier(): number {
+        return this.teleportSpeedModifier;
     }
 }

@@ -173,6 +173,9 @@ export class LevelScene extends Phaser.Scene {
 
         this.cameras.main.setBackgroundColor('#111111');
 
+        if (this.portalSystem) {
+            this.portalSystem.destroy();
+        }
         this.portalSystem = new PortalSystem(this);
 
         if (this.mapKey === 'hub' || this.mapKey === 'central-hub') {
@@ -440,7 +443,10 @@ export class LevelScene extends Phaser.Scene {
             this.portalSystem.parsePortals(portalsLayer, this.mapKey, this.previousMap);
         }
 
-        this.portalSystem.createMerchantPortal(this.mapKey);
+        const merchantEntranceLayer = map.objects.find(layer => layer.name === 'merchant_entrance');
+        if (merchantEntranceLayer) {
+            this.portalSystem.parseMerchantEntrances(merchantEntranceLayer);
+        }
 
         const doorLayer = map.objects.find(layer => layer.name.toLowerCase() === 'door');
         if (doorLayer) {
@@ -489,7 +495,7 @@ export class LevelScene extends Phaser.Scene {
         }
 
         const OFFSET = 54;
-        const spawnPos = this.portalSystem.calculateSpawn(portalsLayer, mapKey, this.previousMap, OFFSET);
+        const spawnPos = this.portalSystem.calculateSpawn(portalsLayer, merchantEntranceLayer, mapKey, this.previousMap, OFFSET);
         let spawnX = spawnPos.x;
         let spawnY = spawnPos.y;
 
@@ -509,7 +515,8 @@ export class LevelScene extends Phaser.Scene {
             if (this.entryDirX < 0) this.player.setFlipX(true);
             else if (this.entryDirX > 0) this.player.setFlipX(false);
 
-            this.time.delayedCall(400, () => {
+            const duration = this.previousMap === 'merchant' ? 200 : 400;
+            this.time.delayedCall(duration, () => {
                 this.isEntering = false;
             });
         }
@@ -640,10 +647,28 @@ export class LevelScene extends Phaser.Scene {
         }
 
         if (moving) {
-            const inputVelocity = new Phaser.Math.Vector2(moveX, moveY).normalize().scale(speed);
-            this.player.setVelocity(inputVelocity.x, inputVelocity.y);
-            this.player.anims.timeScale = this.currentSlowFactor;
-            if (this.player.anims.currentAnim?.key !== 'run-start' && this.player.anims.currentAnim?.key !== 'run-loop') this.player.play('run-start').chain('run-loop');
+            let currentSpeed = speed;
+            let currentTimeScale = this.currentSlowFactor;
+            let isTeleportStopped = false;
+            if (this.portalSystem.getIsTeleporting()) {
+                const modifier = this.portalSystem.getTeleportSpeedModifier();
+                currentSpeed *= modifier;
+                currentTimeScale *= modifier;
+                if (modifier === 0) {
+                    isTeleportStopped = true;
+                }
+            }
+            if (isTeleportStopped) {
+                this.player.setVelocity(body.velocity.x * 0.85, body.velocity.y * 0.85);
+                this.player.anims.timeScale = 1;
+                if (this.player.anims.currentAnim?.key === 'run-start' || this.player.anims.currentAnim?.key === 'run-loop') this.player.play('stop').chain('idle');
+                else if (this.player.anims.currentAnim?.key !== 'stop' && this.player.anims.currentAnim?.key !== 'idle') this.player.play('idle');
+            } else {
+                const inputVelocity = new Phaser.Math.Vector2(moveX, moveY).normalize().scale(currentSpeed);
+                this.player.setVelocity(inputVelocity.x, inputVelocity.y);
+                this.player.anims.timeScale = currentTimeScale;
+                if (this.player.anims.currentAnim?.key !== 'run-start' && this.player.anims.currentAnim?.key !== 'run-loop') this.player.play('run-start').chain('run-loop');
+            }
         } else {
             this.player.setVelocity(body.velocity.x * 0.85, body.velocity.y * 0.85);
             this.player.anims.timeScale = 1;
@@ -661,7 +686,7 @@ export class LevelScene extends Phaser.Scene {
             case 'desert-settlement': return 18;
             case 'mechanic-settlement': return 13;
             case 'summit-trade': return 4;
-            case 'merchant': return 10;
+            case 'merchant': return 9;
             default: return 14;
         }
     }

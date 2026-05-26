@@ -3029,6 +3029,29 @@
         }, 
         {
          "draworder":"topdown",
+         "id":35,
+         "name":"merchant_entrance",
+         "objects":[
+                {
+                 "height":58.2727272727273,
+                 "id":189,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":28.0909090909091,
+                 "x":381,
+                 "y":64
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
          "id":33,
          "name":"slates",
          "objects":[
@@ -7395,8 +7418,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":35,
- "nextobjectid":187,
+ "nextlayerid":36,
+ "nextobjectid":190,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",
