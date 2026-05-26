@@ -560,6 +560,10 @@ export class RunePickerSystem {
         this.rebuildChainDisplay(false);
     }
 
+    public refreshPreview(): void {
+        this.rebuildChainDisplay(false);
+    }
+
     reset(): void {
         this.selectedChain = [];
         this.chainCards = [];

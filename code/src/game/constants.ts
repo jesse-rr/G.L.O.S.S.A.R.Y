@@ -12,7 +12,8 @@ export enum InputKeys {
     DOWN = 'keydown-DOWN',
     LEFT = 'keydown-LEFT',
     RIGHT = 'keydown-RIGHT',
-    SHIFT = 'keydown-SHIFT'
+    SHIFT = 'keydown-SHIFT',
+    INVENTORY = 'keydown-C'
 }
 
 export const COVENANT_COLORS: Record<string, number> = {

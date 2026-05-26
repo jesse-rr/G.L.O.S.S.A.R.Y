@@ -129,19 +129,43 @@ export class CombatScene extends Phaser.Scene {
 
         this.equippedItemStatus.clear();
         const equippedIds = getSelectedItems();
+        const plumeConsumed = localStorage.getItem('glossary_seraphs_plume_consumed') === 'true';
         equippedIds.forEach(idStr => {
-            this.equippedItemStatus.set(parseInt(idStr, 10), false);
+            const id = parseInt(idStr, 10);
+            if (id === 2) {
+                this.equippedItemStatus.set(2, plumeConsumed);
+            } else {
+                this.equippedItemStatus.set(id, false);
+            }
         });
 
         if (this.equippedItemStatus.has(0)) {
             this.equippedItemStatus.set(0, true);
             const player = this.combatSystem ? this.combatSystem.getLocalPlayer() : null;
             if (player) {
-                const healAmount = Math.floor(player.stats.maxHp * 0.2);
-                player.stats.hp = Math.min(player.stats.maxHp, player.stats.hp + healAmount);
+                player.stats.defense += 2;
+                player.specialCurrency = Math.min(10, player.specialCurrency + 1);
                 this.time.delayedCall(400, () => {
-                    this.showFloatingText(200, 420, "Namaste: Cleanse & +20% HP!", "#00ff00");
-                    this.updatePlayerHp();
+                    this.showFloatingText(200, 420, "Namaste: +2 DEF & +1 Currency!", "#00ff00");
+                    this.updateHUD();
+                });
+            }
+        }
+
+        if (this.equippedItemStatus.has(6)) {
+            this.equippedItemStatus.set(6, true);
+            const player = this.combatSystem ? this.combatSystem.getLocalPlayer() : null;
+            if (player) {
+                const choices = [
+                    { effect: 'schizo_dmg', name: 'Extra Buff', desc: 'Trade: +2 Damage', duration: -1, frame: 9 },
+                    { effect: 'schizo_def', name: 'Extra Buff', desc: 'Trade: +2 Defense', duration: -1, frame: 9 },
+                    { effect: 'schizo_heal', name: 'Extra Buff', desc: 'Trade: +2 Healing', duration: -1, frame: 9 }
+                ];
+                const choice = choices[Math.floor(Math.random() * choices.length)];
+                player.statusEffects.push(choice);
+                this.time.delayedCall(600, () => {
+                    this.showFloatingText(200, 400, `Schizostone: ${choice.desc.replace('Trade: ', '')}!`, "#ef4444");
+                    this.updateStatusEffects();
                 });
             }
         }
@@ -221,10 +245,10 @@ export class CombatScene extends Phaser.Scene {
             }
         });
 
-        const inventoryX = settingsX - 40;
+        const inventoryX = 24;
         const inventoryY = settingsY;
         const inventoryBtn = this.add.image(inventoryX, inventoryY, 'inventory-btn')
-            .setOrigin(1, 1).setScrollFactor(0).setScale(1)
+            .setOrigin(0, 1).setScrollFactor(0).setScale(1)
             .setInteractive({ useHandCursor: true });
         inventoryBtn.on('pointerover', () => inventoryBtn.setTint(0xaaaaaa));
         inventoryBtn.on('pointerout', () => inventoryBtn.clearTint());
@@ -239,6 +263,10 @@ export class CombatScene extends Phaser.Scene {
             }
         });
         this.input.keyboard!.on(InputKeys.BACK, () => {
+            if (this.inventoryUI && this.inventoryUI.isOpen()) {
+                this.inventoryUI.hide();
+                return;
+            }
             if (!this.scene.isPaused() && this.runePickerSystem) {
                 this.runePickerSystem.clearChain();
             }
@@ -247,6 +275,13 @@ export class CombatScene extends Phaser.Scene {
             if (!this.scene.isActive('GlossaryUI')) {
                 this.scene.pause();
                 this.scene.launch('GlossaryUI', { previousScene: 'CombatScene', isPaused: true });
+            }
+        });
+        this.input.keyboard!.on(InputKeys.INVENTORY, () => {
+            if (this.inventoryUI && this.inventoryUI.isOpen()) {
+                this.inventoryUI.hide();
+            } else {
+                this.openInventoryPanel();
             }
         });
 
@@ -358,9 +393,10 @@ export class CombatScene extends Phaser.Scene {
                         }
                     }
                 }
-                
+
                 if (player.stats.hp <= 0 && this.equippedItemStatus.has(2) && !this.equippedItemStatus.get(2)) {
                     this.equippedItemStatus.set(2, true);
+                    localStorage.setItem('glossary_seraphs_plume_consumed', 'true');
                     const reviveHp = Math.floor(player.stats.maxHp * 0.3);
                     player.stats.hp = reviveHp;
                     this.time.delayedCall(300, () => {
@@ -404,7 +440,15 @@ export class CombatScene extends Phaser.Scene {
             this.showFloatingText(this.scale.width / 2, 150, msg, '#cc0000');
         });
 
-        this.combatSystem.on('status_applied', () => {
+        this.combatSystem.on('status_applied', (e) => {
+            if (e.data?.effect === 'voidframe_negate') {
+                const negated = (e.data.negatedEffect || 'effect').toString().toUpperCase();
+                this.showFloatingText(200, 420, `VoidFrame: Negated ${negated}!`, "#ffd700");
+            } else if (e.data?.effect === 'fog_skip') {
+                this.showFloatingText(this.scale.width - 200, 420, "Fog of War: Enemy Stunned!", "#ffd700");
+            } else if (e.data?.effect === 'dodge') {
+                this.showFloatingText(200, 420, "404: Attack Not Found!", "#3b82f6");
+            }
             this.updateStatusEffects();
         });
 
@@ -595,6 +639,9 @@ export class CombatScene extends Phaser.Scene {
 
         if (success && this.abilityBtnSprite) {
             this.refreshAbilityVisual();
+            if (this.runePickerSystem) {
+                this.runePickerSystem.refreshPreview();
+            }
         }
     }
 
@@ -659,23 +706,21 @@ export class CombatScene extends Phaser.Scene {
                 });
             }
 
-            const enemy = this.combatSystem!.getAllEnemies()[0];
-            const enemyDead = enemy && enemy.stats.hp <= 0;
+            if (this.equippedItemStatus.has(1) && Math.random() < 0.5) {
+                const enemy = this.combatSystem!.getAllEnemies()[0];
+                if (enemy && enemy.stats.hp > 0) {
+                    const extraDmg = 9;
+                    enemy.stats.hp = Math.max(0, enemy.stats.hp - extraDmg);
+                    this.time.delayedCall(300, () => {
+                        this.showFloatingText(this.scale.width - 200, 400, `Runefall: +${extraDmg} Lightning!`, "#50bfe6");
+                        this.updateEnemyHp();
+                        this.cameras.main.flash(200, 80, 191, 230);
+                    });
+                }
+            }
 
             this.time.delayedCall(600, () => {
-                if (enemyDead && this.enemySprite) {
-                    this.enemySprite.clearTint();
-                    this.tweens.add({
-                        targets: this.enemySprite,
-                        alpha: 0,
-                        duration: 700,
-                        ease: 'Quad.easeIn',
-                        onComplete: () => {
-                            if (this.enemyHpText) this.enemyHpText.setAlpha(0);
-                            this.combatSystem!.checkCombatEnd();
-                            this.isAnimating = false;
-                        }
-                    });
+                if (this.checkEnemyDeathAndAnimate()) {
                     return;
                 }
 
@@ -707,6 +752,9 @@ export class CombatScene extends Phaser.Scene {
             }
 
             this.time.delayedCall(600, () => {
+                if (this.checkEnemyDeathAndAnimate()) {
+                    return;
+                }
                 if (this.combatSystem!.checkCombatEnd()) {
                     this.isAnimating = false;
                     return;
@@ -719,6 +767,9 @@ export class CombatScene extends Phaser.Scene {
     private startNextRound(): void {
         this.isAnimating = false;
         this.combatSystem!.startRound();
+        if (this.checkEnemyDeathAndAnimate()) {
+            return;
+        }
         this.combatSystem!.getCurrentRound();
         this.updateHUD();
         this.updateStatusEffects();
@@ -755,15 +806,25 @@ export class CombatScene extends Phaser.Scene {
 
         this.syncPlayerDataFromCombat();
 
+        let earnedGems = 0;
+        let earnedSpecial = 0;
+        let defeatedEnemyName = 'Unknown Enemy';
+
         if (result === 'VICTORY' && this.playerData) {
             const enemy = this.combatSystem ? this.combatSystem.getAllEnemies()[0] : null;
-            const enemyName = enemy ? enemy.name : 'Unknown Enemy';
+            defeatedEnemyName = enemy ? enemy.name : 'Unknown Enemy';
 
-            const gems = this.encounterTier * 15 + Phaser.Math.Between(5, 15);
-            const specialCur = this.encounterTier;
+            earnedGems = this.encounterTier * 15 + Phaser.Math.Between(5, 15);
+            earnedSpecial = this.encounterTier;
 
-            this.playerData.gemstones += gems;
-            this.playerData.specialCurrency += specialCur;
+            this.playerData.gemstones += earnedGems;
+            this.playerData.specialCurrency += earnedSpecial;
+
+            try {
+                const echoRaw = localStorage.getItem('glossary_echojar_completed_combats');
+                const echoCount = (parseInt(echoRaw || '0', 10) || 0) + 1;
+                localStorage.setItem('glossary_echojar_completed_combats', echoCount.toString());
+            } catch { }
 
             const key = 'glossary_completed_combats';
             let allCompleted: Record<string, any[]> = {};
@@ -779,9 +840,9 @@ export class CombatScene extends Phaser.Scene {
             }
             if (mapList.length < 3 && globalTotal < 3) {
                 mapList.push({
-                    enemyName,
-                    gems,
-                    specialCur
+                    enemyName: defeatedEnemyName,
+                    gems: earnedGems,
+                    specialCur: earnedSpecial
                 });
                 allCompleted[this.encounterMapKey] = mapList;
                 localStorage.setItem(key, JSON.stringify(allCompleted));
@@ -799,20 +860,58 @@ export class CombatScene extends Phaser.Scene {
 
         this.overlayContainer = this.add.container(0, 0).setDepth(500).setScrollFactor(0);
 
-        const bg = this.add.rectangle(centerX, centerY, this.scale.width, this.scale.height, 0x000000, 0.8);
-        const resultText = this.add.text(centerX, centerY - 30, result, {
-            fontFamily: FONT_FAMILY, fontSize: '48px', color: result === 'VICTORY' ? '#FFD700' : '#cc0000', fontStyle: 'bold'
-        }).setOrigin(0.5);
+        const bg = this.add.rectangle(centerX, centerY, this.scale.width, this.scale.height, 0x000000, 0);
+        this.tweens.add({ targets: bg, fillAlpha: 0.85, duration: 800, ease: 'Sine.easeOut' });
 
-        const continueText = this.add.text(centerX, centerY + 40, 'Click to continue', {
-            fontFamily: FONT_FAMILY, fontSize: '18px', color: '#FFFFFF'
+        const isVictory = result === 'VICTORY';
+        const color = isVictory ? '#FFD700' : '#cc0000';
+
+        const resultText = this.add.text(centerX, centerY - 60, result, {
+            fontFamily: FONT_FAMILY, fontSize: '80px', color: color, stroke: '#000000', strokeThickness: 4
         }).setOrigin(0.5).setAlpha(0);
 
-        this.overlayContainer.add([bg, resultText, continueText]);
+        this.tweens.add({
+            targets: resultText,
+            alpha: 1,
+            duration: 800,
+            ease: 'Sine.easeOut',
+            delay: 300
+        });
+
+        const elements: Phaser.GameObjects.GameObject[] = [bg, resultText];
+        let delayTime = 800;
+
+        if (isVictory && this.playerData) {
+            const subText = this.add.text(centerX, centerY + 10, `${defeatedEnemyName} Defeated!`, {
+                fontFamily: FONT_FAMILY, fontSize: '24px', color: '#ffffff', stroke: '#000000', strokeThickness: 2
+            }).setOrigin(0.5).setAlpha(0);
+
+            const lootText = this.add.text(centerX, centerY + 45, `+${earnedGems} Gemstones  |  +${earnedSpecial} Special Currency`, {
+                fontFamily: FONT_FAMILY, fontSize: '18px', color: '#50bfe6', stroke: '#000000', strokeThickness: 2
+            }).setOrigin(0.5).setAlpha(0);
+
+            elements.push(subText, lootText);
+
+            this.tweens.add({
+                targets: subText, y: centerY, alpha: 1, duration: 600, ease: 'Quad.easeOut', delay: delayTime
+            });
+            delayTime += 400;
+            this.tweens.add({
+                targets: lootText, y: centerY + 35, alpha: 1, duration: 600, ease: 'Quad.easeOut', delay: delayTime
+            });
+            delayTime += 600;
+        }
+
+        const continueText = this.add.text(centerX, centerY + 100, '- Click anywhere to continue -', {
+            fontFamily: FONT_FAMILY, fontSize: '18px', color: '#aaaaaa'
+        }).setOrigin(0.5).setAlpha(0);
+        elements.push(continueText);
 
         this.tweens.add({
-            targets: continueText, alpha: 1, duration: 1000, delay: 500
+            targets: continueText, alpha: 1, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: delayTime
         });
+
+        this.overlayContainer.add(elements);
 
         bg.setInteractive();
         bg.on('pointerdown', () => {
@@ -870,34 +969,35 @@ export class CombatScene extends Phaser.Scene {
         }
     }
 
-    private openInventoryPanel(): void {
-        if (this.isAnimating) return;
-        this.inventoryUI = new CombatInventoryUI(this, this.equippedItemStatus, (itemId) => {
-            this.useActiveItem(itemId);
-        });
-        this.inventoryUI.show();
+    private checkEnemyDeathAndAnimate(): boolean {
+        const enemy = this.combatSystem ? this.combatSystem.getAllEnemies()[0] : null;
+        if (enemy && enemy.stats.hp <= 0) {
+            this.isAnimating = true;
+            if (this.enemySprite) {
+                this.enemySprite.clearTint();
+                this.tweens.add({
+                    targets: this.enemySprite,
+                    alpha: 0,
+                    duration: 700,
+                    ease: 'Quad.easeIn',
+                    onComplete: () => {
+                        if (this.enemyHpText) this.enemyHpText.setAlpha(0);
+                        this.combatSystem!.checkCombatEnd();
+                        this.isAnimating = false;
+                    }
+                });
+            } else {
+                this.combatSystem!.checkCombatEnd();
+                this.isAnimating = false;
+            }
+            return true;
+        }
+        return false;
     }
 
-    private useActiveItem(itemId: number): void {
-        if (!this.combatSystem || this.equippedItemStatus.get(itemId)) return;
-
-        if (itemId === 8) {
-            this.equippedItemStatus.set(8, true);
-            const enemy = this.combatSystem.getAllEnemies()[0];
-            if (enemy) {
-                enemy.stats.hp = Math.max(0, enemy.stats.hp - 35);
-                this.updateEnemyHp();
-                this.showFloatingText(this.scale.width - 200, 420, "Freedom Dispensed! 35 Piercing DMG", "#ffd700");
-                this.cameras.main.shake(200, 0.015);
-                
-                if (enemy.stats.hp <= 0) {
-                    this.time.delayedCall(400, () => {
-                        if (this.combatSystem) {
-                            this.combatSystem.checkCombatEnd();
-                        }
-                    });
-                }
-            }
-        }
+    private openInventoryPanel(): void {
+        if (this.isAnimating) return;
+        this.inventoryUI = new CombatInventoryUI(this, this.equippedItemStatus);
+        this.inventoryUI.show();
     }
 }

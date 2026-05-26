@@ -185,6 +185,27 @@ export class CombatSystem {
             player.statusEffects = player.statusEffects.filter(s => s.duration === -1 || s.duration > 0);
         }
 
+        let hasVoidFrame = false;
+        try {
+            const rawItems = localStorage.getItem('glossary_selected_items');
+            if (rawItems) {
+                const parsed = JSON.parse(rawItems);
+                hasVoidFrame = parsed.includes('11');
+            }
+        } catch { }
+        if (hasVoidFrame) {
+            const negativeEffects = ['venom', 'ignite', 'dazed', 'slow', 'weaken', 'shatter'];
+            for (const player of this.players) {
+                if (!player.isLocal || player.stats.hp <= 0) continue;
+                const negIdx = player.statusEffects.findIndex(s => negativeEffects.includes(s.effect as string));
+                if (negIdx !== -1) {
+                    const negated = player.statusEffects[negIdx].effect;
+                    player.statusEffects.splice(negIdx, 1);
+                    this.emit({ type: 'status_applied', data: { targetId: player.id, effect: 'voidframe_negate', negatedEffect: negated } });
+                }
+            }
+        }
+
         if (this.checkCombatEnd()) return;
 
         this.emit({ type: 'turn_start', data: { round: this.currentRound } });
@@ -221,7 +242,6 @@ export class CombatSystem {
         const healParts: string[] = [];
         const defenseParts: string[] = [];
 
-        // 1. Base attack from player (if > 0)
         if (player.stats.attack > 0) {
             damageParts.push(player.stats.attack.toString());
         }
@@ -230,7 +250,6 @@ export class CombatSystem {
         let healPower = 0;
         let defensePower = 0;
 
-        // 2. Rune powers
         for (const letter of chain) {
             const def = RuneData.getDefinition(letter);
             if (def) {
@@ -275,9 +294,38 @@ export class CombatSystem {
 
         // 4. Combo Bonus
         const combo = RuneData.findMatchingCombo(chain);
+        let hasArchive = false;
+        let hasEchojar = false;
+        let hasSecondAmendment = false;
+        try {
+            const rawItems = localStorage.getItem('glossary_selected_items');
+            if (rawItems) {
+                const parsed = JSON.parse(rawItems);
+                hasArchive = parsed.includes('7');
+                hasEchojar = parsed.includes('3');
+                hasSecondAmendment = parsed.includes('8');
+            }
+        } catch { }
+
         if (combo && combo.bonusPower > 0) {
-            damagePower += combo.bonusPower;
-            damageParts.push(combo.bonusPower.toString());
+            let bonus = combo.bonusPower;
+            if (hasArchive) {
+                bonus = Math.floor(bonus * 1.5);
+            }
+            damagePower += bonus;
+            damageParts.push(bonus.toString());
+        }
+
+        if (hasEchojar) {
+            let count = 0;
+            try {
+                const raw = localStorage.getItem('glossary_echojar_completed_combats');
+                if (raw) count = parseInt(raw, 10) || 0;
+            } catch { }
+            if (count > 0) {
+                damagePower += count;
+                damageParts.push(count.toString());
+            }
         }
 
         // 5. Multipliers
@@ -291,6 +339,10 @@ export class CombatSystem {
 
         if (this.phoenixBurnActive) {
             multiplier *= 1.5;
+        }
+
+        if (hasSecondAmendment) {
+            multiplier *= 1.25;
         }
 
         if (multiplier > 1.0) {
@@ -368,8 +420,34 @@ export class CombatSystem {
         }
 
         const combo = RuneData.findMatchingCombo(player.currentChain.runes);
+        let hasArchive = false;
+        let hasEchojar = false;
+        let hasSecondAmendment = false;
+        try {
+            const rawItems = localStorage.getItem('glossary_selected_items');
+            if (rawItems) {
+                const parsed = JSON.parse(rawItems);
+                hasArchive = parsed.includes('7');
+                hasEchojar = parsed.includes('3');
+                hasSecondAmendment = parsed.includes('8');
+            }
+        } catch { }
+
         if (combo) {
-            damagePower += combo.bonusPower;
+            let bonus = combo.bonusPower;
+            if (hasArchive) {
+                bonus = Math.floor(bonus * 1.5);
+            }
+            damagePower += bonus;
+        }
+
+        if (hasEchojar) {
+            let count = 0;
+            try {
+                const raw = localStorage.getItem('glossary_echojar_completed_combats');
+                if (raw) count = parseInt(raw, 10) || 0;
+            } catch { }
+            damagePower += count;
         }
 
         if (healPower > 0) {
@@ -389,6 +467,10 @@ export class CombatSystem {
             rawDamage = Math.floor(rawDamage * 1.5);
         }
 
+        if (hasSecondAmendment) {
+            rawDamage = Math.floor(rawDamage * 1.25);
+        }
+
         let enemyDef = enemy.stats.defense;
         const shatter = enemy.statusEffects.find(s => s.effect === 'shatter');
         if (shatter) {
@@ -399,6 +481,20 @@ export class CombatSystem {
 
         enemy.stats.hp = Math.max(0, enemy.stats.hp - damage);
         this.emit({ type: 'enemy_damaged', data: { enemyId: enemy.id, damage, remainingHp: enemy.stats.hp } });
+
+        let hasBrokenCrown = false;
+        try {
+            const rawItems = localStorage.getItem('glossary_selected_items');
+            if (rawItems) {
+                const parsed = JSON.parse(rawItems);
+                hasBrokenCrown = parsed.includes('10');
+            }
+        } catch { }
+        if (hasBrokenCrown && damage > 0) {
+            const lifeSteal = Math.max(1, Math.floor(damage * 0.1));
+            player.stats.hp = Math.min(player.stats.maxHp, player.stats.hp + lifeSteal);
+            this.emit({ type: 'player_healed', data: { playerId: player.id, amount: lifeSteal, newHp: player.stats.hp, source: 'broken_crown' } });
+        }
 
         const appliedEffects: RuneStatusEffect[] = [];
         for (const letter of player.currentChain.runes) {
@@ -473,8 +569,31 @@ export class CombatSystem {
             }
         }
 
+        let hasFogOfWar = false;
+        let has404 = false;
+        let hasSecondAmendment = false;
+        try {
+            const rawItems = localStorage.getItem('glossary_selected_items');
+            if (rawItems) {
+                const parsed = JSON.parse(rawItems);
+                hasFogOfWar = parsed.includes('9');
+                has404 = parsed.includes('5');
+                hasSecondAmendment = parsed.includes('8');
+            }
+        } catch { }
+
+        if (hasFogOfWar && Math.random() < 0.05) {
+            this.emit({ type: 'status_applied', data: { targetId: enemy.id, effect: 'fog_skip' } });
+            return 0;
+        }
+
         const player = this.getPlayer(enemy.targetPlayerId);
         if (!player) return 0;
+
+        if (has404 && Math.random() < 0.10) {
+            this.emit({ type: 'status_applied', data: { targetId: player.id, effect: 'dodge' } });
+            return 0;
+        }
 
         let rawDamage = Math.floor(enemy.stats.attack * enemy.damageModifier);
         const weaken = enemy.statusEffects.find(s => s.effect === 'weaken');
@@ -488,7 +607,11 @@ export class CombatSystem {
             playerDef = Math.floor(playerDef * 1.5);
         }
 
-        const damage = Math.max(1, rawDamage - playerDef);
+        let damage = Math.max(1, rawDamage - playerDef);
+
+        if (hasSecondAmendment) {
+            damage = Math.floor(damage * 1.25);
+        }
 
         this.lastEnemyDamage.set(enemyId, damage);
         player.stats.hp = Math.max(0, player.stats.hp - damage);

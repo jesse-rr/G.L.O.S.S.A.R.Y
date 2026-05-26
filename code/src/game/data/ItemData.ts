@@ -15,18 +15,18 @@ const ITEMS: ItemDefinition[] = [
         id: 0,
         name: "Namaste",
         ability: "Inner Peace",
-        effectDescription: "Heals for 20% of Max HP and clears all debuffs at the start of combat.",
+        effectDescription: "Gain +2 Defense and +1 Special Covenant Currency at the start of combat.",
         lore: "A string of ancient monk beads. They vibrate with a bizarrely calm energy, whispering 'chill bro' into the mind of the holder.",
-        cost: 150,
+        cost: 100,
         rarity: 'Common'
     },
     {
         id: 1,
         name: "Runefall",
         ability: "Thunder Strike",
-        effectDescription: "Adds a 15% chance to cast a secondary Lightning Rune on every base attack.",
+        effectDescription: "Adds a 50% chance to cast a secondary Lightning Rune on every base attack. +9",
         lore: "A suspiciously familiar miniature hammer. Legend says it was wielded by a god of thunder who really hated frost giants.",
-        cost: 350,
+        cost: 300,
         rarity: 'Epic'
     },
     {
@@ -35,7 +35,7 @@ const ITEMS: ItemDefinition[] = [
         ability: "Rebirth",
         effectDescription: "Upon taking fatal damage, instantly revive with 30% HP. Consumed on use.",
         lore: "An enchanted feather plucked from a dying phoenix. It still burns with the warmth of a thousand suns, refusing to extinguish.",
-        cost: 500,
+        cost: 450,
         rarity: 'Legendary'
     },
     {
@@ -44,7 +44,7 @@ const ITEMS: ItemDefinition[] = [
         ability: "Soul Siphon",
         effectDescription: "Gain 1 Base Power for every enemy defeated during the current run.",
         lore: "A sealed jar filled with screaming souls. If you put your ear to the glass, you can hear them arguing about rent prices in the underworld.",
-        cost: 400,
+        cost: 350,
         rarity: 'Rare'
     },
     {
@@ -53,7 +53,7 @@ const ITEMS: ItemDefinition[] = [
         ability: "Deflection",
         effectDescription: "Reflects 50% of the first instance of damage taken in combat back to the attacker.",
         lore: "A golden scale of judgment that has been completely inverted. Instead of weighing guilt, it weighs retribution, punishing those who strike first.",
-        cost: 250,
+        cost: 200,
         rarity: 'Epic'
     },
     {
@@ -62,34 +62,34 @@ const ITEMS: ItemDefinition[] = [
         ability: "Evasion",
         effectDescription: "Grants a flat 10% chance to completely dodge any incoming attack.",
         lore: "A map depicting a realm that simply does not exist. Looking at it too long makes you feel like you've misplaced your own coordinates.",
-        cost: 200,
+        cost: 150,
         rarity: 'Rare'
     },
     {
         id: 6,
         name: "Schizostone",
         ability: "Mad Whispers",
-        effectDescription: "Randomly applies either a powerful buff to you or a severe debuff to the enemy every 3 turns.",
+        effectDescription: "Grants a random permanent buff (+2 DMG, +2 DEF, or +2 HEAL) at the start of combat.",
         lore: "A rock that talks incessantly. It claims to have created the universe but currently resides in your pocket. It refuses to pay rent.",
-        cost: 300,
+        cost: 250,
         rarity: 'Mythic'
     },
     {
         id: 7,
         name: "The Archive",
         ability: "Wildcard",
-        effectDescription: "Draw 1 additional random Rune at the start of your turn.",
+        effectDescription: "Increases all resolved combo bonus power by 50%.",
         lore: "A mystical deck of cards containing the sum of all possibilities. Drawing the wrong card might turn your hair blue, but it's worth the risk.",
-        cost: 450,
+        cost: 400,
         rarity: 'Legendary'
     },
     {
         id: 8,
         name: "Second Amendment",
         ability: "Freedom Dispenser",
-        effectDescription: "Deal massive piercing damage bypassing all shields once per battle.",
+        effectDescription: "Permanently boosts your damage dealt by 25%, but you take 25% more damage from all sources.",
         lore: "A strange, metallic wand that fires tiny lead projectiles at deafening speeds. Its original creators believed it solved literally every problem.",
-        cost: 600,
+        cost: 550,
         rarity: 'Mythic'
     },
     {
@@ -98,7 +98,7 @@ const ITEMS: ItemDefinition[] = [
         ability: "Absolute Swag",
         effectDescription: "Enemies have a 5% chance to skip their turn in sheer awe of your presence.",
         lore: "A lit cigar paired with pixelated black glasses. Wearing them grants unparalleled confidence and an irresistible urge to drop the bass.",
-        cost: 420,
+        cost: 370,
         rarity: 'Epic'
     },
     {
@@ -107,16 +107,16 @@ const ITEMS: ItemDefinition[] = [
         ability: "Ruined King",
         effectDescription: "Convert 10% of all damage dealt into healing.",
         lore: "The shattered crown of a mad king who lost everything for love. It still seeps with a corrupting, sorrowful mist.",
-        cost: 550,
+        cost: 500,
         rarity: 'Legendary'
     },
     {
         id: 11,
         name: "VoidFrame",
         ability: "Event Horizon",
-        effectDescription: "Nullifies the first negative status effect applied to you in combat.",
+        effectDescription: "Nullifies the first negative status effect applied to you at the start of each turn.",
         lore: "A picture frame holding a literal black hole. It slowly consumes any dust in the room, making it an incredibly dangerous, yet effective, vacuum cleaner.",
-        cost: 380,
+        cost: 330,
         rarity: 'Rare'
     }
 ];

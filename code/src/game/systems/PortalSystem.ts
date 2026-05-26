@@ -24,7 +24,7 @@ export class PortalSystem {
         portal.setData('target', targetMap);
     }
 
-    parsePortals(portalsLayer: any, mapKey: string): void {
+    parsePortals(portalsLayer: any, mapKey: string, previousMap: string = ''): void {
         if (!portalsLayer) return;
 
         portalsLayer.objects.forEach((obj: any) => {
@@ -52,6 +52,8 @@ export class PortalSystem {
                 } else {
                     return;
                 }
+            } else if (mapKey === 'merchant') {
+                targetMap = previousMap && previousMap.includes('-settlement') ? previousMap : 'hub';
             } else {
                 targetMap = 'hub';
             }
@@ -60,6 +62,11 @@ export class PortalSystem {
                 this.createPortal(cx, cy, targetMap, width, height);
             }
         });
+    }
+
+    createMerchantPortal(mapKey: string): void {
+        if (!mapKey.includes('-settlement')) return;
+        this.createPortal(0, -500, 'merchant', 96, 32);
     }
 
     calculateSpawn(portalsLayer: any, mapKey: string, previousMap: string, OFFSET: number): { x: number, y: number } {
@@ -94,6 +101,17 @@ export class PortalSystem {
                 spawnX = 0;
                 spawnY = -30;
             }
+        } else if (mapKey === 'merchant') {
+            const returnPortal = portalsLayer?.objects[0];
+            if (returnPortal) {
+                const pw = returnPortal.width || 60;
+                const ph = returnPortal.height || 60;
+                spawnX = (returnPortal.x || 0) + pw / 2;
+                spawnY = (returnPortal.y || 0) + ph / 2 - OFFSET;
+            }
+        } else if (mapKey.includes('-settlement') && previousMap === 'merchant') {
+            spawnX = 0;
+            spawnY = -500 + OFFSET;
         } else {
             const returnPortal = portalsLayer?.objects[0];
             if (returnPortal) {

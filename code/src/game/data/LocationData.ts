@@ -71,6 +71,13 @@ export const HUBS: LocationDefinition[] = [
         description: 'A summit where merchants gather. Runes and relics exchange hands under watchful eyes.',
         frame: 0,
         texture: 'map-trade-hub'
+    },
+    {
+        id: 'merchant',
+        name: 'Merchant Base',
+        type: 'hub',
+        description: 'A hidden merchant outpost nestled above the settlements. Rare goods await the intrepid.',
+        frame: 0
     }
 ];
 

@@ -17,6 +17,7 @@ import { GlossaryUI } from './scenes/ui/GlossaryUI';
 import { NotificationOverlay } from './scenes/ui/NotificationOverlay';
 import { ItemModal } from './scenes/ui/ItemModal';
 import { SlateMinigame } from './scenes/ui/SlateMinigame';
+import { MerchantShop } from './scenes/ui/MerchantShop';
 
 let useVsync = true;
 
@@ -70,7 +71,8 @@ const config: Phaser.Types.Core.GameConfig = {
         GlossaryUI,
         NotificationOverlay,
         ItemModal,
-        SlateMinigame
+        SlateMinigame,
+        MerchantShop
     ]
 };
 

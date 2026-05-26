@@ -8,12 +8,10 @@ export class CombatInventoryUI {
     private container: Phaser.GameObjects.Container | null = null;
     private blocker: Phaser.GameObjects.Rectangle | null = null;
     private equippedItemStatus: Map<number, boolean>;
-    private onUseItemCallback: (itemId: number) => void;
 
-    constructor(scene: Phaser.Scene, equippedItemStatus: Map<number, boolean>, onUseItemCallback: (itemId: number) => void) {
+    constructor(scene: Phaser.Scene, equippedItemStatus: Map<number, boolean>) {
         this.scene = scene;
         this.equippedItemStatus = equippedItemStatus;
-        this.onUseItemCallback = onUseItemCallback;
     }
 
     show(): void {
@@ -136,7 +134,7 @@ export class CombatInventoryUI {
 
         const nameText = this.scene.add.text(-150, -22, def.name.toUpperCase(), {
             fontFamily: FONT_FAMILY,
-            fontSize: '17px',
+            fontSize: '15px',
             color: rarityColor,
             fontStyle: 'bold'
         }).setOrigin(0, 0.5);
@@ -146,57 +144,34 @@ export class CombatInventoryUI {
             fontFamily: FONT_FAMILY,
             fontSize: '12px',
             color: '#cccccc',
-            wordWrap: { width: 250 },
+            wordWrap: { width: 280 },
             lineSpacing: 2
         }).setOrigin(0, 0);
         row.add(effectText);
 
         const isUsed = this.equippedItemStatus.get(def.id) ?? false;
         const isConsumable = def.id === 2;
-        const isInteractiveActive = def.id === 8;
 
-        if (isInteractiveActive) {
-            if (isUsed) {
-                const usedText = this.scene.add.text(200, 0, 'USED', {
-                    fontFamily: FONT_FAMILY,
-                    fontSize: '13px',
-                    color: '#ef4444',
-                    fontStyle: 'bold'
-                }).setOrigin(0.5);
-                row.add(usedText);
-            } else {
-                const useBtn = this.scene.add.rectangle(200, 0, 75, 24, 0x9e2e2e)
-                    .setStrokeStyle(1, 0xef4444)
-                    .setOrigin(0.5)
-                    .setInteractive({ useHandCursor: true });
-
-                const useText = this.scene.add.text(200, 0, 'USE', {
-                    fontFamily: FONT_FAMILY,
-                    fontSize: '12px',
-                    color: '#ffffff',
-                    fontStyle: 'bold'
-                }).setOrigin(0.5);
-
-                useBtn.on('pointerover', () => {
-                    useBtn.setFillStyle(0xef4444);
-                });
-                useBtn.on('pointerout', () => {
-                    useBtn.setFillStyle(0x9e2e2e);
-                });
-                useBtn.on('pointerdown', () => {
-                    this.onUseItemCallback(def.id);
-                    this.hide();
-                });
-
-                row.add([useBtn, useText]);
-            }
-        } else if (isConsumable) {
+        if (isConsumable) {
             const statusLabel = isUsed ? 'CONSUMED' : 'READY';
             const statusColor = isUsed ? '#ef4444' : '#00ff00';
             const statusText = this.scene.add.text(200, 0, statusLabel, {
                 fontFamily: FONT_FAMILY,
                 fontSize: '13px',
                 color: statusColor,
+                fontStyle: 'bold'
+            }).setOrigin(0.5);
+            row.add(statusText);
+        } else if (def.id === 3) {
+            let count = 0;
+            try {
+                const raw = localStorage.getItem('glossary_echojar_completed_combats');
+                if (raw) count = parseInt(raw, 10) || 0;
+            } catch {}
+            const statusText = this.scene.add.text(200, 0, `+${count} PWR`, {
+                fontFamily: FONT_FAMILY,
+                fontSize: '13px',
+                color: '#ffd700',
                 fontStyle: 'bold'
             }).setOrigin(0.5);
             row.add(statusText);
@@ -239,5 +214,9 @@ export class CombatInventoryUI {
         this.container = null;
         this.blocker?.destroy();
         this.blocker = null;
+    }
+
+    isOpen(): boolean {
+        return this.container !== null;
     }
 }

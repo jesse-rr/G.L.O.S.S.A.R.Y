@@ -52,6 +52,10 @@ export class ControlsUI extends Phaser.Scene {
         makeKey(rightX, actionsYStart, 'G');
         this.container.add(this.add.text(rightX + 45, actionsYStart, '- Glossary / Book', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
 
+        const rightColumnX = rightX + 300;
+        makeKey(rightColumnX, actionsYStart, 'C');
+        this.container.add(this.add.text(rightColumnX + 45, actionsYStart, '- Open Items (Combat)', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
+
         makeKey(rightX, actionsYStart + actSpacing, 'X');
         this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing, '- Interact (Press/Hold)', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
 

@@ -10,9 +10,11 @@ import { TradeState, createTrades, handleTradeInteraction } from "../../systems/
 import { SlateState, createSlates, handleSlateInteraction } from '../../systems/SlateInteraction';
 import { PortalSystem } from '../../systems/PortalSystem';
 import { PlayerData } from '../../data/PlayerData';
+import { ItemData, ItemDefinition } from '../../data/ItemData';
 import { CombatTrackerHUD } from '../../systems/CombatTrackerHUD';
 import { isPipeLayer, fillPipeLayer, hasReachedMaxCombats } from '../../systems/PipeSystem';
 import { RaidhoRuneSystem } from '../../systems/RaidhoRuneSystem';
+import { MerchantState, createMerchants, handleMerchantInteraction } from '../../systems/MerchantSystem';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -39,6 +41,8 @@ export class LevelScene extends Phaser.Scene {
     private wasInteractPressed = { value: false };
     private combatTrackerHUD!: CombatTrackerHUD;
     private raidhoRuneSystem?: RaidhoRuneSystem;
+    private merchants: MerchantState[] = [];
+    public merchantItems: ItemDefinition[] = [];
 
     constructor() {
         super('LevelScene');
@@ -83,6 +87,8 @@ export class LevelScene extends Phaser.Scene {
         this.load.tilemapTiledJSON('mechanic-settlement', 'assets/Models/exports/Maps/mechanic-settlement.json');
 
         this.load.tilemapTiledJSON('summit-trade', 'assets/Models/exports/Maps/summit-trade.json');
+
+        this.load.tilemapTiledJSON('merchant', 'assets/Models/exports/Maps/merchant.json');
 
         this.load.spritesheet('door-sheet', 'assets/Models/exports/Animations/Door-Sheet.png', {
             frameWidth: 64,
@@ -158,6 +164,8 @@ export class LevelScene extends Phaser.Scene {
         this.chests = [];
         this.trades = [];
         this.slates = [];
+        this.merchants = [];
+        this.merchantItems = [];
 
         if (this.scene.isActive('CombatScene')) {
             this.scene.stop('CombatScene');
@@ -182,6 +190,7 @@ export class LevelScene extends Phaser.Scene {
         else if (this.mapKey === 'boss-floor-desert') locId = 'boss_desert';
         else if (this.mapKey === 'boss-floor-mechanic') locId = 'boss_mechanic';
         else if (this.mapKey === 'summit-trade') locId = 'summit_trade';
+        else if (this.mapKey === 'merchant') locId = 'merchant';
 
         if (locId) {
             LocationData.getInstance().discoverLocation(locId);
@@ -428,8 +437,10 @@ export class LevelScene extends Phaser.Scene {
 
         const portalsLayer = map.objects.find(layer => layer.name.toLowerCase() === 'portals');
         if (portalsLayer) {
-            this.portalSystem.parsePortals(portalsLayer, this.mapKey);
+            this.portalSystem.parsePortals(portalsLayer, this.mapKey, this.previousMap);
         }
+
+        this.portalSystem.createMerchantPortal(this.mapKey);
 
         const doorLayer = map.objects.find(layer => layer.name.toLowerCase() === 'door');
         if (doorLayer) {
@@ -466,6 +477,15 @@ export class LevelScene extends Phaser.Scene {
                 slate.slateId = fillerIds[index % fillerIds.length];
             });
             this.slates.push(...fillerSlates);
+        }
+
+        const merchantLayer = map.objects.find(layer => layer.name.toLowerCase() === 'merchant');
+        if (merchantLayer) {
+            this.merchants = createMerchants(this, merchantLayer);
+            this.generateMerchantItems();
+        } else {
+            this.merchants = [];
+            this.merchantItems = [];
         }
 
         const OFFSET = 54;
@@ -580,6 +600,19 @@ export class LevelScene extends Phaser.Scene {
             );
         }
 
+        if (this.mapKey === 'merchant') {
+            handleMerchantInteraction(
+                this,
+                this.merchants,
+                this.player,
+                this.interactKey.isDown,
+                this.wasInteractPressed,
+                this.isCinematic,
+                this.portalSystem.getIsTeleporting(),
+                this.isEntering
+            );
+        }
+
         this.currentSlowFactor = Phaser.Math.Linear(this.currentSlowFactor, this.targetSlowFactor, 0.05);
         const speed = 3 * this.currentSlowFactor;
         const body = this.player.body as MatterJS.BodyType;
@@ -628,7 +661,33 @@ export class LevelScene extends Phaser.Scene {
             case 'desert-settlement': return 18;
             case 'mechanic-settlement': return 13;
             case 'summit-trade': return 4;
+            case 'merchant': return 10;
             default: return 14;
         }
+    }
+
+    private generateMerchantItems(): void {
+        const allItems = ItemData.getAllItems();
+        const pd = PlayerData.getInstance();
+        const undiscovered = allItems.filter(item => !ItemData.getInstance().isDiscovered(item.id) && pd.getItemQuantity(item.id.toString()) === 0);
+
+        const pool = [...undiscovered];
+        if (pool.length < 3) {
+            const others = allItems.filter(item => !pool.includes(item));
+            pool.push(...others);
+        }
+
+        const selected: ItemDefinition[] = [];
+        const tempPool = [...pool];
+        while (selected.length < 3 && tempPool.length > 0) {
+            const randIdx = Math.floor(Math.random() * tempPool.length);
+            selected.push(tempPool.splice(randIdx, 1)[0]);
+        }
+
+        while (selected.length < 3) {
+            selected.push(allItems[0]);
+        }
+
+        this.merchantItems = selected;
     }
 }

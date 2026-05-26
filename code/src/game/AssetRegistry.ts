@@ -51,6 +51,7 @@ export const MapKeys = {
     SETTLEMENT_ABANDONED: 'abandoned-settlement',
     SETTLEMENT_DESERT: 'desert-settlement',
     SETTLEMENT_MECHANIC: 'mechanic-settlement',
+    MERCHANT: 'merchant',
 } as const;
 
 export const AnimationKeys = {

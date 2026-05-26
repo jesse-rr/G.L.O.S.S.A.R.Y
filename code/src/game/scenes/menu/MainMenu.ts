@@ -160,6 +160,8 @@ export class MainMenu extends Phaser.Scene {
         localStorage.removeItem('glossary_physical_slate_mapping');
         localStorage.removeItem('glossary_selected_slate_id');
         localStorage.removeItem('glossary_completed_combats');
+        localStorage.removeItem('glossary_echojar_completed_combats');
+        localStorage.removeItem('glossary_seraphs_plume_consumed');
         localStorage.removeItem('glossary_boss_presses');
         localStorage.removeItem('glossary_last_floor');
         this.scene.launch('TransitionScene', { targetScene: 'Covenant', currentScene: 'MainMenu' });
