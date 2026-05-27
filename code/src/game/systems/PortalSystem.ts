@@ -186,17 +186,29 @@ export class PortalSystem {
         if (this.isTeleporting) return;
         const targetMap = portal.getData('target');
         if (targetMap) {
+            const px = (portal as Phaser.GameObjects.Rectangle).x;
+            const py = (portal as Phaser.GameObjects.Rectangle).y;
+
+            const isMerchant = portal.getData('isMerchantEntrance');
+            if (isMerchant) {
+                const ls = this.scene as any;
+                if (ls.settlementDoors) {
+                    const door = ls.settlementDoors.find((d: any) => {
+                        return Phaser.Math.Distance.Between(d.centerX, d.centerY, px, py) < 50;
+                    });
+                    if (door && !door.opened) {
+                        return;
+                    }
+                }
+            }
+
             this.isTeleporting = true;
             if (targetMap === 'merchant') {
                 localStorage.setItem('glossary_merchant_return_map', mapKey);
             }
 
-            const px = (portal as Phaser.GameObjects.Rectangle).x;
-            const py = (portal as Phaser.GameObjects.Rectangle).y;
-
             let dirX = 0;
             let dirY = 0;
-            const isMerchant = portal.getData('isMerchantEntrance');
             if (isMerchant) {
                 dirX = 0;
                 dirY = -1;
