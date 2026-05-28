@@ -207,16 +207,14 @@ export function showCurrencyPopup(scene: Phaser.Scene, gems: number, specialCur:
     if (gems > 0) {
         const gemText = scene.add.text(0, yOffset, `+${gems}`, {
             fontFamily: FONT_FAMILY,
-            fontSize: '10px',
+            fontSize: '20px',
             color: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 2,
-            resolution: 4
-        }).setOrigin(1, 0.5);
+            strokeThickness: 2
+        }).setOrigin(1, 0.5).setScale(0.5);
 
         const gemIcon = scene.add.sprite(-gemText.width * 0.7 - 5, yOffset, 'currency', 4)
-            .setOrigin(1, 0.5)
-            .setScale(1);
+            .setOrigin(0.5, 0.5);
 
         elements.push(gemText, gemIcon);
         yOffset += 18;
@@ -225,16 +223,14 @@ export function showCurrencyPopup(scene: Phaser.Scene, gems: number, specialCur:
     if (specialCur > 0) {
         const scText = scene.add.text(0, yOffset, `+${specialCur}`, {
             fontFamily: FONT_FAMILY,
-            fontSize: '10px',
+            fontSize: '20px',
             color: covColorStr,
             stroke: '#000000',
-            strokeThickness: 2,
-            resolution: 4
-        }).setOrigin(1, 0.5);
+            strokeThickness: 2
+        }).setOrigin(1, 0.5).setScale(0.5);
 
         const scIcon = scene.add.sprite(-scText.width * 0.7 - 5, yOffset, 'currency', scFrame)
-            .setOrigin(1, 0.5)
-            .setScale(1);
+            .setOrigin(0.5, 0.5);
 
         elements.push(scText, scIcon);
     }

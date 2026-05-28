@@ -273,7 +273,6 @@ export class CombatSystem {
             }
         }
 
-        // 3. Extra Buffs
         for (const buff of player.statusEffects) {
             if (buff.duration === -1 && buff.name === 'Extra Buff' && buff.desc) {
                 if (buff.desc === 'Trade: +2 Damage') {

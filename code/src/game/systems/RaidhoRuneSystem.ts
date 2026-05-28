@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import {
+    FONT_FAMILY,
     RUNE_FONT,
     RAIDHO_CHAR,
     RAIDHO_START_COLOR,
@@ -35,6 +36,10 @@ export class RaidhoRuneSystem {
     private mountX: number = 0;
     private mountY: number = 0;
     private teleporting: boolean = false;
+
+    private activeSpeechText: Phaser.GameObjects.Text | null = null;
+    private speechOffsetY: number = -42;
+    private speechTween: Phaser.Tweens.Tween | null = null;
 
     constructor(scene: Phaser.Scene, mountX: number, mountY: number) {
         this.scene = scene;
@@ -94,6 +99,8 @@ export class RaidhoRuneSystem {
         this.tweens.push(glintTween);
     }
 
+    private wasInteractPressed: boolean = false;
+
     update(
         player: Phaser.Physics.Matter.Sprite,
         interactKeyDown: boolean,
@@ -105,29 +112,110 @@ export class RaidhoRuneSystem {
     ): void {
         if (this.teleporting) return;
 
-        if (!this.interactable || isCinematic || isTeleporting || isEntering) {
+        // Dynamically pin the speech bubble position to follow the player
+        if (this.activeSpeechText && this.activeSpeechText.active) {
+            this.activeSpeechText.setPosition(player.x, player.y + this.speechOffsetY);
+        }
+
+        if (isCinematic || isTeleporting || isEntering) {
             this.holdTimer = 0;
+            this.wasInteractPressed = interactKeyDown;
             return;
         }
 
         const dist = Phaser.Math.Distance.Between(player.x, player.y, this.mountX, this.mountY);
         if (dist < RAIDHO_INTERACT_RANGE) {
-            if (interactKeyDown) {
-                this.holdTimer += delta;
+            if (this.completedCombats >= MAX_COMBATS) {
+                if (interactKeyDown) {
+                    this.holdTimer += delta;
+                } else {
+                    this.holdTimer = 0;
+                }
+
+                const progress = Math.min(this.holdTimer / RAIDHO_HOLD_DURATION, 1);
+                InteractSystem.getInstance(this.scene).show(this.mountX, this.mountY - 63, progress);
+
+                if (this.holdTimer >= RAIDHO_HOLD_DURATION) {
+                    this.holdTimer = 0;
+                    this.startWalkSequence(player, setCinematic);
+                }
             } else {
-                this.holdTimer = 0;
-            }
+                InteractSystem.getInstance(this.scene).show(this.mountX, this.mountY - 63, 0);
 
-            const progress = Math.min(this.holdTimer / RAIDHO_HOLD_DURATION, 1);
-            InteractSystem.getInstance(this.scene).show(this.mountX, this.mountY - 63, progress);
+                if (interactKeyDown && !this.wasInteractPressed) {
+                    let text = '';
+                    if (this.completedCombats === 0) {
+                        text = "The rune is cold and silent. The pipes leading to it are completely empty.";
+                    } else if (this.completedCombats === 1) {
+                        text = "One pipe seems filled by some strange energy, the rune is glowing, but only slightly...";
+                    } else if (this.completedCombats === 2) {
+                        text = "Only one missing pipe, the rune is almost asking to be activated.";
+                    }
 
-            if (this.holdTimer >= RAIDHO_HOLD_DURATION) {
-                this.holdTimer = 0;
-                this.startWalkSequence(player, setCinematic);
+                    if (text) {
+                        if (this.activeSpeechText) {
+                            if (this.speechTween) this.speechTween.stop();
+                            this.activeSpeechText.destroy();
+                            this.activeSpeechText = null;
+                        }
+
+                        this.activeSpeechText = this.scene.add.text(player.x, player.y, text, {
+                            fontFamily: FONT_FAMILY,
+                            fontSize: '12px',
+                            color: '#e4dacf',
+                            align: 'center',
+                            stroke: '#141417',
+                            strokeThickness: 2,
+                            wordWrap: { width: 220 }
+                        }).setOrigin(0.5, 0).setDepth(200).setAlpha(0).setScale(0.5);
+
+                        this.speechTween = this.scene.tweens.add({
+                            targets: this,
+                            speechOffsetY: -52,
+                            duration: 350,
+                            ease: 'Quad.easeOut',
+                            onStart: () => {
+                                if (this.activeSpeechText) this.activeSpeechText.setAlpha(0);
+                            },
+                            onUpdate: () => {
+                                if (this.activeSpeechText && this.activeSpeechText.active) {
+                                    this.activeSpeechText.setAlpha(Math.min(1, (this.speechOffsetY + 42) / -10));
+                                }
+                            },
+                            onComplete: () => {
+                                if (this.activeSpeechText) this.activeSpeechText.setAlpha(1);
+                                this.scene.time.delayedCall(3000, () => {
+                                    if (this.activeSpeechText && this.activeSpeechText.active) {
+                                        this.speechTween = this.scene.tweens.add({
+                                            targets: this,
+                                            speechOffsetY: -62,
+                                            duration: 400,
+                                            ease: 'Quad.easeIn',
+                                            onUpdate: () => {
+                                                if (this.activeSpeechText && this.activeSpeechText.active) {
+                                                    this.activeSpeechText.setAlpha(Math.max(0, 1 - (this.speechOffsetY + 52) / -10));
+                                                }
+                                            },
+                                            onComplete: () => {
+                                                if (this.activeSpeechText) {
+                                                    this.activeSpeechText.destroy();
+                                                    this.activeSpeechText = null;
+                                                }
+                                                this.speechTween = null;
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
             }
         } else {
             this.holdTimer = 0;
         }
+
+        this.wasInteractPressed = interactKeyDown;
     }
 
     private startWalkSequence(player: Phaser.Physics.Matter.Sprite, setCinematic: (val: boolean) => void): void {
@@ -179,6 +267,14 @@ export class RaidhoRuneSystem {
     destroy(): void {
         this.tweens.forEach(t => t.stop());
         this.tweens = [];
+        if (this.speechTween) {
+            this.speechTween.stop();
+            this.speechTween = null;
+        }
+        if (this.activeSpeechText) {
+            this.activeSpeechText.destroy();
+            this.activeSpeechText = null;
+        }
         if (this.runeText) this.runeText.destroy();
         if (this.glintOverlay) this.glintOverlay.destroy();
         this.scene.events.off('shutdown', this.destroy, this);

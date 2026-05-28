@@ -491,15 +491,15 @@ export class CombatScene extends Phaser.Scene {
         }
 
         this.playerShadow = this.add.image(x, y + 30, 'protagonist-shadow')
-            .setOrigin(0.5, 1.06)
+            .setOrigin(0.5, 0.95)
             .setScrollFactor(0)
             .setAlpha(0.6)
-            .setScale(2.0);
+            .setScale(3);
 
         this.playerSprite = this.add.sprite(x, y, 'protagonist-idle')
             .setOrigin(0.5, 0.75)
             .setScrollFactor(0)
-            .setScale(2.5);
+            .setScale(3);
 
         this.playerSprite.play('combat-player-idle');
 
