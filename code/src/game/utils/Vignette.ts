@@ -15,32 +15,39 @@ export function createVignette(scene: Phaser.Scene, depth: number = 90, isDark: 
     const h = Number(scene.game.config.height);
 
     if (!scene.textures.exists(textureKey)) {
-        const canvas = scene.textures.createCanvas(textureKey, w, h);
+        const p = 100;
+        const canvas = scene.textures.createCanvas(textureKey, w + 2 * p, h + 2 * p);
         const ctx = canvas!.context;
 
-        const top = ctx.createLinearGradient(0, 0, 0, h * edgeSize);
+        ctx.fillStyle = `rgba(0, 0, 0, ${alphaStr})`;
+        ctx.fillRect(0, 0, w + 2 * p, p);
+        ctx.fillRect(0, h + p, w + 2 * p, p);
+        ctx.fillRect(0, 0, p, h + 2 * p);
+        ctx.fillRect(w + p, 0, p, h + 2 * p);
+
+        const top = ctx.createLinearGradient(0, p, 0, p + h * edgeSize);
         top.addColorStop(0, `rgba(0, 0, 0, ${alphaStr})`);
         top.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = top;
-        ctx.fillRect(0, 0, w, h * edgeSize);
+        ctx.fillRect(0, p, w + 2 * p, h * edgeSize);
 
-        const bottom = ctx.createLinearGradient(0, h, 0, h - h * edgeSize);
+        const bottom = ctx.createLinearGradient(0, p + h, 0, p + h - h * edgeSize);
         bottom.addColorStop(0, `rgba(0, 0, 0, ${alphaStr})`);
         bottom.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = bottom;
-        ctx.fillRect(0, h - h * edgeSize, w, h * edgeSize);
+        ctx.fillRect(0, p + h - h * edgeSize, w + 2 * p, h * edgeSize);
 
-        const left = ctx.createLinearGradient(0, 0, w * edgeSize, 0);
+        const left = ctx.createLinearGradient(p, 0, p + w * edgeSize, 0);
         left.addColorStop(0, `rgba(0, 0, 0, ${alphaStr})`);
         left.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = left;
-        ctx.fillRect(0, 0, w * edgeSize, h);
+        ctx.fillRect(p, 0, w * edgeSize, h + 2 * p);
 
-        const right = ctx.createLinearGradient(w, 0, w - w * edgeSize, 0);
+        const right = ctx.createLinearGradient(p + w, 0, p + w - w * edgeSize, 0);
         right.addColorStop(0, `rgba(0, 0, 0, ${alphaStr})`);
         right.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = right;
-        ctx.fillRect(w - w * edgeSize, 0, w * edgeSize, h);
+        ctx.fillRect(p + w - w * edgeSize, 0, w * edgeSize, h + 2 * p);
 
         canvas!.refresh();
     }

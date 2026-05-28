@@ -24,9 +24,10 @@ export class LightSystem {
         if (LightSystem.globalOverlay && LightSystem.globalOverlay.active) {
             this.overlay = LightSystem.globalOverlay;
             this.overlay.setPosition(w / 2, h / 2);
+            this.overlay.setSize(w * 4, h * 4);
             this.overlay.setScale(1 / zoom);
         } else {
-            this.overlay = scene.add.rectangle(w / 2, h / 2, w, h, overlayColor)
+            this.overlay = scene.add.rectangle(w / 2, h / 2, w * 4, h * 4, overlayColor)
                 .setScrollFactor(0)
                 .setDepth(150)
                 .setOrigin(0.5)
