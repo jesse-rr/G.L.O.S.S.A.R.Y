@@ -166,7 +166,7 @@ export class LevelScene extends Phaser.Scene {
             this.anims.create({ key: 'run-start', frames: this.anims.generateFrameNumbers('protagonist-run', { start: 0, end: 7 }), frameRate: 12, repeat: 0 });
             this.anims.create({ key: 'run-loop', frames: this.anims.generateFrameNumbers('protagonist-run', { start: 0, end: 7 }), frameRate: 12, repeat: -1 });
             this.anims.create({ key: 'stop', frames: this.anims.generateFrameNumbers('protagonist-idle', { start: 0, end: 0 }), frameRate: 12, repeat: 0 });
-            this.anims.create({ key: 'dash', frames: this.anims.generateFrameNumbers('protagonist-dash', { start: 0, end: 11 }), frameRate: 30, repeat: 0 });
+            this.anims.create({ key: 'dash', frames: this.anims.generateFrameNumbers('protagonist-dash', { start: 0, end: 11 }), frameRate: 80, repeat: 0 });
         }
 
         this.cursors = this.input.keyboard!.createCursorKeys();

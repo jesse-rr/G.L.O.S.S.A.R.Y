@@ -8,7 +8,7 @@ import { LocationData } from '../../data/LocationData';
 import { BestiaryData } from '../../data/BestiaryData';
 import { NetworkManager } from '../../NetworkManager';
 import { EventBus } from '../../EventBus';
-import { COVENANT_CARD_TINTS, InputKeys } from '../../constants';
+import { COVENANT_CARD_TINTS, InputKeys, FONT_FAMILY } from '../../constants';
 import { resetOpenedChests } from '../../systems/ChestSystem';
 import { resetCompletedTrades } from '../../systems/TradeSystem';
 import { CovenantType } from '../../types';
@@ -129,6 +129,11 @@ export class Covenant extends Phaser.Scene {
             this.setSelectedCard(this.selectedCardIndex + 1);
         });
 
+        this.input.keyboard!.on(InputKeys.INTERACT, () => {
+            if (!this.inputReady || this.myLock) return;
+            this.selectCovenant(COVENANTS[this.selectedCardIndex].key as CovenantType);
+        });
+
         this.time.delayedCall(200, () => { this.inputReady = true; });
 
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
@@ -141,6 +146,22 @@ export class Covenant extends Phaser.Scene {
         EventBus.on('network-data-received', this.onNetworkData, this);
         this.events.on('shutdown', () => {
             EventBus.off('network-data-received', this.onNetworkData, this);
+        });
+
+        const interactText = this.add.text(centerX, this.scale.height - 30, 'PRESS/HOLD X TO INTERACT', {
+            fontFamily: FONT_FAMILY,
+            fontSize: '14px',
+            color: '#888888',
+            align: 'center'
+        }).setOrigin(0.5).setAlpha(0.5);
+
+        this.tweens.add({
+            targets: interactText,
+            alpha: { from: 0.2, to: 0.5 },
+            duration: 1500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
         });
     }
 
