@@ -42,7 +42,7 @@ export function createDoors(
 
         const baseY = cy + 25;
         if (!playerOpenedDoor) {
-            bodyBase = (scene as MatterScene).matter.add.rectangle(cx, baseY, width - 10, 10, { isStatic: true });
+            bodyBase = (scene as MatterScene).matter.add.rectangle(cx, baseY - 40, width, height, { isStatic: true });
         } else {
             bodyLeft = (scene as MatterScene).matter.add.rectangle(cx - 27, baseY, 10, 10, { isStatic: true });
             bodyRight = (scene as MatterScene).matter.add.rectangle(cx + 27, baseY, 10, 10, { isStatic: true });
@@ -114,7 +114,7 @@ export function handleDoorInteraction(
             const dist = Phaser.Math.Distance.Between(player.x, player.y, door.x, door.y);
             if (dist < 40) {
                 interactingDoor = true;
-                
+
                 if (interactKeyDown) {
                     door.interactTimer += delta;
                 } else {
@@ -125,38 +125,38 @@ export function handleDoorInteraction(
                 InteractSystem.getInstance(scene).show(door.x, door.y - 45, progress);
 
                 if (door.interactTimer >= 1000) {
-                        door.opened = true;
-                        PlayerData.getInstance().hubDoorOpened = true;
+                    door.opened = true;
+                    PlayerData.getInstance().hubDoorOpened = true;
 
-                        setCinematic(true);
+                    setCinematic(true);
 
-                        const startDoorAnimation = () => {
-                            scene.cameras.main.shake(1000, 0.001);
-                            door.sprite.play('door-open');
-                            if (door.bodyBase) (scene as MatterScene).matter.world.remove(door.bodyBase);
+                    const startDoorAnimation = () => {
+                        scene.cameras.main.shake(1000, 0.001);
+                        door.sprite.play('door-open');
+                        if (door.bodyBase) (scene as MatterScene).matter.world.remove(door.bodyBase);
 
-                            const baseY = door.y + 25;
-                            door.bodyLeft = (scene as MatterScene).matter.add.rectangle(door.x - 29, baseY, 8, 8, { isStatic: true });
-                            door.bodyRight = (scene as MatterScene).matter.add.rectangle(door.x + 29, baseY, 8, 8, { isStatic: true });
+                        const baseY = door.y + 25;
+                        door.bodyLeft = (scene as MatterScene).matter.add.rectangle(door.x - 29, baseY, 8, 8, { isStatic: true });
+                        door.bodyRight = (scene as MatterScene).matter.add.rectangle(door.x + 29, baseY, 8, 8, { isStatic: true });
 
-                            door.sprite.on('animationupdate', (_anim: any, frame: any) => {
-                                const offset = (frame.index - 1) * 2;
-                                door.symbolLeft.x = door.x - offset;
-                                door.symbolRight.x = door.x + offset;
-                            });
-
-                            door.sprite.on('animationcomplete', () => {
-                                setCinematic(false);
-                            });
-                        };
-
-                        const darkVignette = createVignette(scene, 99, true);
-                        darkVignette.setAlpha(0);
-                        fadeIn(scene, darkVignette, 500, () => {
-                            startDoorAnimation();
-                            fadeOutAndDestroy(scene, darkVignette, 1000);
+                        door.sprite.on('animationupdate', (_anim: any, frame: any) => {
+                            const offset = (frame.index - 1) * 2;
+                            door.symbolLeft.x = door.x - offset;
+                            door.symbolRight.x = door.x + offset;
                         });
-                    }
+
+                        door.sprite.on('animationcomplete', () => {
+                            setCinematic(false);
+                        });
+                    };
+
+                    const darkVignette = createVignette(scene, 99, true);
+                    darkVignette.setAlpha(0);
+                    fadeIn(scene, darkVignette, 500, () => {
+                        startDoorAnimation();
+                        fadeOutAndDestroy(scene, darkVignette, 1000);
+                    });
+                }
             }
         }
     }

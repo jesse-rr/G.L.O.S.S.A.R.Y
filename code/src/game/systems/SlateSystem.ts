@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import { FONT_FAMILY, RUNE_FONT } from '../constants';
 import { SlateDefinition, SlateFragment, SlateProgress } from '../data/SlateData';
 import { SLATE_DARK_COLORS, SLATE_LIGHT_COLORS } from '../data/SlateData';
+import { showCurrencyPopup } from './ChestSystem';
+import { PlayerData } from '../data/PlayerData';
 
 interface FragmentSlot {
     container: Phaser.GameObjects.Container;
@@ -44,6 +46,8 @@ export class SlateSystem {
     private activeTweens: Phaser.Tweens.Tween[] = [];
     private activeTimers: Phaser.Time.TimerEvent[] = [];
     private colors: typeof SLATE_DARK_COLORS;
+    private rewardGiven = false;
+    private alreadyCompleted: boolean;
 
     constructor(
         scene: Phaser.Scene,
@@ -57,9 +61,15 @@ export class SlateSystem {
         this.slate = slate;
         this.onComplete = onComplete;
         this.colors = colorScheme === 'light' ? SLATE_LIGHT_COLORS : SLATE_DARK_COLORS;
+        this.alreadyCompleted = SlateProgress.getInstance().isCompleted(slate.id);
     }
 
     create(centerX: number, centerY: number): void {
+        if (this.alreadyCompleted) {
+            this.showAlreadyCompletedLore(centerX, centerY);
+            return;
+        }
+
         this.slateContainer = this.scene.add.container(centerX, centerY);
         this.parentContainer.add(this.slateContainer);
 
@@ -120,6 +130,65 @@ export class SlateSystem {
             const slotY = this.startY + i * (this.slotHeight + this.slotGap);
             this.createFragmentSlot(fragment, fragmentIndex, i, slotY);
         }
+
+        this.slateContainer.setAlpha(0);
+        this.slateContainer.setScale(0.9);
+        const entranceTween = this.scene.tweens.add({
+            targets: this.slateContainer,
+            alpha: 1,
+            scale: 1,
+            duration: 400,
+            ease: 'Back.easeOut',
+        });
+        this.activeTweens.push(entranceTween);
+    }
+
+    private showAlreadyCompletedLore(centerX: number, centerY: number): void {
+        this.slateContainer = this.scene.add.container(centerX, centerY);
+        this.parentContainer.add(this.slateContainer);
+
+        const totalHeight = 520;
+        const totalWidth = 580;
+
+        const slateBg = this.scene.add.rectangle(0, 0, totalWidth, totalHeight, this.colors.SLATE_BG_COLOR, 0.95)
+            .setStrokeStyle(2, this.colors.SLATE_BORDER_COLOR);
+        this.slateContainer.add(slateBg);
+
+        this.titleText = this.scene.add.text(0, -totalHeight / 2 + 30, this.slate.title, {
+            fontFamily: FONT_FAMILY,
+            fontSize: '22px',
+            color: this.colors.TITLE_COLOR,
+            align: 'center',
+            resolution: 2,
+            letterSpacing: 6
+        }).setOrigin(0.5);
+        this.slateContainer.add(this.titleText);
+
+        const dividerTop = this.scene.add.rectangle(0, -120, 300, 1, 0x888888, 0.4);
+        this.slateContainer.add(dividerTop);
+
+        const loreText = this.scene.add.text(0, 0, this.slate.loreText, {
+            fontFamily: FONT_FAMILY,
+            fontSize: '16px',
+            color: this.colors.TEXT_LORE,
+            align: 'center',
+            wordWrap: { width: 460 },
+            lineSpacing: 8,
+            resolution: 2,
+        }).setOrigin(0.5);
+        this.slateContainer.add(loreText);
+
+        const dividerBottom = this.scene.add.rectangle(0, 120, 300, 1, 0x888888, 0.4);
+        this.slateContainer.add(dividerBottom);
+
+        const completedLabel = this.scene.add.text(0, 165, 'press ESC to leave  •  this information can be found on the glossary info pages', {
+            fontFamily: FONT_FAMILY,
+            fontSize: '11px',
+            color: this.colors.TEXT_DIM,
+            align: 'center',
+            resolution: 2,
+        }).setOrigin(0.5);
+        this.slateContainer.add(completedLabel);
 
         this.slateContainer.setAlpha(0);
         this.slateContainer.setScale(0.9);
@@ -241,7 +310,8 @@ export class SlateSystem {
 
             this.checkAndLockCorrectFragments();
 
-            if (this.isCorrectOrder()) {
+            if (this.isCorrectOrder() && !this.solved) {
+                this.solved = true;
                 this.onSolved();
             }
         });
@@ -347,7 +417,6 @@ export class SlateSystem {
     }
 
     private onSolved(): void {
-        this.solved = true;
         this.locked = true;
 
         this.fragmentSlots.forEach(f => {
@@ -365,6 +434,23 @@ export class SlateSystem {
             });
             this.activeTweens.push(flashTween);
         });
+
+        if (!this.alreadyCompleted) {
+            if (!this.rewardGiven) {
+                this.rewardGiven = true;
+                PlayerData.getInstance().gemstones += 10;
+                PlayerData.getInstance().save();
+
+                const levelScene = this.scene.scene.get('LevelScene') as Phaser.Scene;
+                if (levelScene) {
+                    showCurrencyPopup(levelScene, 10, 0);
+                } else {
+                    showCurrencyPopup(this.scene, 10, 0);
+                }
+            }
+            SlateProgress.getInstance().completeSlate(this.slate.id);
+            this.alreadyCompleted = true;
+        }
 
         this.scene.time.delayedCall(500, () => {
             this.playTranslationSequence();
@@ -461,7 +547,9 @@ export class SlateSystem {
     }
 
     private showLoreReveal(): void {
-        SlateProgress.getInstance().completeSlate(this.slate.id);
+        if (!this.alreadyCompleted) {
+            SlateProgress.getInstance().completeSlate(this.slate.id);
+        }
 
         this.fragmentSlots.forEach(frag => {
             const fadeTween = this.scene.tweens.add({

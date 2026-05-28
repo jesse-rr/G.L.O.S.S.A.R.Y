@@ -1,4 +1,6 @@
 import * as Phaser from 'phaser';
+import { ScreenShake } from '../utils/ScreenShake';
+
 
 export interface DashConfig {
     speed?: number;
@@ -112,6 +114,9 @@ export class DashSystem {
                 this.dashDirection.y * this.dashSpeed,
             );
             player.play('dash');
+
+            // Trigger a slight screen shake on dash
+            ScreenShake.trigger(player.scene, 250, 0.0005);
         }
     }
 }

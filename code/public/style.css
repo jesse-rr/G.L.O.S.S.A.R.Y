@@ -11,8 +11,24 @@
 body {
     margin: 0;
     padding: 0;
-    background-color: #000000;
+    background-color: #080809;
     overflow: hidden;
+    position: relative;
+}
+
+body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("assets/Models/bg.jpg");
+    background-size: cover;
+    background-position: center;
+    opacity: 0.02;
+    z-index: -1;
+    pointer-events: none;
 }
 
 #app {
@@ -34,5 +50,3 @@ canvas {
     image-rendering: -moz-crisp-edges;
     image-rendering: crisp-edges;
 }
-
-

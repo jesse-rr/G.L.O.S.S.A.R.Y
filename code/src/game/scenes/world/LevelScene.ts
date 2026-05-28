@@ -214,6 +214,7 @@ export class LevelScene extends Phaser.Scene {
         new LightSystem(this, 0.55, 0x000000);
 
         this.combatTrackerHUD = new CombatTrackerHUD(this, this.mapKey);
+
         if (this.mapKey === 'hub' || this.mapKey === 'central-hub') this.raidhoRuneSystem = new RaidhoRuneSystem(this, 0, 5);
 
         this.matter.world.on('collisionstart', (event: any) => {

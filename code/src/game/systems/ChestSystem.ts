@@ -166,8 +166,6 @@ export function handleChestInteraction(
 
                     const gems = Phaser.Math.Between(30, 60);
                     const specialCur = Phaser.Math.Between(1, 3);
-                    PlayerData.getInstance().gemstones += gems;
-                    PlayerData.getInstance().updateSpecialCurrency(specialCur);
 
                     showCurrencyPopup(scene, gems, specialCur);
 
@@ -188,7 +186,7 @@ export function handleChestInteraction(
     return interactingChest;
 }
 
-function showCurrencyPopup(scene: Phaser.Scene, gems: number, specialCur: number) {
+export function showCurrencyPopup(scene: Phaser.Scene, gems: number, specialCur: number) {
     const w = scene.scale.width;
     const h = scene.scale.height;
     const camZoom = 2;
@@ -202,32 +200,48 @@ function showCurrencyPopup(scene: Phaser.Scene, gems: number, specialCur: number
     const scFrame = covenant === 'snake' ? 1 : covenant === 'phoenix' ? 2 : covenant === 'dragon' ? 3 : 1;
 
     const container = scene.add.container(startX, startY).setDepth(300).setScrollFactor(0);
+    const elements: Phaser.GameObjects.GameObject[] = [];
 
-    const gemText = scene.add.text(0, 0, `+${gems}`, {
-        fontFamily: FONT_FAMILY,
-        fontSize: '24px',
-        color: '#ffffff',
-        stroke: '#000000',
-        strokeThickness: 4
-    }).setOrigin(1, 0.5).setScale(0.5);
+    let yOffset = 0;
 
-    const gemIcon = scene.add.sprite(-gemText.width * 0.5 - 5, 0, 'currency', 4)
-        .setOrigin(1, 0.5)
-        .setScale(1);
+    if (gems > 0) {
+        const gemText = scene.add.text(0, yOffset, `+${gems}`, {
+            fontFamily: FONT_FAMILY,
+            fontSize: '10px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2,
+            resolution: 4
+        }).setOrigin(1, 0.5);
 
-    const scText = scene.add.text(0, 20, `+${specialCur}`, {
-        fontFamily: FONT_FAMILY,
-        fontSize: '24px',
-        color: covColorStr,
-        stroke: '#000000',
-        strokeThickness: 4
-    }).setOrigin(1, 0.5).setScale(0.5);
+        const gemIcon = scene.add.sprite(-gemText.width * 0.7 - 5, yOffset, 'currency', 4)
+            .setOrigin(1, 0.5)
+            .setScale(1);
 
-    const scIcon = scene.add.sprite(-scText.width * 0.5 - 5, 20, 'currency', scFrame)
-        .setOrigin(1, 0.5)
-        .setScale(1);
+        elements.push(gemText, gemIcon);
+        yOffset += 18;
+    }
 
-    container.add([gemText, gemIcon, scText, scIcon]);
+    if (specialCur > 0) {
+        const scText = scene.add.text(0, yOffset, `+${specialCur}`, {
+            fontFamily: FONT_FAMILY,
+            fontSize: '10px',
+            color: covColorStr,
+            stroke: '#000000',
+            strokeThickness: 2,
+            resolution: 4
+        }).setOrigin(1, 0.5);
+
+        const scIcon = scene.add.sprite(-scText.width * 0.7 - 5, yOffset, 'currency', scFrame)
+            .setOrigin(1, 0.5)
+            .setScale(1);
+
+        elements.push(scText, scIcon);
+    }
+
+    container.add(elements);
+
+    if (elements.length === 0) return;
 
     scene.tweens.add({
         targets: container,
@@ -239,5 +253,7 @@ function showCurrencyPopup(scene: Phaser.Scene, gems: number, specialCur: number
             container.destroy();
         }
     });
-}
 
+    PlayerData.getInstance().gemstones += gems;
+    PlayerData.getInstance().updateSpecialCurrency(specialCur);
+}

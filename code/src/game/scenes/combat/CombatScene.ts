@@ -471,7 +471,7 @@ export class CombatScene extends Phaser.Scene {
 
     private createPlayerVisual(): void {
         const x = 200;
-        const y = 480;
+        const y = 500;
 
         if (!this.anims.exists('combat-player-idle')) {
             this.anims.create({
