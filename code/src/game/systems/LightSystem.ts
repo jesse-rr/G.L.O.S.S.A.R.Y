@@ -1,27 +1,32 @@
 export class LightSystem {
     private overlay: Phaser.GameObjects.Rectangle;
     private minAlpha: number = 0;
-    private maxAlpha: number = 0.5;
-    private duration: number = 300000;
+    private maxAlpha: number = 0.9;
+    private duration: number = 120000;
     private scene: Phaser.Scene;
     private static globalAlpha: number = 0;
     private static globalIsDarkening: boolean = true;
     private static globalTween: Phaser.Tweens.Tween | null = null;
     private static globalOverlay: Phaser.GameObjects.Rectangle | null = null;
 
-    constructor(scene: Phaser.Scene) {
+    constructor(scene: Phaser.Scene, maxAlpha?: number, color?: number) {
         this.scene = scene;
+
+        if (maxAlpha !== undefined) {
+            this.maxAlpha = Math.min(1, Math.max(0, maxAlpha));
+        }
 
         const w = scene.scale.width;
         const h = scene.scale.height;
         const zoom = scene.cameras.main.zoom || 1;
+        const overlayColor = color !== undefined ? color : 0x000000;
 
         if (LightSystem.globalOverlay && LightSystem.globalOverlay.active) {
             this.overlay = LightSystem.globalOverlay;
             this.overlay.setPosition(w / 2, h / 2);
             this.overlay.setScale(1 / zoom);
         } else {
-            this.overlay = scene.add.rectangle(w / 2, h / 2, w, h, 0x0a0a1a)
+            this.overlay = scene.add.rectangle(w / 2, h / 2, w, h, overlayColor)
                 .setScrollFactor(0)
                 .setDepth(150)
                 .setOrigin(0.5)

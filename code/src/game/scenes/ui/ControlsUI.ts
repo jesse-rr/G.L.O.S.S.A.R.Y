@@ -67,7 +67,7 @@ export class ControlsUI extends Phaser.Scene {
 
         const shiftFrame = this.textures.get('ui-items').frameTotal - 2;
         makeKey(rightX, actionsYStart + actSpacing * 4, 'Shift', shiftFrame);
-        this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing * 4, '- View Rune Info (While in combat)', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
+        this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing * 4, '- View Rune Info (While in combat) / Dash', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
 
         this.input.on('wheel', (_: any, __: any, ___: number, dy: number) => {
             const parent = this.parentScene as ScrollableScene;

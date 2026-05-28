@@ -17,6 +17,8 @@ import { CombatTrackerHUD } from '../../systems/CombatTrackerHUD';
 import { isPipeLayer, fillPipeLayer } from '../../systems/PipeSystem';
 import { RaidhoRuneSystem } from '../../systems/RaidhoRuneSystem';
 import { MerchantState, createMerchants, handleMerchantInteraction } from '../../systems/MerchantSystem';
+import { DashSystem } from '../../systems/DashSystem';
+import { LightSystem } from '../../systems/LightSystem';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -50,14 +52,7 @@ export class LevelScene extends Phaser.Scene {
     public merchantItems: ItemDefinition[] = [];
 
     private dashKey!: Phaser.Input.Keyboard.Key;
-    private isDashing = false;
-    private dashCooldownTimer = 0;
-    private dashDurationTimer = 0;
-    private dashSpeed = 25;
-    private dashCooldownTime = 5;
-    private dashDurationTime = 0.8;
-    private dashDirection = new Phaser.Math.Vector2(0, 0);
-    private dashAvailable = true;
+    private dashSystem!: DashSystem;
 
     constructor() {
         super('LevelScene');
@@ -106,10 +101,10 @@ export class LevelScene extends Phaser.Scene {
         this.load.spritesheet('door-sheet', 'assets/Models/exports/Animations/Door-Sheet.png', { frameWidth: 64, frameHeight: 96 });
         this.load.spritesheet('door-symbol', 'assets/Models/exports/Animations/Door-Symbol.png', { frameWidth: 64, frameHeight: 96 });
 
-        this.load.spritesheet('protagonist-idle', 'assets/Models/Protagonist/Idle.png', { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('protagonist-run', 'assets/Models/Protagonist/Run.png', { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('protagonist-dash', 'assets/Models/Protagonist/Dash.png', { frameWidth: 48, frameHeight: 48 });
-        this.load.image('protagonist-shadow', 'assets/Models/Protagonist/Shadow.png');
+        this.load.spritesheet('protagonist-idle', `assets/Models/Protagonist/Idle-${this.registry.get('playerData').covenant}.png`, { frameWidth: 48, frameHeight: 48 });
+        this.load.spritesheet('protagonist-run', `assets/Models/Protagonist/Run-${this.registry.get('playerData').covenant}.png`, { frameWidth: 48, frameHeight: 48 });
+        this.load.spritesheet('protagonist-dash', `assets/Models/Protagonist/Dash-${this.registry.get('playerData').covenant}.png`, { frameWidth: 48, frameHeight: 48 });
+        this.load.image('protagonist-shadow', `assets/Models/Protagonist/Shadow.png`);
 
         this.load.spritesheet('btn-boss-abandoned', 'assets/Models/exports/Animations/Btn-Boss-Abandoned.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('btn-boss-desert', 'assets/Models/exports/Animations/Btn-Boss-Desert.png', { frameWidth: 64, frameHeight: 64 });
@@ -142,11 +137,8 @@ export class LevelScene extends Phaser.Scene {
         this.merchants = [];
         this.merchantItems = [];
 
-        this.isDashing = false;
-        this.dashCooldownTimer = 0;
-        this.dashDurationTimer = 0;
-        this.dashAvailable = true;
-        this.dashDirection.set(0, 0);
+        this.dashSystem = new DashSystem();
+        this.dashSystem.reset();
 
         if (this.scene.isActive('CombatScene')) this.scene.stop('CombatScene');
 
@@ -219,6 +211,8 @@ export class LevelScene extends Phaser.Scene {
         this.settingsBtn.on('pointerdown', () => { if (!this.scene.isActive('Help')) { this.scene.pause(); this.scene.launch('Help', { previousScene: 'LevelScene' }); } });
 
         createVignette(this);
+        new LightSystem(this, 0.55, 0x000000);
+
         this.combatTrackerHUD = new CombatTrackerHUD(this, this.mapKey);
         if (this.mapKey === 'hub' || this.mapKey === 'central-hub') this.raidhoRuneSystem = new RaidhoRuneSystem(this, 0, 5);
 
@@ -235,7 +229,7 @@ export class LevelScene extends Phaser.Scene {
                             const stairId = other.getData('stairId') ?? (other as any).id;
                             if (stairId !== undefined) { this.activeStairZones.add(stairId); this.updateSlowFactor(); }
                         }
-                        if (other.getData('target')) this.portalSystem.onPortalOverlap(other, this.player, this.mapKey);
+                        if (other.getData('target') && !this.isEntering) this.portalSystem.onPortalOverlap(other, this.player, this.mapKey);
                     }
                 }
             });
@@ -267,6 +261,15 @@ export class LevelScene extends Phaser.Scene {
     }
 
     private createMap(mapKey: string) {
+        this.doors = [];
+        this.settlementDoors = [];
+        this.mechanicDoors = [];
+        this.bossButtons = [];
+        this.chests = [];
+        this.trades = [];
+        this.slates = [];
+        this.merchants = [];
+
         const map = this.make.tilemap({ key: mapKey });
         const tilesets: Phaser.Tilemaps.Tileset[] = [];
         map.tilesets.forEach(ts => {
@@ -350,7 +353,9 @@ export class LevelScene extends Phaser.Scene {
         this.spawnPlayer(this.overrideSpawnX !== null ? this.overrideSpawnX : spawnX, this.overrideSpawnY !== null ? this.overrideSpawnY : spawnY);
         this.overrideSpawnX = null;
         this.overrideSpawnY = null;
-        this.player.setDepth(this.getPlayerDepth(mapKey));
+        const playerDepth = this.getPlayerDepth(mapKey);
+        this.player.setDepth(playerDepth);
+        this.playerShadow.setDepth(playerDepth);
 
         if (this.isTeleportingFromRune) this.cameras.main.fadeIn(1200, 255, 255, 255);
         else this.cameras.main.fadeIn(800, 0, 0, 0);
@@ -367,8 +372,8 @@ export class LevelScene extends Phaser.Scene {
     private spawnPlayer(x: number, y: number) {
         this.player = this.matter.add.sprite(x, y, 'protagonist-idle');
         this.player.setDepth(15);
-        this.player.setRectangle(20, 16, { chamfer: { radius: 6 } });
-        this.player.setOrigin(0.5, 0.75);
+        this.player.setRectangle(20, 6, { chamfer: { radius: 2 } });
+        this.player.setOrigin(0.5, 0.67);
         this.player.setFixedRotation();
         this.player.setFriction(1);
         this.player.setFrictionAir(0.05);
@@ -376,7 +381,7 @@ export class LevelScene extends Phaser.Scene {
         this.player.setBounce(0);
         this.player.setMass(10);
 
-        this.playerShadow = this.add.image(x, y + 12, 'protagonist-shadow');
+        this.playerShadow = this.add.image(x, y + 16, 'protagonist-shadow');
         this.playerShadow.setOrigin(0.5, 1.06);
         this.playerShadow.setDepth(14);
         this.playerShadow.setAlpha(0.6);
@@ -387,37 +392,7 @@ export class LevelScene extends Phaser.Scene {
     }
 
     update(_time: number, delta: number) {
-        // Cooldown timer
-        if (this.dashCooldownTimer > 0) {
-            this.dashCooldownTimer -= delta;
-            if (this.dashCooldownTimer <= 0) {
-                this.dashCooldownTimer = 0;
-                this.dashAvailable = true;
-                console.log('Dash ready!');
-            }
-        }
-
-        // Dash duration timer
-        if (this.isDashing) {
-            this.dashDurationTimer -= delta;
-            if (this.dashDurationTimer <= 0) {
-                this.isDashing = false;
-                this.player.setVelocity(0, 0);
-                this.player.play('idle');
-                console.log('Dash finished after', this.dashDurationTime, 'seconds');
-            } else {
-                // Continue dashing
-                this.player.setVelocity(this.dashDirection.x * this.dashSpeed, this.dashDirection.y * this.dashSpeed);
-                if (this.player.anims.currentAnim?.key !== 'dash') {
-                    this.player.play('dash');
-                }
-                if (this.playerShadow && this.player.active) {
-                    this.playerShadow.setPosition(this.player.x, this.player.y + 12);
-                    this.playerShadow.setFlipX(this.player.flipX);
-                }
-                return;
-            }
-        }
+        if (this.dashSystem.updateTimers(delta, this.player, this.playerShadow)) return;
 
         handleDoorInteraction(this, this.doors, this.player, this.interactKey.isDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => { this.isCinematic = val; });
         handleSettlementDoorInteraction(this, this.settlementDoors, this.player, this.interactKey.isDown, this.wasInteractPressed);
@@ -486,25 +461,11 @@ export class LevelScene extends Phaser.Scene {
         }
 
         const dashJustPressed = Phaser.Input.Keyboard.JustDown(this.dashKey);
-        const isMovingCardinal = moveX !== 0 || moveY !== 0;
-
-        if (!this.isDashing && !this.portalSystem.getIsTeleporting() && !this.isEntering && !this.isCinematic && dashJustPressed && this.dashAvailable && isMovingCardinal) {
-            this.isDashing = true;
-            this.dashDurationTimer = this.dashDurationTime;
-            this.dashAvailable = false;
-            this.dashCooldownTimer = this.dashCooldownTime;
-            this.dashDirection.set(moveX, moveY);
-            if (this.dashDirection.length() === 0) {
-                this.dashDirection.set(this.player.flipX ? -1 : 1, 0);
-            }
-            this.dashDirection.normalize();
-            this.player.setVelocity(this.dashDirection.x * this.dashSpeed, this.dashDirection.y * this.dashSpeed);
-            this.player.play('dash');
-            console.log('Dash triggered! Direction:', this.dashDirection.x, this.dashDirection.y, 'Duration:', this.dashDurationTime, 'seconds');
-        }
+        const canDash = !this.portalSystem.getIsTeleporting() && !this.isEntering && !this.isCinematic;
+        this.dashSystem.tryTrigger(dashJustPressed, moveX, moveY, this.player, canDash);
 
         if (this.playerShadow && this.player.active) {
-            this.playerShadow.setPosition(this.player.x, this.player.y + 12);
+            this.playerShadow.setPosition(this.player.x, this.player.y + 16);
             this.playerShadow.setFlipX(this.player.flipX);
         }
     }

@@ -207,18 +207,7 @@ export class PortalSystem {
                 localStorage.setItem('glossary_merchant_return_map', mapKey);
             }
 
-            let dirX = 0;
-            let dirY = 0;
-            if (isMerchant) {
-                dirX = 0;
-                dirY = -1;
-            } else {
-                if (Math.abs(player.x - px) > Math.abs(player.y - py)) {
-                    dirX = player.x < px ? 1 : -1;
-                } else {
-                    dirY = player.y < py ? 1 : -1;
-                }
-            }
+            const { x: dirX, y: dirY } = this.getFixedDirection(mapKey, targetMap, isMerchant);
             this.teleportDirection = { x: dirX, y: dirY };
 
             if (isMerchant) {
@@ -247,6 +236,28 @@ export class PortalSystem {
                 this.activeTimers.push(t2);
             }
         }
+    }
+
+    private getFixedDirection(sourceMap: string, targetMap: string, isMerchant: boolean): { x: number, y: number } {
+        if (isMerchant) return { x: 0, y: -1 };
+
+        const isHub = sourceMap === 'central-hub' || sourceMap === 'hub';
+
+        if (isHub) {
+            if (targetMap.includes('boss-')) return { x: 0, y: -1 };
+            if (targetMap.includes('-settlement')) return { x: -1, y: 0 };
+            if (targetMap === 'summit-trade') return { x: 1, y: 0 };
+        }
+
+        if (targetMap === 'hub' || targetMap === 'central-hub') {
+            if (sourceMap.includes('boss-')) return { x: 0, y: 1 };
+            if (sourceMap.includes('-settlement')) return { x: 1, y: 0 };
+            if (sourceMap === 'summit-trade') return { x: -1, y: 0 };
+        }
+
+        if (sourceMap === 'merchant') return { x: 0, y: 1 };
+
+        return { x: 0, y: -1 };
     }
 
     getIsTeleporting(): boolean {

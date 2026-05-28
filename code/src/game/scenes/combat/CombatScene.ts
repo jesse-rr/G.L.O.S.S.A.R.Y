@@ -26,7 +26,8 @@ export class CombatScene extends Phaser.Scene {
     private targetEnemyId: string | null = null;
     private enemySprite: Phaser.GameObjects.Sprite | null = null;
     private enemyHpText: Phaser.GameObjects.Text | null = null;
-    private playerRect: Phaser.GameObjects.Rectangle | null = null;
+    private playerSprite: Phaser.GameObjects.Sprite | null = null;
+    private playerShadow: Phaser.GameObjects.Image | null = null;
     private abilityBtnSprite: Phaser.GameObjects.Sprite | null = null;
     private abilityBtnText: Phaser.GameObjects.Text | null = null;
     private abilityWobbleTween: Phaser.Tweens.Tween | null = null;
@@ -100,6 +101,10 @@ export class CombatScene extends Phaser.Scene {
         this.load.spritesheet('status-btn', 'assets/Models/exports/UI/Status-Btn.png', {
             frameWidth: 32, frameHeight: 32
         });
+        const covenant = this.registry.get('playerData')?.covenant || 'snake';
+        this.load.spritesheet('protagonist-idle', `assets/Models/Protagonist/Idle-${covenant}.png`, { frameWidth: 48, frameHeight: 48 });
+        this.load.spritesheet('protagonist-hurt', `assets/Models/Protagonist/Hurt-${covenant}.png`, { frameWidth: 48, frameHeight: 48 });
+        this.load.image('protagonist-shadow', 'assets/Models/Protagonist/Shadow.png');
     }
 
     create(data?: any) {
@@ -408,6 +413,13 @@ export class CombatScene extends Phaser.Scene {
             }
             this.updatePlayerHp();
             this.showDamageNumber(200, 250, e.data.damage, '#0000cc', '-');
+            if (this.playerSprite) {
+                this.playerSprite.play('combat-player-hurt').chain('combat-player-idle');
+                this.playerSprite.setTint(0xff0000);
+                this.time.delayedCall(250, () => {
+                    this.playerSprite?.clearTint();
+                });
+            }
         });
 
         this.combatSystem.on('player_healed', (e) => {
@@ -459,11 +471,37 @@ export class CombatScene extends Phaser.Scene {
 
     private createPlayerVisual(): void {
         const x = 200;
-        const y = 450;
-        const covenantColor = COVENANT_COLORS[this.playerData!.covenant] ?? 0xaaaaaa;
+        const y = 480;
 
-        this.playerRect = this.add.rectangle(x, y, 75, 100, covenantColor, 1)
-            .setStrokeStyle(3, 0x000000).setScrollFactor(0);
+        if (!this.anims.exists('combat-player-idle')) {
+            this.anims.create({
+                key: 'combat-player-idle',
+                frames: this.anims.generateFrameNumbers('protagonist-idle', { start: 0, end: 6 }),
+                frameRate: 8,
+                repeat: -1
+            });
+        }
+        if (!this.anims.exists('combat-player-hurt')) {
+            this.anims.create({
+                key: 'combat-player-hurt',
+                frames: this.anims.generateFrameNumbers('protagonist-hurt', { start: 0, end: 2 }),
+                frameRate: 8,
+                repeat: 0
+            });
+        }
+
+        this.playerShadow = this.add.image(x, y + 30, 'protagonist-shadow')
+            .setOrigin(0.5, 1.06)
+            .setScrollFactor(0)
+            .setAlpha(0.6)
+            .setScale(2.0);
+
+        this.playerSprite = this.add.sprite(x, y, 'protagonist-idle')
+            .setOrigin(0.5, 0.75)
+            .setScrollFactor(0)
+            .setScale(2.5);
+
+        this.playerSprite.play('combat-player-idle');
 
         this.playerStatusContainer = this.add.container(40, 95).setScrollFactor(0);
     }
@@ -745,9 +783,13 @@ export class CombatScene extends Phaser.Scene {
             }
 
             const damage = this.combatSystem!.executeEnemyAttack(enemy.id);
-            if (damage > 0 && this.playerRect) {
+            if (damage > 0 && this.playerSprite) {
                 this.tweens.add({
-                    targets: this.playerRect, x: this.playerRect.x - 8, duration: 50, yoyo: true, repeat: 3
+                    targets: [this.playerSprite, this.playerShadow].filter(Boolean),
+                    x: '-=8',
+                    duration: 50,
+                    yoyo: true,
+                    repeat: 3
                 });
             }
 

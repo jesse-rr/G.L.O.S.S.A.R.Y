@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { RuneData } from '../data/RuneData';
+import { RuneData, PREDEFINED_COMBOS } from '../data/RuneData';
 import { FONT_FAMILY, RUNE_FONT, InputKeys } from '../constants';
 import { DamagePreview } from '../combat/CombatSystem';
 
@@ -19,6 +19,7 @@ export class RunePickerSystem {
     private chainCards: Phaser.GameObjects.Container[] = [];
     private chainLinks: Phaser.GameObjects.Sprite[] = [];
     private pickerItems: Map<string, Phaser.GameObjects.Container> = new Map();
+    private comboGlows: Map<string, Phaser.GameObjects.Rectangle> = new Map();
     private getRuneFrame: (cardType: string) => number;
     private getCovenantColor: (covenant: string) => number;
     private covenant: string;
@@ -247,6 +248,7 @@ export class RunePickerSystem {
 
         this.repositionPicker();
         this.rebuildChainDisplay(true);
+        this.updateComboGlows();
     }
 
     private removeRuneFromChain(index: number): void {
@@ -260,6 +262,7 @@ export class RunePickerSystem {
 
         this.repositionPicker();
         this.rebuildChainDisplay(false);
+        this.updateComboGlows();
     }
 
     private updateDimOverlay(): void {
@@ -558,6 +561,7 @@ export class RunePickerSystem {
         this.selectedChain = [];
         this.repositionPicker();
         this.rebuildChainDisplay(false);
+        this.updateComboGlows();
     }
 
     public refreshPreview(): void {
@@ -569,5 +573,73 @@ export class RunePickerSystem {
         this.chainCards = [];
         this.chainLinks = [];
         this.pickerItems = new Map();
+        this.clearComboGlows();
+        this.comboGlows = new Map();
+    }
+
+    private getComboHintLetters(): Set<string> {
+        const chain = this.selectedChain;
+        if (chain.length === 0 || chain.length >= MAX_CHAIN_RUNES) return new Set();
+
+        const hints = new Set<string>();
+        const chainSet = new Set(chain.map(l => l.toUpperCase()));
+
+        for (const combo of PREDEFINED_COMBOS) {
+            const comboRunes = combo.runes.map(r => r.toUpperCase());
+            const matches = comboRunes.filter(r => chainSet.has(r));
+            if (matches.length !== chain.length) continue;
+            const chainSorted = [...chain].map(l => l.toUpperCase()).sort().join(',');
+            const matchesSorted = [...matches].sort().join(',');
+            if (chainSorted !== matchesSorted) continue;
+
+            const remaining = comboRunes.filter(r => !chainSet.has(r));
+            const allAvailable = remaining.every(r => {
+                const item = this.pickerItems.get(r);
+                return item && item.visible;
+            });
+            if (!allAvailable) continue;
+
+            for (const r of remaining) {
+                hints.add(r);
+            }
+        }
+        return hints;
+    }
+
+    private clearComboGlows(): void {
+        this.comboGlows.forEach((glow) => {
+            this.scene.tweens.killTweensOf(glow);
+            glow.destroy();
+        });
+        this.comboGlows.clear();
+    }
+
+    private updateComboGlows(): void {
+        this.clearComboGlows();
+
+        const hints = this.getComboHintLetters();
+        if (hints.size === 0) return;
+
+        hints.forEach((letter) => {
+            const item = this.pickerItems.get(letter);
+            if (!item || !item.visible) return;
+
+            const glow = this.scene.add.rectangle(0, 0, 48 * PICKER_CARD_SCALE + 1.5, 59 * PICKER_CARD_SCALE + 12, 0xFFD700, 0)
+                .setStrokeStyle(2, 0xFFD700)
+                .setDepth(79);
+
+            item.addAt(glow, 0);
+
+            this.scene.tweens.add({
+                targets: glow,
+                alpha: { from: 0.3, to: 0.8 },
+                duration: 800,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+
+            this.comboGlows.set(letter, glow);
+        });
     }
 }
