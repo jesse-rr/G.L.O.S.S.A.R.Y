@@ -19,6 +19,7 @@ import { RaidhoRuneSystem } from '../../systems/RaidhoRuneSystem';
 import { MerchantState, createMerchants, handleMerchantInteraction } from '../../systems/MerchantSystem';
 import { DashSystem } from '../../systems/DashSystem';
 import { LightSystem } from '../../systems/LightSystem';
+import { BossAttackSystem } from '../../systems/BossAttackSystem';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -53,6 +54,7 @@ export class LevelScene extends Phaser.Scene {
 
     private dashKey!: Phaser.Input.Keyboard.Key;
     private dashSystem!: DashSystem;
+    private bossAttackSystem?: BossAttackSystem;
 
     constructor() {
         super('LevelScene');
@@ -120,6 +122,15 @@ export class LevelScene extends Phaser.Scene {
         this.load.spritesheet('currency', 'assets/Models/exports/Objects/Currency.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('trade', 'assets/Models/exports/Animations/Trade.png', { frameWidth: 160, frameHeight: 190 });
         this.load.spritesheet('combat-symbol-ui', 'assets/Models/exports/UI/Combat-Symbol-UI.png', { frameWidth: 32, frameHeight: 32 });
+
+        this.load.spritesheet('pillar', 'assets/Models/Boss/boss-big-pillar-attack.png', { frameWidth: 32, frameHeight: 128 });
+        this.load.spritesheet('small_pillar', 'assets/Models/Boss/boss-small-pillar-attack.png', { frameWidth: 32, frameHeight: 96 });
+        this.load.spritesheet('inline_pillar', 'assets/Models/Boss/boss-inline-pillar-attack.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('spikes', 'assets/Models/Boss/boss-spikes-attack.png', { frameWidth: 32, frameHeight: 64 });
+        this.load.image('small_pillar_indicator', 'assets/Models/Boss/boss-small-pillar-attack-indicator.png');
+        this.load.image('spikes_indicator', 'assets/Models/Boss/boss-spikes-attack-indicator.png');
+        this.load.image('inline_pillar_indicator', 'assets/Models/Boss/boss-inline-pillar-attack-indicator.png');
+        this.load.image('big_pillar_indicator', 'assets/Models/Boss/boss-big-pillar-attack-indicator.png');
     }
 
     create() {
@@ -358,6 +369,8 @@ export class LevelScene extends Phaser.Scene {
         this.player.setDepth(playerDepth);
         this.playerShadow.setDepth(playerDepth);
 
+        this.bossAttackSystem = new BossAttackSystem(this, this.player);
+
         if (this.isTeleportingFromRune) this.cameras.main.fadeIn(1200, 255, 255, 255);
         else this.cameras.main.fadeIn(800, 0, 0, 0);
 
@@ -393,6 +406,7 @@ export class LevelScene extends Phaser.Scene {
     }
 
     update(_time: number, delta: number) {
+        if (this.bossAttackSystem) this.bossAttackSystem.update();
         if (this.dashSystem.updateTimers(delta, this.player, this.playerShadow)) return;
 
         handleDoorInteraction(this, this.doors, this.player, this.interactKey.isDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => { this.isCinematic = val; });
