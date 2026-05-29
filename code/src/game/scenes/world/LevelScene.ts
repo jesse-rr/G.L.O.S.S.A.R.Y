@@ -22,6 +22,7 @@ import { LightSystem } from '../../systems/LightSystem';
 import { BossAttackSystem } from '../../systems/BossAttackSystem';
 import { InteractSystem } from '../../systems/InteractSystem';
 import { fadeIn, fadeOutAndDestroy } from '../../utils/TweenUtils';
+import { RuneIndicatorSystem } from '../../systems/RuneIndicatorSystem';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -69,6 +70,7 @@ export class LevelScene extends Phaser.Scene {
     private isGlossaryInteractable = true;
     private glossaryInteractZone: Phaser.GameObjects.Zone | null = null;
     private isNearGlossary = false;
+    private runeIndicatorSystem?: RuneIndicatorSystem;
 
     constructor() {
         super('LevelScene');
@@ -151,6 +153,7 @@ export class LevelScene extends Phaser.Scene {
         this.load.image('spikes_indicator', 'assets/Models/Boss/boss-spikes-attack-indicator.png');
         this.load.image('inline_pillar_indicator', 'assets/Models/Boss/boss-inline-pillar-attack-indicator.png');
         this.load.image('big_pillar_indicator', 'assets/Models/Boss/boss-big-pillar-attack-indicator.png');
+        this.load.image('Rune-Indicator', 'assets/Models/Boss/Rune-Indicator.png');
     }
 
     create() {
@@ -348,7 +351,33 @@ export class LevelScene extends Phaser.Scene {
         }
 
         if (this.bossAttackSystem) {
-            // this.bossAttackSystem.startBattle();
+        }
+
+        if (this.runeIndicatorSystem) {
+            this.runeIndicatorSystem.startBattle(() => {
+                this.deactivateBarrier();
+            });
+        }
+    }
+
+    private deactivateBarrier(): void {
+        if (!this.barrierActive) return;
+
+        this.barrierActive = false;
+
+        for (const layer of this.barrierLayers) {
+            layer.setVisible(false);
+        }
+
+        for (const body of this.barrierBodies) {
+            if (body && this.matter.world) {
+                this.matter.world.remove(body);
+            }
+        }
+        this.barrierBodies = [];
+
+        if (this.glossaryInteractZone) {
+            this.glossaryInteractZone.setInteractive();
         }
     }
 
@@ -412,7 +441,6 @@ export class LevelScene extends Phaser.Scene {
                 }
                 if (layerData.name.toLowerCase().includes('slate')) depthVal = this.getPlayerDepth(mapKey) - 1;
                 if (layerData.name === 'Barrier' || layerData.name === 'Barrier+') {
-                    console.log(`Found barrier layer: ${layerData.name}`, layer.visible);
                     this.barrierLayers.push(layer);
                     layer.setVisible(false);
                 }
@@ -425,18 +453,14 @@ export class LevelScene extends Phaser.Scene {
             }
         });
 
-        console.log('Total barrier layers found:', this.barrierLayers.length);
-
         this.cameras.main.setZoom(2);
         this.matter.world.setBounds(-2000, -2000, 4000, 4000);
         parseCollisionObjects(this, map.objects);
 
         const barrierCollisionLayers = map.objects.filter(layer => layer.name.toLowerCase().includes('barrier'));
-        console.log('Barrier collision layers found:', barrierCollisionLayers.map(l => l.name));
 
         for (const barrierLayer of barrierCollisionLayers) {
             if (barrierLayer.objects) {
-                console.log(`Objects in ${barrierLayer.name}:`, barrierLayer.objects.length);
                 for (const obj of barrierLayer.objects) {
                     this.barrierCollisionObjects.push({
                         x: obj.x + (obj.width / 2),
@@ -447,8 +471,6 @@ export class LevelScene extends Phaser.Scene {
                 }
             }
         }
-
-        console.log('Total barrier collision objects:', this.barrierCollisionObjects.length);
 
         const stairsLayer = map.objects.find(layer => layer.name.toLowerCase() === 'stairs');
         if (stairsLayer) parseStairObjects(this, stairsLayer, this.stairZones);
@@ -528,6 +550,9 @@ export class LevelScene extends Phaser.Scene {
 
         if (mapKey === 'summit-settlement') {
             this.bossAttackSystem = new BossAttackSystem(this, this.player);
+            if (this.barrierCollisionObjects.length > 0) {
+                this.runeIndicatorSystem = new RuneIndicatorSystem(this, this.player, this.barrierCollisionObjects);
+            }
         }
 
         if (this.isTeleportingFromRune) this.cameras.main.fadeIn(1200, 255, 255, 255);
@@ -585,6 +610,7 @@ export class LevelScene extends Phaser.Scene {
         }
 
         if (this.bossAttackSystem) this.bossAttackSystem.update();
+        if (this.runeIndicatorSystem) this.runeIndicatorSystem.update(delta);
         if (this.dashSystem.updateTimers(delta, this.player, this.playerShadow)) return;
 
         handleDoorInteraction(this, this.doors, this.player, this.interactKey.isDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => { this.isCinematic = val; });
