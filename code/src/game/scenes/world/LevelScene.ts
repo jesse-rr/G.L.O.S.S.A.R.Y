@@ -20,6 +20,8 @@ import { MerchantState, createMerchants, handleMerchantInteraction } from '../..
 import { DashSystem } from '../../systems/DashSystem';
 import { LightSystem } from '../../systems/LightSystem';
 import { BossAttackSystem } from '../../systems/BossAttackSystem';
+import { InteractSystem } from '../../systems/InteractSystem';
+import { fadeIn, fadeOutAndDestroy } from '../../utils/TweenUtils';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -43,8 +45,8 @@ export class LevelScene extends Phaser.Scene {
     private trades: TradeState[] = [];
     private slates: SlateState[] = [];
     private interactKey!: Phaser.Input.Keyboard.Key;
+    private glossaryKey!: Phaser.Input.Keyboard.Key;
     private isCinematic = false;
-    private glossaryBtn!: Phaser.GameObjects.Sprite;
     private settingsBtn!: Phaser.GameObjects.Sprite;
     private wasInteractPressed = { value: false };
     private combatTrackerHUD!: CombatTrackerHUD;
@@ -55,6 +57,18 @@ export class LevelScene extends Phaser.Scene {
     private dashKey!: Phaser.Input.Keyboard.Key;
     private dashSystem!: DashSystem;
     private bossAttackSystem?: BossAttackSystem;
+
+    private barrierLayers: Phaser.Tilemaps.TilemapLayer[] = [];
+    private barrierCollisionObjects: any[] = [];
+    private barrierBodies: MatterJS.BodyType[] = [];
+    private barrierActive = false;
+    private isHoldingGlossary = false;
+    private glossaryHoldProgress = 0;
+    private glossaryHoldDuration = 1500;
+    private interactSystem!: InteractSystem;
+    private isGlossaryInteractable = true;
+    private glossaryInteractZone: Phaser.GameObjects.Zone | null = null;
+    private isNearGlossary = false;
 
     constructor() {
         super('LevelScene');
@@ -78,6 +92,11 @@ export class LevelScene extends Phaser.Scene {
         this.isTeleportingFromRune = data?.teleportFromRune ?? false;
         this.isEntering = false;
         this.isCinematic = false;
+        this.barrierActive = false;
+        this.isHoldingGlossary = false;
+        this.glossaryHoldProgress = 0;
+        this.isGlossaryInteractable = true;
+        this.isNearGlossary = false;
     }
 
     preload() {
@@ -91,6 +110,7 @@ export class LevelScene extends Phaser.Scene {
         this.load.tilemapTiledJSON('boss-floor-abandoned', 'assets/Models/exports/Maps/boss-floor-abandoned.json');
         this.load.tilemapTiledJSON('boss-floor-desert', 'assets/Models/exports/Maps/boss-floor-desert.json');
         this.load.tilemapTiledJSON('boss-floor-mechanic', 'assets/Models/exports/Maps/boss-floor-mechanic.json');
+        this.load.tilemapTiledJSON('summit-settlement', 'assets/Models/exports/Maps/summit-settlement.json');
 
         this.load.tilemapTiledJSON('abandoned-settlement', 'assets/Models/exports/Maps/abandoned-settlement.json');
         this.load.tilemapTiledJSON('desert-settlement', 'assets/Models/exports/Maps/desert-settlement.json');
@@ -134,6 +154,8 @@ export class LevelScene extends Phaser.Scene {
     }
 
     create() {
+        this.interactSystem = InteractSystem.getInstance(this);
+
         this.stairZones = this.add.group();
         this.inReverseZone = false;
         this.targetSlowFactor = 1;
@@ -141,6 +163,7 @@ export class LevelScene extends Phaser.Scene {
         this.activeStairZones.clear();
         this.doors = [];
         this.settlementDoors = [];
+        this.mechanicDoors = [];
         this.bossButtons = [];
         this.chests = [];
         this.trades = [];
@@ -168,6 +191,7 @@ export class LevelScene extends Phaser.Scene {
         else if (this.mapKey === 'boss-floor-abandoned') locId = 'boss_abandoned';
         else if (this.mapKey === 'boss-floor-desert') locId = 'boss_desert';
         else if (this.mapKey === 'boss-floor-mechanic') locId = 'boss_mechanic';
+        else if (this.mapKey === 'summit-settlement') locId = 'boss_summit';
         else if (this.mapKey === 'summit-trade') locId = 'summit_trade';
         else if (this.mapKey === 'merchant') locId = 'merchant';
         if (locId) LocationData.getInstance().discoverLocation(locId);
@@ -183,6 +207,7 @@ export class LevelScene extends Phaser.Scene {
         this.cursors = this.input.keyboard!.createCursorKeys();
         this.keys = this.input.keyboard!.addKeys('W,A,S,D') as any;
         this.interactKey = this.input.keyboard!.addKey('X');
+        this.glossaryKey = this.input.keyboard!.addKey(InputKeys.GLOSSARY);
         this.dashKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
         if (!this.anims.exists('door-open')) {
@@ -199,21 +224,6 @@ export class LevelScene extends Phaser.Scene {
         });
 
         const w = this.scale.width, h = this.scale.height, camZoom = 2;
-        const glossaryScreenX = (15 - w / 2) / camZoom + w / 2;
-        const glossaryScreenY = (h - 15 - h / 2) / camZoom + h / 2;
-        this.glossaryBtn = this.add.sprite(glossaryScreenX, glossaryScreenY, 'glossary', 0).setOrigin(0, 1).setScrollFactor(0).setDepth(200).setScale(2 / camZoom).setInteractive({ useHandCursor: true });
-        this.glossaryBtn.on('pointerdown', () => { if (!this.scene.isActive('GlossaryUI')) { this.scene.pause(); this.scene.launch('GlossaryUI', { previousScene: 'LevelScene', isPaused: true }); } });
-        this.input.keyboard!.on(InputKeys.GLOSSARY, () => { if (!this.scene.isActive('GlossaryUI')) { this.scene.pause(); this.scene.launch('GlossaryUI', { previousScene: 'LevelScene', isPaused: true }); } });
-
-        this.time.addEvent({
-            delay: 1000, loop: true, callback: () => {
-                if (this.player && this.player.active) {
-                    const pd = PlayerData.getInstance();
-                    pd.lastMap = this.mapKey; pd.lastX = this.player.x; pd.lastY = this.player.y; pd.save();
-                }
-            }
-        });
-
         const settingsScreenX = (w - 15 - w / 2) / camZoom + w / 2;
         const settingsScreenY = (h - 15 - h / 2) / camZoom + h / 2;
         this.settingsBtn = this.add.sprite(settingsScreenX, settingsScreenY, 'settings-btn').setOrigin(1, 1).setScrollFactor(0).setDepth(200).setScale(1 / camZoom).setInteractive({ useHandCursor: true });
@@ -226,7 +236,13 @@ export class LevelScene extends Phaser.Scene {
 
         this.combatTrackerHUD = new CombatTrackerHUD(this, this.mapKey);
 
-        if (this.mapKey === 'hub' || this.mapKey === 'central-hub') this.raidhoRuneSystem = new RaidhoRuneSystem(this, 0, 5);
+        if (this.raidhoRuneSystem) {
+            this.raidhoRuneSystem.destroy();
+            this.raidhoRuneSystem = undefined;
+        }
+        if (this.mapKey === 'hub' || this.mapKey === 'central-hub') {
+            this.raidhoRuneSystem = new RaidhoRuneSystem(this, 0, 5);
+        }
 
         this.matter.world.on('collisionstart', (event: any) => {
             event.pairs.forEach((pair: any) => {
@@ -235,7 +251,7 @@ export class LevelScene extends Phaser.Scene {
                 const gameObjectB = bodyB.gameObject;
                 if (gameObjectA === this.player || gameObjectB === this.player) {
                     const other = gameObjectA === this.player ? gameObjectB : gameObjectA;
-                    if (other && other.getData) {
+                    if (other && other.getData && typeof other.getData === 'function') {
                         if (other.getData('reverseSlow')) { this.inReverseZone = true; this.updateSlowFactor(); }
                         if (other.getData('isStair') && !this.inReverseZone) {
                             const stairId = other.getData('stairId') ?? (other as any).id;
@@ -254,7 +270,7 @@ export class LevelScene extends Phaser.Scene {
                 const gameObjectB = bodyB.gameObject;
                 if (gameObjectA === this.player || gameObjectB === this.player) {
                     const other = gameObjectA === this.player ? gameObjectB : gameObjectA;
-                    if (other && other.getData) {
+                    if (other && other.getData && typeof other.getData === 'function') {
                         if (other.getData('reverseSlow')) { this.inReverseZone = false; this.updateSlowFactor(); }
                         if (other.getData('isStair') && !this.inReverseZone) {
                             const stairId = other.getData('stairId') ?? (other as any).id;
@@ -264,6 +280,94 @@ export class LevelScene extends Phaser.Scene {
                 }
             });
         });
+    }
+
+    private startGlossaryHold(): void {
+        if (this.barrierActive) return;
+        if (this.scene.isActive('GlossaryUI')) return;
+        if (this.isCinematic) return;
+        if (this.portalSystem.getIsTeleporting()) return;
+
+        this.isHoldingGlossary = true;
+        this.glossaryHoldProgress = 0;
+        this.isGlossaryInteractable = false;
+    }
+
+    private cancelGlossaryHold(): void {
+        if (!this.isHoldingGlossary) return;
+
+        this.isHoldingGlossary = false;
+        this.glossaryHoldProgress = 0;
+        this.isGlossaryInteractable = true;
+    }
+
+    private completeGlossaryHold(): void {
+        if (!this.isHoldingGlossary) return;
+
+        this.isHoldingGlossary = false;
+        this.glossaryHoldProgress = 0;
+        this.isGlossaryInteractable = false;
+        this.isCinematic = true;
+
+        const darkVignette = createVignette(this, 99, true);
+        darkVignette.setAlpha(0);
+
+        fadeIn(this, darkVignette, 500, () => {
+            this.cameras.main.shake(1000, 0.005);
+            this.cameras.main.flash(500, 255, 255, 255);
+
+            this.activateBarrier();
+
+            fadeOutAndDestroy(this, darkVignette, 1000);
+
+            this.time.delayedCall(1500, () => {
+                this.isCinematic = false;
+            });
+        });
+    }
+
+    private activateBarrier(): void {
+        if (this.barrierActive) return;
+
+        this.barrierActive = true;
+
+        if (this.glossaryInteractZone) {
+            this.glossaryInteractZone.disableInteractive();
+        }
+
+        for (const layer of this.barrierLayers) {
+            layer.setVisible(true);
+            layer.setDepth(10);
+        }
+
+        for (const obj of this.barrierCollisionObjects) {
+            const barrierSprite = this.add.rectangle(obj.x, obj.y, obj.width, obj.height, 0x000000, 0);
+            this.matter.add.gameObject(barrierSprite, { isStatic: true, label: 'barrier' });
+            barrierSprite.setData('type', 'barrier');
+            this.barrierBodies.push(barrierSprite.body as MatterJS.BodyType);
+        }
+
+        if (this.bossAttackSystem) {
+            // this.bossAttackSystem.startBattle();
+        }
+    }
+
+    private updateGlossaryHold(delta: number): void {
+        if (!this.isHoldingGlossary) return;
+
+        const isGlossaryKeyDown = this.glossaryKey.isDown;
+        const isInteractKeyDown = this.interactKey.isDown;
+
+        if (!isGlossaryKeyDown && !isInteractKeyDown) {
+            this.cancelGlossaryHold();
+            return;
+        }
+
+        this.glossaryHoldProgress += delta;
+
+        if (this.glossaryHoldProgress >= this.glossaryHoldDuration) {
+            this.completeGlossaryHold();
+        }
     }
 
     private updateSlowFactor(): void {
@@ -281,6 +385,10 @@ export class LevelScene extends Phaser.Scene {
         this.trades = [];
         this.slates = [];
         this.merchants = [];
+        this.barrierCollisionObjects = [];
+        this.barrierLayers = [];
+        this.barrierBodies = [];
+        this.barrierActive = false;
 
         const map = this.make.tilemap({ key: mapKey });
         const tilesets: Phaser.Tilemaps.Tileset[] = [];
@@ -303,14 +411,44 @@ export class LevelScene extends Phaser.Scene {
                     }
                 }
                 if (layerData.name.toLowerCase().includes('slate')) depthVal = this.getPlayerDepth(mapKey) - 1;
-                layer.setDepth(depthVal);
+                if (layerData.name === 'Barrier' || layerData.name === 'Barrier+') {
+                    console.log(`Found barrier layer: ${layerData.name}`, layer.visible);
+                    this.barrierLayers.push(layer);
+                    layer.setVisible(false);
+                }
+                if (layerData.name === 'Barrier') {
+                    layer.setDepth(depthVal + 1);
+                } else {
+                    layer.setDepth(depthVal);
+                }
                 if (mapKey === 'central-hub' && isPipeLayer(layerData.name)) fillPipeLayer(layer);
             }
         });
 
+        console.log('Total barrier layers found:', this.barrierLayers.length);
+
         this.cameras.main.setZoom(2);
         this.matter.world.setBounds(-2000, -2000, 4000, 4000);
         parseCollisionObjects(this, map.objects);
+
+        const barrierCollisionLayers = map.objects.filter(layer => layer.name.toLowerCase().includes('barrier'));
+        console.log('Barrier collision layers found:', barrierCollisionLayers.map(l => l.name));
+
+        for (const barrierLayer of barrierCollisionLayers) {
+            if (barrierLayer.objects) {
+                console.log(`Objects in ${barrierLayer.name}:`, barrierLayer.objects.length);
+                for (const obj of barrierLayer.objects) {
+                    this.barrierCollisionObjects.push({
+                        x: obj.x + (obj.width / 2),
+                        y: obj.y + (obj.height / 2),
+                        width: obj.width,
+                        height: obj.height
+                    });
+                }
+            }
+        }
+
+        console.log('Total barrier collision objects:', this.barrierCollisionObjects.length);
 
         const stairsLayer = map.objects.find(layer => layer.name.toLowerCase() === 'stairs');
         if (stairsLayer) parseStairObjects(this, stairsLayer, this.stairZones);
@@ -359,17 +497,38 @@ export class LevelScene extends Phaser.Scene {
             this.merchantItems = [];
         }
 
+        const glossaryLayer = map.objects.find(layer => layer.name.toLowerCase() === 'glossary');
+        if (glossaryLayer && glossaryLayer.objects && glossaryLayer.objects[0]) {
+            const glossaryObj = glossaryLayer.objects[0];
+            const glossaryWorldX = glossaryObj.x + (glossaryObj.width / 2);
+            const glossaryWorldY = glossaryObj.y + (glossaryObj.height / 2);
+
+            this.glossaryInteractZone = this.add.zone(glossaryWorldX, glossaryWorldY, glossaryObj.width, glossaryObj.height);
+            this.glossaryInteractZone.setInteractive();
+        } else {
+            this.glossaryInteractZone = null;
+        }
+
+        const spawn = map.objects.find(layer => layer.name.toLowerCase() === 'spawn')?.objects?.[0];
         const OFFSET = 54;
         const spawnPos = this.portalSystem.calculateSpawn(portalsLayer, merchantEntranceLayer, mapKey, this.previousMap, OFFSET);
         let spawnX = spawnPos.x, spawnY = spawnPos.y;
-        this.spawnPlayer(this.overrideSpawnX !== null ? this.overrideSpawnX : spawnX, this.overrideSpawnY !== null ? this.overrideSpawnY : spawnY);
+
+        if (spawn) {
+            spawnX = spawn.x + (spawn.width / 2);
+            spawnY = spawn.y + (spawn.height / 2);
+        }
+
+        this.spawnPlayer(this.overrideSpawnX ?? spawnX, this.overrideSpawnY ?? spawnY);
         this.overrideSpawnX = null;
         this.overrideSpawnY = null;
         const playerDepth = this.getPlayerDepth(mapKey);
         this.player.setDepth(playerDepth);
         this.playerShadow.setDepth(playerDepth);
 
-        this.bossAttackSystem = new BossAttackSystem(this, this.player);
+        if (mapKey === 'summit-settlement') {
+            this.bossAttackSystem = new BossAttackSystem(this, this.player);
+        }
 
         if (this.isTeleportingFromRune) this.cameras.main.fadeIn(1200, 255, 255, 255);
         else this.cameras.main.fadeIn(800, 0, 0, 0);
@@ -406,6 +565,25 @@ export class LevelScene extends Phaser.Scene {
     }
 
     update(_time: number, delta: number) {
+        if (this.glossaryInteractZone) {
+            this.isNearGlossary = this.glossaryInteractZone.getBounds().contains(this.player.x, this.player.y);
+        }
+
+        if (this.isNearGlossary && this.isGlossaryInteractable && !this.barrierActive && !this.isHoldingGlossary) {
+            this.interactSystem.show(this.glossaryInteractZone!.x, this.glossaryInteractZone!.y - 30, 0);
+
+            if ((this.interactKey.isDown || this.glossaryKey.isDown) && !this.isHoldingGlossary) {
+                this.startGlossaryHold();
+            }
+        }
+
+        if (this.isHoldingGlossary) {
+            this.updateGlossaryHold(delta);
+
+            const progress = Math.min(1, this.glossaryHoldProgress / this.glossaryHoldDuration);
+            this.interactSystem.show(this.glossaryInteractZone!.x, this.glossaryInteractZone!.y - 30, progress);
+        }
+
         if (this.bossAttackSystem) this.bossAttackSystem.update();
         if (this.dashSystem.updateTimers(delta, this.player, this.playerShadow)) return;
 
@@ -450,6 +628,11 @@ export class LevelScene extends Phaser.Scene {
             this.player.anims.timeScale = this.currentSlowFactor;
             if (this.player.anims.currentAnim?.key !== 'run-start' && this.player.anims.currentAnim?.key !== 'run-loop') this.player.play('run-start').chain('run-loop');
         } else if (this.isCinematic) {
+        } else if (this.isHoldingGlossary) {
+            this.player.setVelocity(body.velocity.x * 0.85, body.velocity.y * 0.85);
+            this.player.anims.timeScale = 1;
+            if (this.player.anims.currentAnim?.key === 'run-start' || this.player.anims.currentAnim?.key === 'run-loop') this.player.play('stop').chain('idle');
+            else if (this.player.anims.currentAnim?.key !== 'stop' && this.player.anims.currentAnim?.key !== 'idle') this.player.play('idle');
         } else {
             const left = this.cursors.left.isDown || this.keys.A.isDown;
             const right = this.cursors.right.isDown || this.keys.D.isDown;
@@ -476,7 +659,7 @@ export class LevelScene extends Phaser.Scene {
         }
 
         const dashJustPressed = Phaser.Input.Keyboard.JustDown(this.dashKey);
-        const canDash = !this.portalSystem.getIsTeleporting() && !this.isEntering && !this.isCinematic;
+        const canDash = !this.portalSystem.getIsTeleporting() && !this.isEntering && !this.isCinematic && !this.isHoldingGlossary;
         this.dashSystem.tryTrigger(dashJustPressed, moveX, moveY, this.player, canDash);
 
         if (this.playerShadow && this.player.active) {
@@ -490,6 +673,7 @@ export class LevelScene extends Phaser.Scene {
             case 'boss-floor-abandoned': return 9;
             case 'boss-floor-desert': return 12;
             case 'boss-floor-mechanic': return 10;
+            case 'summit-settlement': return 9;
             case 'abandoned-settlement': return 13;
             case 'desert-settlement': return 14;
             case 'mechanic-settlement': return 13;

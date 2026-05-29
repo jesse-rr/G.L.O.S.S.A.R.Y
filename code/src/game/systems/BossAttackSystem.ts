@@ -1,6 +1,9 @@
 import * as Phaser from 'phaser';
 import { ScreenShake } from '../utils/ScreenShake';
 
+const INDICATOR_DEPTH = 7;
+const ATTACK_DEPTH = 8;
+
 export class BossAttackSystem {
     private scene: Phaser.Scene;
     private player: Phaser.Physics.Matter.Sprite;
@@ -96,7 +99,7 @@ export class BossAttackSystem {
 
         this.bigPillar = this.scene.add.sprite(0, 0, 'pillar');
         this.bigPillar.setVisible(false);
-        this.bigPillar.setDepth(100);
+        this.bigPillar.setDepth(ATTACK_DEPTH);
 
         this.scene.input.keyboard!.on('keydown-H', () => {
             if (!this.isBigAttacking) {
@@ -144,7 +147,7 @@ export class BossAttackSystem {
 
         this.bigIndicator = this.scene.add.sprite(spawnX, spawnY, 'big_pillar_indicator');
         this.bigIndicator.setOrigin(0.5, 0.5);
-        this.bigIndicator.setDepth(97);
+        this.bigIndicator.setDepth(INDICATOR_DEPTH);
         this.bigIndicator.setAlpha(0.6);
 
         this.scene.tweens.add({
@@ -159,6 +162,7 @@ export class BossAttackSystem {
         this.scene.time.delayedCall(500, () => {
             this.bigPillar.setPosition(startX, spawnY);
             this.bigPillar.setVisible(true);
+            this.bigPillar.setDepth(ATTACK_DEPTH);
             this.bigPillar.anims.play('pillarRise');
             ScreenShake.trigger(this.scene, 150, 0.005);
 
@@ -294,7 +298,7 @@ export class BossAttackSystem {
     private triggerSmallPillar(x: number, y: number) {
         const indicator = this.scene.add.sprite(x, y, 'small_pillar_indicator');
         indicator.setOrigin(0.5, 0.5);
-        indicator.setDepth(97);
+        indicator.setDepth(INDICATOR_DEPTH);
         indicator.setAlpha(0.6);
 
         const indicatorTween = this.scene.tweens.add({
@@ -309,7 +313,7 @@ export class BossAttackSystem {
         this.scene.time.delayedCall(500, () => {
             const sprite = this.scene.add.sprite(x, y - 26, 'small_pillar', 0);
             sprite.setOrigin(0.5, 0.5);
-            sprite.setDepth(100);
+            sprite.setDepth(ATTACK_DEPTH);
 
             sprite.anims.play('smallPillarRise');
             sprite.anims.pause();
@@ -419,7 +423,7 @@ export class BossAttackSystem {
             const p = points[i];
             const indicator = this.scene.add.sprite(p.x, p.y, 'inline_pillar_indicator');
             indicator.setOrigin(0.5, 0.5);
-            indicator.setDepth(97);
+            indicator.setDepth(INDICATOR_DEPTH);
             indicator.setAlpha(0.6);
 
             const tween = this.scene.tweens.add({
@@ -440,7 +444,7 @@ export class BossAttackSystem {
                     const p = points[i];
                     const sprite = this.scene.add.sprite(p.x, p.y, 'inline_pillar');
                     sprite.setOrigin(0.5, 0.5);
-                    sprite.setDepth(100);
+                    sprite.setDepth(ATTACK_DEPTH);
                     sprite.setAlpha(0.7);
                     sprite.anims.play('inlinePillarRise');
 
@@ -566,7 +570,7 @@ export class BossAttackSystem {
 
                     const indicator = this.scene.add.sprite(px, py, 'spikes_indicator');
                     indicator.setOrigin(0.5, 0.5);
-                    indicator.setDepth(97);
+                    indicator.setDepth(INDICATOR_DEPTH);
                     indicator.setAlpha(0.6);
                     indicator.setFlipX(flipX);
 
@@ -585,7 +589,7 @@ export class BossAttackSystem {
                         this.scene.time.delayedCall(500, () => {
                             const sprite = this.scene.add.sprite(px, py - 12, 'spikes', 0);
                             sprite.setOrigin(0.5, 0.5);
-                            sprite.setDepth(99);
+                            sprite.setDepth(ATTACK_DEPTH);
                             sprite.setFlipX(flipX);
                             sprite.anims.play('spikesRise');
 

@@ -112,7 +112,6 @@ export class RaidhoRuneSystem {
     ): void {
         if (this.teleporting) return;
 
-        // Dynamically pin the speech bubble position to follow the player
         if (this.activeSpeechText && this.activeSpeechText.active) {
             this.activeSpeechText.setPosition(player.x, player.y + this.speechOffsetY);
         }
@@ -256,12 +255,19 @@ export class RaidhoRuneSystem {
         const playerData = PlayerData.getInstance();
         const nextFloor = playerData.currentFloor + 1;
 
-        playerData.currentFloor = nextFloor > MAX_FLOORS ? 1 : nextFloor;
-        localStorage.removeItem('glossary_completed_combats');
-        playerData.hubDoorOpened = false;
-        playerData.save();
-
-        this.scene.scene.restart({ mapKey: 'hub', teleportFromRune: true });
+        if (playerData.combatTier >= 3 && playerData.currentFloor == 3) {
+            playerData.currentFloor = 3;
+            localStorage.removeItem('glossary_completed_combats');
+            playerData.hubDoorOpened = false;
+            playerData.save();
+            this.scene.scene.restart({ mapKey: 'summit-settlement', teleportFromRune: true });
+        } else {
+            playerData.currentFloor = nextFloor > MAX_FLOORS ? 1 : nextFloor;
+            localStorage.removeItem('glossary_completed_combats');
+            playerData.hubDoorOpened = false;
+            playerData.save();
+            this.scene.scene.restart({ mapKey: 'hub', teleportFromRune: true });
+        }
     }
 
     destroy(): void {
