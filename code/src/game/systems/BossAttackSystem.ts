@@ -43,8 +43,8 @@ export class BossAttackSystem {
         if (!this.scene.anims.exists('smallPillarRise')) {
             this.scene.anims.create({
                 key: 'smallPillarRise',
-                frames: this.scene.anims.generateFrameNumbers('small_pillar', { start: 0, end: 11 }),
-                frameRate: 15,
+                frames: this.scene.anims.generateFrameNumbers('small_pillar', { start: 0, end: 17 }),
+                frameRate: 60,
                 repeat: 0
             });
         }
@@ -52,8 +52,8 @@ export class BossAttackSystem {
         if (!this.scene.anims.exists('smallPillarFall')) {
             this.scene.anims.create({
                 key: 'smallPillarFall',
-                frames: this.scene.anims.generateFrameNumbers('small_pillar', { start: 11, end: 0 }),
-                frameRate: 15,
+                frames: this.scene.anims.generateFrameNumbers('small_pillar', { start: 17, end: 0 }),
+                frameRate: 30,
                 repeat: 0
             });
         }
@@ -157,7 +157,7 @@ export class BossAttackSystem {
         });
 
         this.scene.time.delayedCall(500, () => {
-            this.bigPillar.setPosition(startX, spawnY + 20);
+            this.bigPillar.setPosition(startX, spawnY);
             this.bigPillar.setVisible(true);
             this.bigPillar.anims.play('pillarRise');
             ScreenShake.trigger(this.scene, 150, 0.005);
@@ -292,8 +292,8 @@ export class BossAttackSystem {
     }
 
     private triggerSmallPillar(x: number, y: number) {
-        const indicator = this.scene.add.sprite(x, y + 10, 'small_pillar_indicator');
-        indicator.setOrigin(0.5, 0.9);
+        const indicator = this.scene.add.sprite(x, y, 'small_pillar_indicator');
+        indicator.setOrigin(0.5, 0.5);
         indicator.setDepth(97);
         indicator.setAlpha(0.6);
 
@@ -307,18 +307,28 @@ export class BossAttackSystem {
         });
 
         this.scene.time.delayedCall(500, () => {
-            const sprite = this.scene.add.sprite(x, y + 10, 'small_pillar', 0);
-            sprite.setOrigin(0.5, 0.9);
+            const sprite = this.scene.add.sprite(x, y - 26, 'small_pillar', 0);
+            sprite.setOrigin(0.5, 0.5);
             sprite.setDepth(100);
-            sprite.anims.play('smallPillarRise');
 
-            const body = this.scene.matter.add.rectangle(x, y + 10, 6, 69, { isStatic: true, label: 'smallPillar' });
-            const pillarObj = { sprite, body, indicator, damaged: false };
-            this.activeSmallPillars.push(pillarObj);
+            sprite.anims.play('smallPillarRise');
+            sprite.anims.pause();
+            sprite.setFrame(0);
+
+            this.scene.time.delayedCall(100, () => {
+                sprite.setFrame(1);
+            });
+
+            this.scene.time.delayedCall(200, () => {
+                sprite.setFrame(2);
+                sprite.anims.resume();
+                sprite.anims.msPerFrame = 1000 / 120;
+            });
 
             sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-                this.scene.time.delayedCall(150, () => {
+                this.scene.time.delayedCall(500, () => {
                     sprite.anims.play('smallPillarFall');
+                    sprite.anims.msPerFrame = 1000 / 30;
                     sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
                         if (indicator && indicator.active) {
                             indicatorTween.stop();
@@ -346,6 +356,10 @@ export class BossAttackSystem {
                     });
                 });
             });
+
+            const body = this.scene.matter.add.rectangle(x - 8, y - 28, 6, 58, { isStatic: true, label: 'smallPillar' });
+            const pillarObj = { sprite, body, indicator, damaged: false };
+            this.activeSmallPillars.push(pillarObj);
         });
     }
 
@@ -403,8 +417,8 @@ export class BossAttackSystem {
 
         for (let i = 0; i < count; i++) {
             const p = points[i];
-            const indicator = this.scene.add.sprite(p.x - 15, p.y - 10, 'inline_pillar_indicator');
-            indicator.setOrigin(0.5, 0.85);
+            const indicator = this.scene.add.sprite(p.x, p.y, 'inline_pillar_indicator');
+            indicator.setOrigin(0.5, 0.5);
             indicator.setDepth(97);
             indicator.setAlpha(0.6);
 
@@ -424,21 +438,21 @@ export class BossAttackSystem {
             for (let i = 0; i < count; i++) {
                 this.scene.time.delayedCall(i * stepDelay, () => {
                     const p = points[i];
-                    const sprite = this.scene.add.sprite(p.x, p.y + 26, 'inline_pillar');
-                    sprite.setOrigin(0.5, 0.85);
+                    const sprite = this.scene.add.sprite(p.x, p.y, 'inline_pillar');
+                    sprite.setOrigin(0.5, 0.5);
                     sprite.setDepth(100);
                     sprite.setAlpha(0.7);
                     sprite.anims.play('inlinePillarRise');
 
                     this.scene.tweens.add({
                         targets: sprite,
-                        y: p.y + 10,
+                        y: p.y,
                         alpha: 1,
                         duration: 250,
                         ease: 'Back.easeOut'
                     });
 
-                    const body = this.scene.matter.add.rectangle(p.x, p.y + 10, 20, 35, { isStatic: true, label: 'inlinePillar' });
+                    const body = this.scene.matter.add.rectangle(p.x, p.y, 20, 35, { isStatic: true, label: 'inlinePillar' });
 
                     pillarSprites.push(sprite);
                     const pillarObj = { sprite, body, indicator: indicators[i], damaged: false };
@@ -550,8 +564,8 @@ export class BossAttackSystem {
 
                     const flipX = Phaser.Math.Between(0, 1) === 0;
 
-                    const indicator = this.scene.add.sprite(px, py + 10, 'spikes_indicator');
-                    indicator.setOrigin(0.5, 0.85);
+                    const indicator = this.scene.add.sprite(px, py, 'spikes_indicator');
+                    indicator.setOrigin(0.5, 0.5);
                     indicator.setDepth(97);
                     indicator.setAlpha(0.6);
                     indicator.setFlipX(flipX);
@@ -569,54 +583,67 @@ export class BossAttackSystem {
 
                     this.scene.time.delayedCall(staggerDelay, () => {
                         this.scene.time.delayedCall(500, () => {
-                            const sprite = this.scene.add.sprite(px, py + 10, 'spikes', 0);
-                            sprite.setOrigin(0.5, 0.85);
+                            const sprite = this.scene.add.sprite(px, py - 12, 'spikes', 0);
+                            sprite.setOrigin(0.5, 0.5);
                             sprite.setDepth(99);
                             sprite.setFlipX(flipX);
                             sprite.anims.play('spikesRise');
 
-                            const body = this.scene.matter.add.rectangle(px, py + 10, 8, 32, { isStatic: true, label: 'spikes' });
+                            const collisionX = flipX ? px - 3 : px + 3;
+                            const collisionY = py - 5;
+                            const body = this.scene.matter.add.rectangle(collisionX, collisionY, 8, 32, { isStatic: true, label: 'spikes' });
+
                             const spikeObj = { sprite, body, indicator, damaged: false };
                             this.activeSpikes.push(spikeObj);
 
                             this.scene.time.delayedCall(6000, () => {
-                                if (body && this.scene.matter.world) {
-                                    this.scene.matter.world.remove(body);
-                                }
-                                if (sprite && sprite.active) {
-                                    sprite.anims.play('spikesFall');
-                                    sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-                                        if (indicator && indicator.active) {
-                                            indicatorTween.stop();
-                                            this.scene.tweens.add({
-                                                targets: indicator,
-                                                alpha: 0,
-                                                duration: 500,
-                                                ease: 'Sine.easeOut',
-                                                onComplete: () => {
-                                                    if (indicator && indicator.active) {
-                                                        indicator.destroy();
-                                                    }
-                                                }
-                                            });
+                                this.scene.tweens.add({
+                                    targets: sprite,
+                                    x: sprite.x + (flipX ? -1 : 1),
+                                    y: sprite.y + (flipX ? -1 : 1),
+                                    yoyo: true,
+                                    repeat: 1,
+                                    duration: 30,
+                                    onComplete: () => {
+                                        if (body && this.scene.matter.world) {
+                                            this.scene.matter.world.remove(body);
                                         }
-                                        this.scene.time.delayedCall(50, () => {
-                                            this.activeSpikes = this.activeSpikes.filter(s => s !== spikeObj);
-                                            if (sprite && sprite.active) {
-                                                sprite.destroy();
-                                            }
+                                        if (sprite && sprite.active) {
+                                            sprite.anims.play('spikesFall');
+                                            sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+                                                if (indicator && indicator.active) {
+                                                    indicatorTween.stop();
+                                                    this.scene.tweens.add({
+                                                        targets: indicator,
+                                                        alpha: 0,
+                                                        duration: 500,
+                                                        ease: 'Sine.easeOut',
+                                                        onComplete: () => {
+                                                            if (indicator && indicator.active) {
+                                                                indicator.destroy();
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                                this.scene.time.delayedCall(50, () => {
+                                                    this.activeSpikes = this.activeSpikes.filter(s => s !== spikeObj);
+                                                    if (sprite && sprite.active) {
+                                                        sprite.destroy();
+                                                    }
+                                                    completedCount++;
+                                                    if (completedCount === totalSpikes) {
+                                                        this.isSpikesAttacking = false;
+                                                    }
+                                                });
+                                            });
+                                        } else {
                                             completedCount++;
                                             if (completedCount === totalSpikes) {
                                                 this.isSpikesAttacking = false;
                                             }
-                                        });
-                                    });
-                                } else {
-                                    completedCount++;
-                                    if (completedCount === totalSpikes) {
-                                        this.isSpikesAttacking = false;
+                                        }
                                     }
-                                }
+                                });
                             });
                         });
                     });
