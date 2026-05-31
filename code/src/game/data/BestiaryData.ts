@@ -18,7 +18,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'rationalist',
         frame: 0,
         rarity: 'Rare',
-        hp: 150,
+        hp: 300,
         baseDamage: 25,
         tier: 3
     },
@@ -29,7 +29,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'cultist',
         frame: 0,
         rarity: 'Common',
-        hp: 30,
+        hp: 60,
         baseDamage: 5,
         tier: 1
     },
@@ -40,7 +40,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'cultist',
         frame: 4,
         rarity: 'Rare',
-        hp: 135,
+        hp: 270,
         baseDamage: 18,
         tier: 2
     },
@@ -51,7 +51,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'scavenger',
         frame: 0,
         rarity: 'Uncommon',
-        hp: 45,
+        hp: 90,
         baseDamage: 8,
         tier: 2
     },
@@ -62,7 +62,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'slime',
         frame: 0,
         rarity: 'Common',
-        hp: 20,
+        hp: 40,
         baseDamage: 3,
         tier: 1
     },
@@ -73,7 +73,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'slime',
         frame: 10,
         rarity: 'Uncommon',
-        hp: 60,
+        hp: 120,
         baseDamage: 6,
         tier: 2
     },
@@ -84,7 +84,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'wisp',
         frame: 0,
         rarity: 'Common',
-        hp: 25,
+        hp: 50,
         baseDamage: 10,
         tier: 1
     },
@@ -95,7 +95,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'wisp',
         frame: 10,
         rarity: 'Rare',
-        hp: 80,
+        hp: 160,
         baseDamage: 18,
         tier: 2
     },
@@ -106,7 +106,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'golem',
         frame: 0,
         rarity: 'Uncommon',
-        hp: 120,
+        hp: 240,
         baseDamage: 15,
         tier: 2
     },
@@ -117,7 +117,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'golem',
         frame: 10,
         rarity: 'Rare',
-        hp: 200,
+        hp: 400,
         baseDamage: 22,
         tier: 3
     },
@@ -128,7 +128,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'golem',
         frame: 10,
         rarity: 'Rare',
-        hp: 60,
+        hp: 120,
         baseDamage: 10,
         tier: 3
     },
@@ -139,7 +139,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'golem',
         frame: 10,
         rarity: 'Rare',
-        hp: 70,
+        hp: 140,
         baseDamage: 12,
         tier: 3
     },
@@ -150,7 +150,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'golem',
         frame: 10,
         rarity: 'Rare',
-        hp: 75,
+        hp: 150,
         baseDamage: 12,
         tier: 3
     },
@@ -161,7 +161,7 @@ export const BESTIARY: BestiaryDefinition[] = [
         texture: 'golem',
         frame: 10,
         rarity: 'Rare',
-        hp: 80,
+        hp: 160,
         baseDamage: 14,
         tier: 3
     }

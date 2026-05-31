@@ -204,6 +204,15 @@ export class CombatScene extends Phaser.Scene {
             });
         }
 
+        if (!this.anims.exists('combat-player-death')) {
+            this.anims.create({
+                key: 'combat-player-death',
+                frames: this.anims.generateFrameNumbers('protagonist-death', { start: 0, end: 16 }),
+                frameRate: 12,
+                repeat: 0
+            });
+        }
+
         const centerX = this.scale.width / 2;
 
         this.add.image(centerX, 0, 'battle-ui')
@@ -903,6 +912,21 @@ export class CombatScene extends Phaser.Scene {
         let earnedSpecial = 0;
         let defeatedEnemyName = 'Unknown Enemy';
 
+        if (result === 'DEFEAT') {
+            if (this.playerSprite) {
+                this.playerSprite.play('combat-player-death');
+                this.playerSprite.setDepth(100);
+            }
+            if (this.playerShadow) {
+                this.tweens.add({
+                    targets: this.playerShadow,
+                    alpha: 0,
+                    duration: 800,
+                    ease: 'Quad.easeIn'
+                });
+            }
+        }
+
         if (result === 'VICTORY' && this.playerData) {
             if (this.encounterMapKey === 'summit-settlement') {
                 localStorage.setItem('glossary_boss_combat_victory', 'true');
@@ -967,16 +991,18 @@ export class CombatScene extends Phaser.Scene {
             fontFamily: FONT_FAMILY, fontSize: '80px', color: color, stroke: '#000000', strokeThickness: 4
         }).setOrigin(0.5).setAlpha(0);
 
+        const delayBeforeText = result === 'DEFEAT' ? 1000 : 300;
+
         this.tweens.add({
             targets: resultText,
             alpha: 1,
             duration: 800,
             ease: 'Sine.easeOut',
-            delay: 300
+            delay: delayBeforeText
         });
 
         const elements: Phaser.GameObjects.GameObject[] = [bg, resultText];
-        let delayTime = 800;
+        let delayTime = result === 'DEFEAT' ? 1800 : 800;
 
         if (isVictory && this.playerData) {
             const subText = this.add.text(centerX, centerY + 10, `${defeatedEnemyName} Defeated!`, {
@@ -1014,6 +1040,45 @@ export class CombatScene extends Phaser.Scene {
         bg.on('pointerdown', () => {
             if (this.transitionStarted) return;
             this.transitionStarted = true;
+
+            if (result === 'DEFEAT') {
+                if (this.encounterMapKey === 'summit-settlement') {
+                    localStorage.removeItem('glossary_boss_fight_active');
+                    localStorage.removeItem('glossary_boss_pillars_defeated');
+                    localStorage.removeItem('glossary_boss_remaining_pillars');
+                    localStorage.removeItem('glossary_boss_current_combat_pillar');
+                    localStorage.removeItem('glossary_boss_combat_victory');
+
+                    if (this.playerData) {
+                        this.playerData.hp = this.playerData.maxHp;
+                        this.playerData.save();
+                    }
+
+                    this.scene.launch('TransitionScene', {
+                        targetScene: 'LevelScene',
+                        targetData: { mapKey: 'summit-settlement' },
+                        currentScene: 'CombatScene'
+                    });
+                } else {
+                    localStorage.removeItem('glossary_boss_fight_active');
+                    localStorage.removeItem('glossary_boss_pillars_defeated');
+                    localStorage.removeItem('glossary_boss_remaining_pillars');
+                    localStorage.removeItem('glossary_boss_current_combat_pillar');
+                    localStorage.removeItem('glossary_boss_combat_victory');
+
+                    if (this.playerData) {
+                        this.playerData.hp = this.playerData.maxHp;
+                        this.playerData.save();
+                    }
+
+                    this.scene.launch('TransitionScene', {
+                        targetScene: 'LevelScene',
+                        targetData: { mapKey: 'hub' },
+                        currentScene: 'CombatScene'
+                    });
+                }
+                return;
+            }
 
             const returnMap = this.encounterMapKey || localStorage.getItem('glossary_combat_return_map') || 'hub';
             const savedX = localStorage.getItem('glossary_combat_player_x');

@@ -5,6 +5,7 @@ import { COVENANT_BASE_INDEX } from '../constants';
 import { InteractSystem } from './InteractSystem';
 import { MatterScene } from '../types';
 import { fadeIn, fadeOutAndDestroy } from '../utils/TweenUtils';
+import {ScreenShake} from "../utils/ScreenShake";
 
 export interface DoorState {
     sprite: Phaser.GameObjects.Sprite;
@@ -131,7 +132,7 @@ export function handleDoorInteraction(
                     setCinematic(true);
 
                     const startDoorAnimation = () => {
-                        scene.cameras.main.shake(1000, 0.001);
+                        ScreenShake.trigger(scene, 1000, 0.001)
                         door.sprite.play('door-open');
                         if (door.bodyBase) (scene as MatterScene).matter.world.remove(door.bodyBase);
 

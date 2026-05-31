@@ -443,7 +443,7 @@ export class RuneIndicatorSystem {
         darkVignette.setAlpha(0);
 
         fadeIn(this.scene, darkVignette, 500, () => {
-            this.scene.cameras.main.shake(500, 0.005);
+            ScreenShake.trigger(this.scene, 500, 0.005)
 
             if (this.tentaclesAnimation) {
                 if (this.scene.anims.exists('tentaclesRetract')) {

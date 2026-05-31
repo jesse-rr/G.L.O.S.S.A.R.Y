@@ -1,5 +1,3 @@
-// LevelScene.ts - Modified sections
-
 import * as Phaser from 'phaser';
 import { createVignette } from '../../utils/Vignette';
 import { InputKeys, FONT_FAMILY } from '../../constants';

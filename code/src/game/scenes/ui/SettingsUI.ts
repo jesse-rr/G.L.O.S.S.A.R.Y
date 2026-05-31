@@ -57,7 +57,7 @@ export class SettingsUI extends Phaser.Scene {
         const gap = 60;
 
         const leftLabels = ['VSync', 'Particles', 'Screen Shake'];
-        const rightLabels = ['Volume', 'Screen Size', 'Cat Mode', 'User Data'];
+        const rightLabels = ['Volume', 'Cat Mode', 'User Data'];
         const userData = this.registry.get('userData') as UserData;
 
         this.elements = [
@@ -67,8 +67,7 @@ export class SettingsUI extends Phaser.Scene {
 
             { type: 'slider', ox: rightTextX + uiOffset, oy: startY, value: userData.settings.volume, label: rightLabels[0] },
             { type: 'button', ox: rightTextX + uiOffset, oy: startY + gap, toggle: false, label: rightLabels[1] },
-            { type: 'button', ox: rightTextX + uiOffset, oy: startY + gap * 2, toggle: false, label: rightLabels[2] },
-            { type: 'download', ox: rightTextX + uiOffset, oy: startY + gap * 3, label: rightLabels[3] }
+            { type: 'download', ox: rightTextX + uiOffset, oy: startY + gap * 2, label: rightLabels[2] }
         ];
 
         this.elements.forEach((el, i) => {
@@ -80,7 +79,7 @@ export class SettingsUI extends Phaser.Scene {
                 fontFamily: FONT_FAMILY
             };
 
-            if (i === 5 && userData.isAchievementUnlocked('cat_whisperer')) {
+            if (i === 4 && userData.isAchievementUnlocked('cat_whisperer')) {
                 labelStyle.color = '#4a4a4a';
             }
 
@@ -101,7 +100,7 @@ export class SettingsUI extends Phaser.Scene {
                 const btn = this.add.image(0, 0, 'ui-items', 2).setScale(scale);
                 el.btnImage = btn;
 
-                if (i === 5 && userData.isAchievementUnlocked('cat_whisperer')) {
+                if (i === 4 && userData.isAchievementUnlocked('cat_whisperer')) {
                     btn.setAlpha(0.5);
                 }
 
@@ -321,7 +320,7 @@ export class SettingsUI extends Phaser.Scene {
             if (i === 2) userData.settings.screenShake = el.enabled;
         }
 
-        if (i === 5) {
+        if (i === 4) {
             const userData = this.registry.get('userData') as UserData;
             if (!userData.isAchievementUnlocked('cat_whisperer')) {
                 userData.unlockAchievement('cat_whisperer');
