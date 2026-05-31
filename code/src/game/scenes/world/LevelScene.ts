@@ -1,6 +1,8 @@
+// LevelScene.ts - Modified sections
+
 import * as Phaser from 'phaser';
 import { createVignette } from '../../utils/Vignette';
-import { InputKeys } from '../../constants';
+import { InputKeys, FONT_FAMILY } from '../../constants';
 import { LocationData } from '../../data/LocationData';
 import { parseCollisionObjects, parseStairObjects } from '../../systems/CollisionParser';
 import { DoorState, createDoors, handleDoorInteraction } from '../../systems/DoorSystem';
@@ -23,6 +25,10 @@ import { BossAttackSystem } from '../../systems/BossAttackSystem';
 import { InteractSystem } from '../../systems/InteractSystem';
 import { fadeIn, fadeOutAndDestroy } from '../../utils/TweenUtils';
 import { RuneIndicatorSystem } from '../../systems/RuneIndicatorSystem';
+import { DashIndicatorHUD } from '../../systems/DashIndicatorHUD';
+import { SummitBossHUD } from '../../systems/SummitBossHUD';
+import { DamageOverlay } from '../../utils/DamageOverlay';
+import {LocationDisplayScene} from "../../utils/LocationDefinition";
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -37,6 +43,8 @@ export class LevelScene extends Phaser.Scene {
     private stairZones!: Phaser.GameObjects.Group;
     private inReverseZone = false;
 
+    private glossaryButton!: Phaser.GameObjects.Sprite;
+
     private activeStairZones: Set<number> = new Set();
     private doors: DoorState[] = [];
     private settlementDoors: SettlementDoor[] = [];
@@ -49,8 +57,13 @@ export class LevelScene extends Phaser.Scene {
     private glossaryKey!: Phaser.Input.Keyboard.Key;
     private isCinematic = false;
     private settingsBtn!: Phaser.GameObjects.Sprite;
-    private wasInteractPressed = { value: false };
-    private combatTrackerHUD!: CombatTrackerHUD;
+    private wasInteractPressed = {value: false};
+    private combatTrackerHUD?: CombatTrackerHUD;
+    private levelHpHudIcon: Phaser.GameObjects.Sprite | null = null;
+    private levelHpHudText: Phaser.GameObjects.Text | null = null;
+    private summitBossHUD?: SummitBossHUD;
+    private dashIndicatorHUD?: DashIndicatorHUD;
+    private isDead = false;
     private raidhoRuneSystem?: RaidhoRuneSystem;
     private merchants: MerchantState[] = [];
     public merchantItems: ItemDefinition[] = [];
@@ -58,6 +71,9 @@ export class LevelScene extends Phaser.Scene {
     private dashKey!: Phaser.Input.Keyboard.Key;
     private dashSystem!: DashSystem;
     private bossAttackSystem?: BossAttackSystem;
+    private damageOverlay?: DamageOverlay;
+    private pushVelocity = new Phaser.Math.Vector2(0, 0);
+    private pushDurationTimer = 0;
 
     private barrierLayers: Phaser.Tilemaps.TilemapLayer[] = [];
     private barrierCollisionObjects: any[] = [];
@@ -69,11 +85,36 @@ export class LevelScene extends Phaser.Scene {
     private interactSystem!: InteractSystem;
     private isGlossaryInteractable = true;
     private glossaryInteractZone: Phaser.GameObjects.Zone | null = null;
+    private glossaryTentaclesX = 0;
+    private glossaryTentaclesY = 0;
     private isNearGlossary = false;
     private runeIndicatorSystem?: RuneIndicatorSystem;
+    private tentaclesAnimation?: Phaser.GameObjects.Sprite;
+    private tentaclesV2Animation?: Phaser.GameObjects.Sprite;
+    private bossEyeAnimation?: Phaser.GameObjects.Sprite;
+    private bossEyeIdle?: Phaser.GameObjects.Image;
+    private bossEyeBg?: Phaser.GameObjects.Sprite;
+    private bossEyeVisible = false;
+    private eyeIdleTimer?: Phaser.Time.TimerEvent;
+    private persistSaveTimer = 0;
+    private readonly persistSaveIntervalMs = 2000;
+    private cachedPlayerX = 0;
+    private cachedPlayerY = 0;
+    private hasPlayerPositionCache = false;
+    private isBossDefeatedSequence = false;
+    private bossDefeatedChoiceText?: Phaser.GameObjects.Text;
+    private bossDefeatedChoiceBg?: Phaser.GameObjects.Rectangle;
+    private waitingForBossChoice = false;
+    private isGlossaryUIVisible = false;
 
     constructor() {
         super('LevelScene');
+    }
+
+    public pushPlayer(vx: number, vy: number, durationMs: number): void {
+        if (this.isDead || this.isCinematic) return;
+        this.pushVelocity.set(vx, vy);
+        this.pushDurationTimer = durationMs;
     }
 
     private previousMap: string = '';
@@ -99,6 +140,27 @@ export class LevelScene extends Phaser.Scene {
         this.glossaryHoldProgress = 0;
         this.isGlossaryInteractable = true;
         this.isNearGlossary = false;
+        this.isDead = false;
+        this.pushDurationTimer = 0;
+        this.hasPlayerPositionCache = false;
+        this.persistSaveTimer = 0;
+        this.bossEyeVisible = false;
+        this.isBossDefeatedSequence = false;
+        this.waitingForBossChoice = false;
+        this.summitBossHUD?.destroy();
+        this.summitBossHUD = undefined;
+        this.dashIndicatorHUD?.destroy();
+        this.dashIndicatorHUD = undefined;
+        this.tentaclesAnimation = undefined;
+        this.tentaclesV2Animation = undefined;
+        if (this.bossEyeAnimation) this.bossEyeAnimation.destroy();
+        this.bossEyeAnimation = undefined;
+        if (this.bossEyeIdle) this.bossEyeIdle.destroy();
+        this.bossEyeIdle = undefined;
+        if (this.bossEyeBg) this.bossEyeBg.destroy();
+        this.bossEyeBg = undefined;
+        if (this.eyeIdleTimer) this.eyeIdleTimer.remove();
+        this.eyeIdleTimer = undefined;
     }
 
     preload() {
@@ -121,39 +183,105 @@ export class LevelScene extends Phaser.Scene {
         this.load.tilemapTiledJSON('summit-trade', 'assets/Models/exports/Maps/summit-trade.json');
         this.load.tilemapTiledJSON('merchant', 'assets/Models/exports/Maps/merchant.json');
 
-        this.load.spritesheet('door-sheet-mechanic', 'assets/Models/exports/Animations/Door-Sheet-Mechanic-Sheet.png', { frameWidth: 32, frameHeight: 64 });
-        this.load.spritesheet('door-sheet', 'assets/Models/exports/Animations/Door-Sheet.png', { frameWidth: 64, frameHeight: 96 });
-        this.load.spritesheet('door-symbol', 'assets/Models/exports/Animations/Door-Symbol.png', { frameWidth: 64, frameHeight: 96 });
+        this.load.spritesheet('door-sheet-mechanic', 'assets/Models/exports/Animations/Door-Sheet-Mechanic-Sheet.png', {
+            frameWidth: 32,
+            frameHeight: 64
+        });
+        this.load.spritesheet('door-sheet', 'assets/Models/exports/Animations/Door-Sheet.png', {
+            frameWidth: 64,
+            frameHeight: 96
+        });
+        this.load.spritesheet('door-symbol', 'assets/Models/exports/Animations/Door-Symbol.png', {
+            frameWidth: 64,
+            frameHeight: 96
+        });
 
-        this.load.spritesheet('protagonist-idle', `assets/Models/Protagonist/Idle-${this.registry.get('playerData').covenant}.png`, { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('protagonist-run', `assets/Models/Protagonist/Run-${this.registry.get('playerData').covenant}.png`, { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('protagonist-dash', `assets/Models/Protagonist/Dash-${this.registry.get('playerData').covenant}.png`, { frameWidth: 48, frameHeight: 48 });
+        this.load.spritesheet('protagonist-idle', `assets/Models/Protagonist/Idle-${this.registry.get('playerData').covenant}.png`, {
+            frameWidth: 48,
+            frameHeight: 48
+        });
+        this.load.spritesheet('protagonist-run', `assets/Models/Protagonist/Run-${this.registry.get('playerData').covenant}.png`, {
+            frameWidth: 48,
+            frameHeight: 48
+        });
+        this.load.spritesheet('protagonist-dash', `assets/Models/Protagonist/Dash-${this.registry.get('playerData').covenant}.png`, {
+            frameWidth: 48,
+            frameHeight: 48
+        });
+        this.load.spritesheet('protagonist-death', `assets/Models/Protagonist/Death-${this.registry.get('playerData').covenant}.png`, {
+            frameWidth: 48,
+            frameHeight: 48
+        });
         this.load.image('protagonist-shadow', `assets/Models/Protagonist/Shadow.png`);
 
-        this.load.spritesheet('btn-boss-abandoned', 'assets/Models/exports/Animations/Btn-Boss-Abandoned.png', { frameWidth: 64, frameHeight: 64 });
-        this.load.spritesheet('btn-boss-desert', 'assets/Models/exports/Animations/Btn-Boss-Desert.png', { frameWidth: 64, frameHeight: 64 });
-        this.load.spritesheet('btn-boss-mechanic', 'assets/Models/exports/Animations/Btn-Boss-Mechanic.png', { frameWidth: 64, frameHeight: 64 });
-        this.load.spritesheet('btn-boss-summit', 'assets/Models/exports/Animations/Btn-Boss-Summit.png', { frameWidth: 64, frameHeight: 64 });
-        this.load.spritesheet('btn-boss-symbol', 'assets/Models/exports/Animations/Btn-Boss-Symbol.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('btn-boss-abandoned', 'assets/Models/exports/Animations/Btn-Boss-Abandoned.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+        this.load.spritesheet('btn-boss-desert', 'assets/Models/exports/Animations/Btn-Boss-Desert.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+        this.load.spritesheet('btn-boss-mechanic', 'assets/Models/exports/Animations/Btn-Boss-Mechanic.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+        this.load.spritesheet('btn-boss-summit', 'assets/Models/exports/Animations/Btn-Boss-Summit.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+        this.load.spritesheet('btn-boss-symbol', 'assets/Models/exports/Animations/Btn-Boss-Symbol.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
 
-        this.load.spritesheet('chests', 'assets/Models/exports/Animations/Chests.png', { frameWidth: 32, frameHeight: 48 });
-        this.load.spritesheet('items', 'assets/Models/exports/Objects/Items.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('chests', 'assets/Models/exports/Animations/Chests.png', {
+            frameWidth: 32,
+            frameHeight: 48
+        });
+        this.load.spritesheet('items', 'assets/Models/exports/Objects/Items.png', {frameWidth: 64, frameHeight: 64});
         this.load.image('interact-btn', 'assets/Models/exports/UI/Interact-Btn.png');
         this.load.image('achievement-ui', 'assets/Models/exports/UI/Achievement-UI.png');
         this.load.image('settings-btn', 'assets/Models/exports/UI/Settings-Btn.png');
-        this.load.spritesheet('currency', 'assets/Models/exports/Objects/Currency.png', { frameWidth: 16, frameHeight: 16 });
-        this.load.spritesheet('trade', 'assets/Models/exports/Animations/Trade.png', { frameWidth: 160, frameHeight: 190 });
-        this.load.spritesheet('combat-symbol-ui', 'assets/Models/exports/UI/Combat-Symbol-UI.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('currency', 'assets/Models/exports/Objects/Currency.png', {
+            frameWidth: 16,
+            frameHeight: 16
+        });
+        this.load.spritesheet('trade', 'assets/Models/exports/Animations/Trade.png', {
+            frameWidth: 160,
+            frameHeight: 190
+        });
+        this.load.spritesheet('combat-symbol-ui', 'assets/Models/exports/UI/Combat-Symbol-UI.png', {
+            frameWidth: 32,
+            frameHeight: 32
+        });
 
-        this.load.spritesheet('pillar', 'assets/Models/Boss/boss-big-pillar-attack.png', { frameWidth: 32, frameHeight: 128 });
-        this.load.spritesheet('small_pillar', 'assets/Models/Boss/boss-small-pillar-attack.png', { frameWidth: 32, frameHeight: 96 });
-        this.load.spritesheet('inline_pillar', 'assets/Models/Boss/boss-inline-pillar-attack.png', { frameWidth: 64, frameHeight: 64 });
-        this.load.spritesheet('spikes', 'assets/Models/Boss/boss-spikes-attack.png', { frameWidth: 32, frameHeight: 64 });
+        this.load.spritesheet('pillar', 'assets/Models/Boss/boss-big-pillar-attack.png', {
+            frameWidth: 32,
+            frameHeight: 128
+        });
+        this.load.spritesheet('small_pillar', 'assets/Models/Boss/boss-small-pillar-attack.png', {
+            frameWidth: 32,
+            frameHeight: 96
+        });
+        this.load.spritesheet('inline_pillar', 'assets/Models/Boss/boss-inline-pillar-attack.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+        this.load.spritesheet('spikes', 'assets/Models/Boss/boss-spikes-attack.png', {frameWidth: 32, frameHeight: 64});
         this.load.image('small_pillar_indicator', 'assets/Models/Boss/boss-small-pillar-attack-indicator.png');
         this.load.image('spikes_indicator', 'assets/Models/Boss/boss-spikes-attack-indicator.png');
         this.load.image('inline_pillar_indicator', 'assets/Models/Boss/boss-inline-pillar-attack-indicator.png');
         this.load.image('big_pillar_indicator', 'assets/Models/Boss/boss-big-pillar-attack-indicator.png');
-        this.load.image('Rune-Indicator', 'assets/Models/Boss/Rune-Indicator.png');
+        this.load.image('Rune-Indicator-Top', 'assets/Models/Boss/Rune-Indicator-Top.png');
+        this.load.image('Rune-Indicator-Bottom', 'assets/Models/Boss/Rune-Indicator-Bottom.png');
+        this.load.spritesheet('tentacles', 'assets/Models/Boss/boss-tentacles.png', {frameWidth: 128, frameHeight: 96});
+        this.load.spritesheet('tentacles-v2', 'assets/Models/Boss/boss-tentacles-v2.png', {
+            frameWidth: 64,
+            frameHeight: 96
+        });
+        this.load.image('boss-eye', 'assets/Models/Boss/boss-eye.png');
+        this.load.spritesheet('boss-eye-bg', 'assets/Models/Boss/boss-eye-bg.png', {frameWidth: 64, frameHeight: 64});
     }
 
     create() {
@@ -179,12 +307,26 @@ export class LevelScene extends Phaser.Scene {
 
         if (this.scene.isActive('CombatScene')) this.scene.stop('CombatScene');
 
+        if (this.mapKey !== 'summit-settlement') {
+            this.createGlossaryUIButton();
+        }
+
         this.cameras.main.setBackgroundColor('#111111');
         if (this.portalSystem) this.portalSystem.destroy();
         this.portalSystem = new PortalSystem(this);
 
+        if (this.mapKey === 'summit-settlement') {
+            this.createPlayerHpLevelHUD();
+        }
+
         if (this.mapKey === 'hub' || this.mapKey === 'central-hub') this.createMap('central-hub');
         else this.createMap(this.mapKey);
+
+        if (this.mapKey === 'summit-settlement' && this.runeIndicatorSystem?.hasPendingPillarDamage()) {
+            this.time.delayedCall(850, () => {
+                this.runeIndicatorSystem?.playPendingPillarDamage();
+            });
+        }
 
         let locId: string | null = null;
         if (this.mapKey === 'hub' || this.mapKey === 'central-hub') locId = 'central_hub';
@@ -194,50 +336,129 @@ export class LevelScene extends Phaser.Scene {
         else if (this.mapKey === 'boss-floor-abandoned') locId = 'boss_abandoned';
         else if (this.mapKey === 'boss-floor-desert') locId = 'boss_desert';
         else if (this.mapKey === 'boss-floor-mechanic') locId = 'boss_mechanic';
-        else if (this.mapKey === 'summit-settlement') locId = 'boss_summit';
+        else if (this.mapKey === 'summit-settlement') locId = 'summit';
         else if (this.mapKey === 'summit-trade') locId = 'summit_trade';
         else if (this.mapKey === 'merchant') locId = 'merchant';
-        if (locId) LocationData.getInstance().discoverLocation(locId);
+
+        if (locId) {
+            LocationData.getInstance().discoverLocation(locId);
+            if (!LocationData.getInstance().isViewed(locId)) {
+                const locationDisplay = LocationDisplayScene.ensureRunning(this);
+                locationDisplay.showLocation(locId);
+                LocationData.getInstance().markViewed(locId);
+            }
+        }
 
         if (!this.anims.exists('idle')) {
-            this.anims.create({ key: 'idle', frames: this.anims.generateFrameNumbers('protagonist-idle', { start: 0, end: 6 }), frameRate: 8, repeat: -1 });
-            this.anims.create({ key: 'run-start', frames: this.anims.generateFrameNumbers('protagonist-run', { start: 0, end: 7 }), frameRate: 12, repeat: 0 });
-            this.anims.create({ key: 'run-loop', frames: this.anims.generateFrameNumbers('protagonist-run', { start: 0, end: 7 }), frameRate: 12, repeat: -1 });
-            this.anims.create({ key: 'stop', frames: this.anims.generateFrameNumbers('protagonist-idle', { start: 0, end: 0 }), frameRate: 12, repeat: 0 });
-            this.anims.create({ key: 'dash', frames: this.anims.generateFrameNumbers('protagonist-dash', { start: 0, end: 11 }), frameRate: 80, repeat: 0 });
+            this.anims.create({
+                key: 'idle',
+                frames: this.anims.generateFrameNumbers('protagonist-idle', {start: 0, end: 6}),
+                frameRate: 8,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'run-start',
+                frames: this.anims.generateFrameNumbers('protagonist-run', {start: 0, end: 7}),
+                frameRate: 12,
+                repeat: 0
+            });
+            this.anims.create({
+                key: 'run-loop',
+                frames: this.anims.generateFrameNumbers('protagonist-run', {start: 0, end: 7}),
+                frameRate: 12,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'stop',
+                frames: this.anims.generateFrameNumbers('protagonist-idle', {start: 0, end: 0}),
+                frameRate: 12,
+                repeat: 0
+            });
+            this.anims.create({
+                key: 'dash',
+                frames: this.anims.generateFrameNumbers('protagonist-dash', {start: 0, end: 11}),
+                frameRate: 80,
+                repeat: 0
+            });
+            this.anims.create({
+                key: 'death',
+                frames: this.anims.generateFrameNumbers('protagonist-death', {start: 0, end: 16}),
+                frameRate: 12,
+                repeat: 0
+            });
         }
 
         this.cursors = this.input.keyboard!.createCursorKeys();
         this.keys = this.input.keyboard!.addKeys('W,A,S,D') as any;
         this.interactKey = this.input.keyboard!.addKey('X');
-        this.glossaryKey = this.input.keyboard!.addKey(InputKeys.GLOSSARY);
-        this.dashKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+        this.glossaryKey = this.input.keyboard!.addKey('G');
+        this.dashKey = this.input.keyboard!.addKey('SHIFT');
+
+        this.input.keyboard!.on(InputKeys.GLOSSARY, () => {
+            if (this.scene.isActive('GlossaryUI')) return;
+            if (this.isDead) return;
+            if (this.isCinematic) return;
+            if (this.portalSystem.getIsTeleporting()) return;
+            if (this.isHoldingGlossary) return;
+
+            this.scene.pause();
+            this.scene.launch('GlossaryUI', {
+                previousScene: 'LevelScene',
+                isPaused: true
+            });
+        });
 
         if (!this.anims.exists('door-open')) {
             const frames = [];
             for (let i = 0; i <= 13; i++) {
                 const t = i / 13;
-                frames.push({ key: 'door-sheet', frame: i, duration: 60 + t * t * 200 });
+                frames.push({key: 'door-sheet', frame: i, duration: 60 + t * t * 200});
             }
-            this.anims.create({ key: 'door-open', frames, repeat: 0 });
+            this.anims.create({key: 'door-open', frames, repeat: 0});
         }
 
         this.input.keyboard!.on(InputKeys.HELP, () => {
-            if (!this.scene.isPaused()) { this.scene.pause(); this.scene.launch('Help', { previousScene: 'LevelScene' }); }
+            if (!this.scene.isPaused()) {
+                this.scene.pause();
+                this.scene.launch('Help', {previousScene: 'LevelScene'});
+            }
         });
 
         const w = this.scale.width, h = this.scale.height, camZoom = 2;
         const settingsScreenX = (w - 15 - w / 2) / camZoom + w / 2;
         const settingsScreenY = (h - 15 - h / 2) / camZoom + h / 2;
-        this.settingsBtn = this.add.sprite(settingsScreenX, settingsScreenY, 'settings-btn').setOrigin(1, 1).setScrollFactor(0).setDepth(200).setScale(1 / camZoom).setInteractive({ useHandCursor: true });
+        this.settingsBtn = this.add.sprite(settingsScreenX, settingsScreenY, 'settings-btn').setOrigin(1, 1).setScrollFactor(0).setDepth(200).setScale(1 / camZoom).setInteractive({useHandCursor: true});
         this.settingsBtn.on('pointerover', () => this.settingsBtn.setTint(0xaaaaaa));
         this.settingsBtn.on('pointerout', () => this.settingsBtn.clearTint());
-        this.settingsBtn.on('pointerdown', () => { if (!this.scene.isActive('Help')) { this.scene.pause(); this.scene.launch('Help', { previousScene: 'LevelScene' }); } });
+        this.settingsBtn.on('pointerdown', () => {
+            if (!this.scene.isActive('Help')) {
+                this.scene.pause();
+                this.scene.launch('Help', {previousScene: 'LevelScene'});
+            }
+        });
 
         createVignette(this);
-        new LightSystem(this, 0.55, 0x000000);
+        this.damageOverlay = new DamageOverlay(this);
+        if (this.mapKey === 'summit-settlement') {
+            LightSystem.clearOverlay();
+        } else {
+            new LightSystem(this, 0.55, 0x000000);
+        }
 
-        this.combatTrackerHUD = new CombatTrackerHUD(this, this.mapKey);
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            this.bossAttackSystem?.stopAttacks();
+            this.summitBossHUD?.destroy();
+            this.summitBossHUD = undefined;
+            this.dashIndicatorHUD?.destroy();
+            this.dashIndicatorHUD = undefined;
+            this.persistPlayerLocation();
+        });
+
+        this.dashIndicatorHUD = new DashIndicatorHUD(this);
+
+        if (this.mapKey !== 'summit-settlement') {
+            this.combatTrackerHUD = new CombatTrackerHUD(this, this.mapKey);
+        }
 
         if (this.raidhoRuneSystem) {
             this.raidhoRuneSystem.destroy();
@@ -249,16 +470,22 @@ export class LevelScene extends Phaser.Scene {
 
         this.matter.world.on('collisionstart', (event: any) => {
             event.pairs.forEach((pair: any) => {
-                const { bodyA, bodyB } = pair;
+                const {bodyA, bodyB} = pair;
                 const gameObjectA = bodyA.gameObject;
                 const gameObjectB = bodyB.gameObject;
                 if (gameObjectA === this.player || gameObjectB === this.player) {
                     const other = gameObjectA === this.player ? gameObjectB : gameObjectA;
                     if (other && other.getData && typeof other.getData === 'function') {
-                        if (other.getData('reverseSlow')) { this.inReverseZone = true; this.updateSlowFactor(); }
+                        if (other.getData('reverseSlow')) {
+                            this.inReverseZone = true;
+                            this.updateSlowFactor();
+                        }
                         if (other.getData('isStair') && !this.inReverseZone) {
                             const stairId = other.getData('stairId') ?? (other as any).id;
-                            if (stairId !== undefined) { this.activeStairZones.add(stairId); this.updateSlowFactor(); }
+                            if (stairId !== undefined) {
+                                this.activeStairZones.add(stairId);
+                                this.updateSlowFactor();
+                            }
                         }
                         if (other.getData('target') && !this.isEntering) this.portalSystem.onPortalOverlap(other, this.player, this.mapKey);
                     }
@@ -268,16 +495,22 @@ export class LevelScene extends Phaser.Scene {
 
         this.matter.world.on('collisionend', (event: any) => {
             event.pairs.forEach((pair: any) => {
-                const { bodyA, bodyB } = pair;
+                const {bodyA, bodyB} = pair;
                 const gameObjectA = bodyA.gameObject;
                 const gameObjectB = bodyB.gameObject;
                 if (gameObjectA === this.player || gameObjectB === this.player) {
                     const other = gameObjectA === this.player ? gameObjectB : gameObjectA;
                     if (other && other.getData && typeof other.getData === 'function') {
-                        if (other.getData('reverseSlow')) { this.inReverseZone = false; this.updateSlowFactor(); }
+                        if (other.getData('reverseSlow')) {
+                            this.inReverseZone = false;
+                            this.updateSlowFactor();
+                        }
                         if (other.getData('isStair') && !this.inReverseZone) {
                             const stairId = other.getData('stairId') ?? (other as any).id;
-                            if (stairId !== undefined) { this.activeStairZones.delete(stairId); this.updateSlowFactor(); }
+                            if (stairId !== undefined) {
+                                this.activeStairZones.delete(stairId);
+                                this.updateSlowFactor();
+                            }
                         }
                     }
                 }
@@ -319,7 +552,11 @@ export class LevelScene extends Phaser.Scene {
             this.cameras.main.shake(1000, 0.005);
             this.cameras.main.flash(500, 255, 255, 255);
 
-            this.activateBarrier();
+            if (this.mapKey === 'summit-settlement') {
+                this.playTentaclesAnimation();
+            } else {
+                this.activateBarrier();
+            }
 
             fadeOutAndDestroy(this, darkVignette, 1000);
 
@@ -327,6 +564,396 @@ export class LevelScene extends Phaser.Scene {
                 this.isCinematic = false;
             });
         });
+    }
+
+    private playTentaclesAnimation(startLoop = false): void {
+        const centerX = this.glossaryTentaclesX;
+        const centerY = this.glossaryTentaclesY;
+
+        if (!this.anims.exists('tentaclesRise')) {
+            const totalFrames = this.textures.get('tentacles').getFrameNames().length;
+            this.anims.create({
+                key: 'tentaclesRise',
+                frames: this.anims.generateFrameNumbers('tentacles', {start: 0, end: totalFrames - 6}),
+                frameRate: 24,
+                repeat: 0
+            });
+            this.anims.create({
+                key: 'tentaclesLoop',
+                frames: this.anims.generateFrameNumbers('tentacles', {start: totalFrames - 4, end: totalFrames - 1}),
+                frameRate: 12,
+                repeat: -1,
+                yoyo: true
+            });
+            this.anims.create({
+                key: 'tentaclesRetract',
+                frames: this.anims.generateFrameNumbers('tentacles', {start: totalFrames - 6, end: 0}),
+                frameRate: 20,
+                repeat: 0
+            });
+        }
+
+        if (this.tentaclesAnimation?.active) {
+            if (startLoop) {
+                this.tentaclesAnimation.play('tentaclesLoop');
+            }
+            this.runeIndicatorSystem?.setTentaclesAnimation(this.tentaclesAnimation);
+            return;
+        }
+
+        this.tentaclesAnimation = this.add.sprite(centerX + 4, centerY - 4, 'tentacles');
+        this.tentaclesAnimation.setOrigin(0.5, 0.5);
+        this.tentaclesAnimation.setDepth(100);
+
+        if (startLoop) {
+            this.tentaclesAnimation.play('tentaclesLoop');
+            this.runeIndicatorSystem?.setTentaclesAnimation(this.tentaclesAnimation);
+        } else {
+            this.tentaclesAnimation.play('tentaclesRise');
+            this.tentaclesAnimation.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+                if (this.tentaclesAnimation?.active) {
+                    this.tentaclesAnimation.play('tentaclesLoop');
+                }
+                this.activateBarrier();
+                if (this.runeIndicatorSystem) {
+                    this.runeIndicatorSystem.setTentaclesAnimation(this.tentaclesAnimation);
+                }
+            });
+        }
+    }
+
+    private ensureTentaclesV2Anims(): void {
+        if (this.anims.exists('tentaclesV2Rise')) return;
+
+        this.anims.create({
+            key: 'tentaclesV2Rise',
+            frames: this.anims.generateFrameNumbers('tentacles-v2', {start: 0, end: 5}),
+            frameRate: 24,
+            repeat: 0
+        });
+        this.anims.create({
+            key: 'tentaclesV2Loop',
+            frames: this.anims.generateFrameNumbers('tentacles-v2', {start: 6, end: 8}),
+            frameRate: 12,
+            repeat: -1,
+            yoyo: true
+        });
+        this.anims.create({
+            key: 'tentaclesV2Retract',
+            frames: this.anims.generateFrameNumbers('tentacles-v2', {start: 5, end: 0}),
+            frameRate: 20,
+            repeat: 0
+        });
+    }
+
+    private playTentaclesV2Animation(startLoop = false): void {
+        if (this.tentaclesV2Animation?.active) {
+            if (startLoop && this.anims.exists('tentaclesV2Loop')) {
+                this.tentaclesV2Animation.play('tentaclesV2Loop');
+            }
+            return;
+        }
+
+        this.ensureTentaclesV2Anims();
+
+        const centerX = this.glossaryTentaclesX;
+        const centerY = this.glossaryTentaclesY;
+        this.tentaclesV2Animation = this.add.sprite(centerX + 4, centerY - 4, 'tentacles-v2');
+        this.tentaclesV2Animation.setOrigin(0.5, 0.5);
+        this.tentaclesV2Animation.setDepth(101);
+
+        if (startLoop) {
+            this.tentaclesV2Animation.play('tentaclesV2Loop');
+        } else {
+            this.tentaclesV2Animation.play('tentaclesV2Rise');
+            this.tentaclesV2Animation.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+                if (this.tentaclesV2Animation?.active) {
+                    this.tentaclesV2Animation.play('tentaclesV2Loop');
+                }
+            });
+        }
+    }
+
+    private retractTentaclesV2(onComplete?: () => void): void {
+        if (!this.tentaclesV2Animation?.active) {
+            onComplete?.();
+            return;
+        }
+
+        const sprite = this.tentaclesV2Animation;
+        if (this.anims.exists('tentaclesV2Retract')) {
+            sprite.play('tentaclesV2Retract');
+            sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+                sprite.destroy();
+                if (this.tentaclesV2Animation === sprite) {
+                    this.tentaclesV2Animation = undefined;
+                }
+                onComplete?.();
+            });
+        } else {
+            sprite.destroy();
+            this.tentaclesV2Animation = undefined;
+            onComplete?.();
+        }
+    }
+
+    private showBossEye(): void {
+        if (this.bossEyeVisible) return;
+        this.bossEyeVisible = true;
+
+        const centerX = this.glossaryTentaclesX;
+        const centerY = this.glossaryTentaclesY - 10;
+        const bgX = centerX + 6;
+        const bgY = centerY - 10;
+
+        if (!this.anims.exists('bossEyeBgAnim')) {
+            this.anims.create({
+                key: 'bossEyeBgAnim',
+                frames: this.anims.generateFrameNumbers('boss-eye-bg', {start: 0, end: 6}),
+                frameRate: 12,
+                repeat: 0
+            });
+        }
+
+        this.bossEyeBg = this.add.sprite(bgX, bgY, 'boss-eye-bg');
+        this.bossEyeBg.setOrigin(0.5, 0.5);
+        this.bossEyeBg.setDepth(102);
+        this.bossEyeBg.setAlpha(0);
+        this.bossEyeBg.setScale(1);
+
+        this.bossEyeBg.play('bossEyeBgAnim');
+
+        this.tweens.add({
+            targets: this.bossEyeBg,
+            alpha: 1,
+            duration: 200,
+            ease: 'Linear',
+            onComplete: () => {
+                if (this.bossEyeBg) {
+                    this.bossEyeBg.setFrame(6);
+
+                    this.bossEyeIdle = this.add.image(centerX, centerY, 'boss-eye');
+                    this.bossEyeIdle.setOrigin(0.5, 0.5);
+                    this.bossEyeIdle.setDepth(103);
+                    this.bossEyeIdle.setAlpha(0);
+                    this.bossEyeIdle.setScale(1);
+
+                    this.tweens.add({
+                        targets: this.bossEyeIdle,
+                        alpha: 1,
+                        scale: 1,
+                        duration: 150,
+                        ease: 'Back.Out',
+                        onComplete: () => {
+                            this.startEyeIdleAnimation();
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private startEyeIdleAnimation(): void {
+        if (!this.bossEyeIdle) return;
+
+        const centerX = this.glossaryTentaclesX;
+        const centerY = this.glossaryTentaclesY - 10;
+
+        const randomMove = () => {
+            if (!this.bossEyeIdle) return;
+
+            const offsetX = (Math.random() - 0.5) * 8;
+            const offsetY = (Math.random() - 0.5) * 6;
+
+            this.tweens.add({
+                targets: this.bossEyeIdle,
+                x: centerX + offsetX,
+                y: centerY + offsetY,
+                duration: 50 + Math.random() * 60,
+                ease: 'Quad.easeInOut',
+                yoyo: true,
+                hold: 60 + Math.random() * 120,
+                onComplete: () => {
+                    if (this.bossEyeIdle) {
+                        this.bossEyeIdle.setPosition(centerX, centerY);
+                    }
+                    randomMove();
+                }
+            });
+        };
+
+        randomMove();
+    }
+
+    private hideBossEye(): void {
+        if (!this.bossEyeVisible) return;
+
+        if (this.bossEyeIdle) {
+            this.tweens.killTweensOf(this.bossEyeIdle);
+            this.bossEyeIdle.destroy();
+            this.bossEyeIdle = undefined;
+        }
+
+        if (this.bossEyeBg) {
+            this.bossEyeBg.destroy();
+            this.bossEyeBg = undefined;
+        }
+
+        this.bossEyeVisible = false;
+    }
+
+    private onBossPillarDamaged(pillarsDefeated: number): void {
+        this.summitBossHUD?.onPillarDefeated(pillarsDefeated);
+        if (pillarsDefeated >= 1) {
+            this.playTentaclesV2Animation(false);
+        }
+        if (pillarsDefeated >= 3 && !this.bossEyeVisible) {
+            this.showBossEye();
+        }
+        if (pillarsDefeated >= 4 && !this.isBossDefeatedSequence) {
+            this.onBossDefeated();
+        }
+    }
+
+    private onBossDefeated(): void {
+        if (this.isBossDefeatedSequence) return;
+        this.isBossDefeatedSequence = true;
+        this.isCinematic = true;
+        this.bossAttackSystem?.stopAttacks();
+        this.runeIndicatorSystem?.stopBattle();
+
+        const glossaryCenterX = this.glossaryTentaclesX;
+        const glossaryCenterY = this.glossaryTentaclesY;
+
+        this.cameras.main.pan(glossaryCenterX, glossaryCenterY, 1200, 'Quad.easeInOut');
+
+        this.time.delayedCall(1300, () => {
+            if (this.levelHpHudIcon) {
+                this.tweens.add({
+                    targets: [this.levelHpHudIcon, this.levelHpHudText],
+                    alpha: 0,
+                    duration: 3000,
+                    ease: 'Sine.easeOut'
+                });
+            }
+
+            if (this.summitBossHUD) {
+                this.tweens.add({
+                    targets: this.summitBossHUD,
+                    alpha: 0,
+                    duration: 3000,
+                    ease: 'Sine.easeOut',
+                    onComplete: () => {
+                        this.summitBossHUD?.setVisible(false);
+                    }
+                });
+            }
+
+            if (this.tentaclesAnimation) {
+                if (this.anims.exists('tentaclesRetract')) {
+                    this.tentaclesAnimation.play('tentaclesRetract');
+                    this.tentaclesAnimation.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+                        this.tentaclesAnimation?.destroy();
+                        this.tentaclesAnimation = undefined;
+                    });
+                } else {
+                    this.tentaclesAnimation.destroy();
+                    this.tentaclesAnimation = undefined;
+                }
+            }
+
+            this.retractTentaclesV2();
+            this.hideBossEye();
+
+            this.time.delayedCall(3000, () => {
+                this.isGlossaryInteractable = true;
+                this.isCinematic = false;
+                this.waitingForBossChoice = true;
+
+                this.showBossDefeatedChoice();
+            });
+        });
+    }
+
+    private showBossDefeatedChoice(): void {
+        const centerX = this.cameras.main.centerX;
+        const centerY = this.cameras.main.centerY;
+
+        this.bossDefeatedChoiceBg = this.add.rectangle(centerX, centerY - 50, 400, 80, 0x000000, 0.85);
+        this.bossDefeatedChoiceBg.setOrigin(0.5);
+        this.bossDefeatedChoiceBg.setDepth(250);
+        this.bossDefeatedChoiceBg.setScrollFactor(0);
+
+        const promptText = "Replace glossary?";
+        this.bossDefeatedChoiceText = this.add.text(centerX, centerY - 65, promptText, {
+            fontFamily: FONT_FAMILY,
+            fontSize: '16px',
+            color: '#e4dacf',
+            align: 'center'
+        }).setOrigin(0.5).setDepth(251).setScrollFactor(0);
+
+        const instructionText = this.add.text(centerX, centerY - 35, "[X] Yes    [ESC] No", {
+            fontFamily: FONT_FAMILY,
+            fontSize: '12px',
+            color: '#aaaaaa',
+            align: 'center'
+        }).setOrigin(0.5).setDepth(251).setScrollFactor(0);
+
+        this.input.keyboard?.once('keydown-X', () => {
+            if (this.waitingForBossChoice) {
+                this.waitingForBossChoice = false;
+                this.bossDefeatedChoiceBg?.destroy();
+                this.bossDefeatedChoiceText?.destroy();
+                instructionText.destroy();
+                this.completeBossDefeatedSequence(true);
+            }
+        });
+
+        this.input.keyboard?.once('keydown-ESC', () => {
+            if (this.waitingForBossChoice) {
+                this.waitingForBossChoice = false;
+                this.bossDefeatedChoiceBg?.destroy();
+                this.bossDefeatedChoiceText?.destroy();
+                instructionText.destroy();
+                this.completeBossDefeatedSequence(false);
+            }
+        });
+    }
+
+    private completeBossDefeatedSequence(shouldReplaceGlossary: boolean): void {
+        this.isCinematic = true;
+
+        const darkVignette = createVignette(this, 99, true);
+        darkVignette.setAlpha(0);
+
+        fadeIn(this, darkVignette, 800, () => {
+            if (shouldReplaceGlossary) {
+                PlayerData.getInstance().replaceGlossary();
+            }
+
+            PlayerData.getInstance().save();
+            localStorage.removeItem('glossary_boss_fight_active');
+            localStorage.removeItem('glossary_boss_pillars_defeated');
+            localStorage.removeItem('glossary_boss_current_combat_pillar');
+
+            fadeOutAndDestroy(this, darkVignette, 500, () => {
+                this.scene.launch('TransitionScene', {
+                    targetScene: 'LevelScene',
+                    currentScene: 'LevelScene',
+                    targetData: { mapKey: 'hub' }
+                });
+            });
+        });
+    }
+
+    private ensureSummitBossHUD(): void {
+        if (this.summitBossHUD && !this.summitBossHUD.isAlive()) {
+            this.summitBossHUD = undefined;
+        }
+        if (!this.summitBossHUD) {
+            this.summitBossHUD = new SummitBossHUD(this);
+        }
+        this.summitBossHUD.setBattleVisible(true);
     }
 
     private activateBarrier(): void {
@@ -345,18 +972,24 @@ export class LevelScene extends Phaser.Scene {
 
         for (const obj of this.barrierCollisionObjects) {
             const barrierSprite = this.add.rectangle(obj.x, obj.y, obj.width, obj.height, 0x000000, 0);
-            this.matter.add.gameObject(barrierSprite, { isStatic: true, label: 'barrier' });
+            this.matter.add.gameObject(barrierSprite, {isStatic: true, label: 'barrier'});
             barrierSprite.setData('type', 'barrier');
             this.barrierBodies.push(barrierSprite.body as MatterJS.BodyType);
         }
 
-        if (this.bossAttackSystem) {
-        }
+        this.ensureSummitBossHUD();
+        this.setPlayerHpHudVisible(true);
 
         if (this.runeIndicatorSystem) {
             this.runeIndicatorSystem.startBattle(() => {
                 this.deactivateBarrier();
             });
+            const defeated = this.runeIndicatorSystem.getPillarsDefeated();
+            if (this.runeIndicatorSystem.hasPendingPillarDamage()) {
+                this.summitBossHUD?.syncPillarsDefeated(Math.max(0, defeated - 1));
+            } else {
+                this.summitBossHUD?.syncPillarsDefeated(defeated);
+            }
         }
     }
 
@@ -379,6 +1012,12 @@ export class LevelScene extends Phaser.Scene {
         if (this.glossaryInteractZone) {
             this.glossaryInteractZone.setInteractive();
         }
+
+        this.summitBossHUD?.setBattleVisible(false);
+        this.setPlayerHpHudVisible(false);
+        this.tentaclesAnimation = undefined;
+        this.retractTentaclesV2();
+        this.hideBossEye();
     }
 
     private updateGlossaryHold(delta: number): void {
@@ -419,7 +1058,7 @@ export class LevelScene extends Phaser.Scene {
         this.barrierBodies = [];
         this.barrierActive = false;
 
-        const map = this.make.tilemap({ key: mapKey });
+        const map = this.make.tilemap({key: mapKey});
         const tilesets: Phaser.Tilemaps.Tileset[] = [];
         map.tilesets.forEach(ts => {
             const boundTileset = map.addTilesetImage(ts.name, ts.name + '.png');
@@ -506,7 +1145,9 @@ export class LevelScene extends Phaser.Scene {
         if (fillersLayer) {
             const fillerSlates = createSlates(this, fillersLayer, mapKey);
             const fillerIds = ['slate_ancestry', 'slate_void', 'slate_whispers'];
-            fillerSlates.forEach((slate, index) => { slate.slateId = fillerIds[index % fillerIds.length]; });
+            fillerSlates.forEach((slate, index) => {
+                slate.slateId = fillerIds[index % fillerIds.length];
+            });
             this.slates.push(...fillerSlates);
         }
 
@@ -524,11 +1165,15 @@ export class LevelScene extends Phaser.Scene {
             const glossaryObj = glossaryLayer.objects[0];
             const glossaryWorldX = glossaryObj.x + (glossaryObj.width / 2);
             const glossaryWorldY = glossaryObj.y + (glossaryObj.height / 2);
+            this.glossaryTentaclesX = glossaryWorldX;
+            this.glossaryTentaclesY = glossaryWorldY;
 
             this.glossaryInteractZone = this.add.zone(glossaryWorldX, glossaryWorldY, glossaryObj.width, glossaryObj.height);
             this.glossaryInteractZone.setInteractive();
         } else {
             this.glossaryInteractZone = null;
+            this.glossaryTentaclesX = 0;
+            this.glossaryTentaclesY = 0;
         }
 
         const spawn = map.objects.find(layer => layer.name.toLowerCase() === 'spawn')?.objects?.[0];
@@ -551,7 +1196,44 @@ export class LevelScene extends Phaser.Scene {
         if (mapKey === 'summit-settlement') {
             this.bossAttackSystem = new BossAttackSystem(this, this.player);
             if (this.barrierCollisionObjects.length > 0) {
-                this.runeIndicatorSystem = new RuneIndicatorSystem(this, this.player, this.barrierCollisionObjects);
+                const pillarsLayer = map.objects.find(layer => layer.name.toLowerCase() === 'pillars');
+                const customPillarPositions: { x: number; y: number }[] = [];
+                if (pillarsLayer && pillarsLayer.objects) {
+                    for (const obj of pillarsLayer.objects) {
+                        if (obj.x !== undefined && obj.y !== undefined && obj.width !== undefined && obj.height !== undefined) {
+                            customPillarPositions.push({
+                                x: obj.x + (obj.width / 2),
+                                y: obj.y + (obj.height / 2)
+                            });
+                        }
+                    }
+                    customPillarPositions.sort((a, b) => a.y - b.y || a.x - b.x);
+                }
+
+                this.runeIndicatorSystem = new RuneIndicatorSystem(this, this.player, this.barrierCollisionObjects, customPillarPositions);
+                this.runeIndicatorSystem.setBossAttackSystem(this.bossAttackSystem);
+                this.runeIndicatorSystem.setOnPillarDamaged((count) => {
+                    this.onBossPillarDamaged(count);
+                });
+                if (this.tentaclesAnimation) {
+                    this.runeIndicatorSystem.setTentaclesAnimation(this.tentaclesAnimation);
+                }
+            }
+
+            if (localStorage.getItem('glossary_boss_fight_active') === 'true') {
+                const pillarsDefeated = parseInt(localStorage.getItem('glossary_boss_pillars_defeated') || '0', 10);
+                this.playTentaclesAnimation(true);
+                if (pillarsDefeated >= 1) {
+                    this.playTentaclesV2Animation(true);
+                }
+                if (pillarsDefeated >= 3) {
+                    this.showBossEye();
+                }
+                if (pillarsDefeated >= 4) {
+                    this.onBossDefeated();
+                } else {
+                    this.activateBarrier();
+                }
             }
         }
 
@@ -563,14 +1245,39 @@ export class LevelScene extends Phaser.Scene {
             if (this.entryDirX < 0) this.player.setFlipX(true);
             else if (this.entryDirX > 0) this.player.setFlipX(false);
             const duration = this.previousMap === 'merchant' ? 200 : 400;
-            this.time.delayedCall(duration, () => { this.isEntering = false; });
+            this.time.delayedCall(duration, () => {
+                this.isEntering = false;
+            });
+        }
+
+        this.updatePlayerPositionCache();
+        this.persistPlayerLocation();
+    }
+
+    private updatePlayerPositionCache(): void {
+        if (!this.player?.active) return;
+        const body = this.player.body as MatterJS.BodyType | null;
+        if (!body) return;
+        this.cachedPlayerX = body.position.x;
+        this.cachedPlayerY = body.position.y;
+        this.hasPlayerPositionCache = true;
+    }
+
+    private persistPlayerLocation(): void {
+        if (this.isDead) return;
+        const playerData = PlayerData.getInstance();
+        const mapKey = this.mapKey === 'central-hub' ? 'hub' : this.mapKey;
+        if (mapKey === 'summit-settlement') {
+            playerData.setLastLocation('summit-settlement', null, null);
+        } else if (this.hasPlayerPositionCache) {
+            playerData.setLastLocation(mapKey, this.cachedPlayerX, this.cachedPlayerY);
         }
     }
 
     private spawnPlayer(x: number, y: number) {
         this.player = this.matter.add.sprite(x, y, 'protagonist-idle');
         this.player.setDepth(15);
-        this.player.setRectangle(20, 6, { chamfer: { radius: 2 } });
+        this.player.setRectangle(20, 6, {chamfer: {radius: 2}});
         this.player.setOrigin(0.5, 0.67);
         this.player.setFixedRotation();
         this.player.setFriction(1);
@@ -590,11 +1297,44 @@ export class LevelScene extends Phaser.Scene {
     }
 
     update(_time: number, delta: number) {
+        const playerData = PlayerData.getInstance();
+        if (this.levelHpHudText && !this.isBossDefeatedSequence) {
+            this.levelHpHudText.setText(`${playerData.hp} / ${playerData.maxHp}`);
+        }
+
+        if (playerData.hp <= 0 && !this.isDead) {
+            this.triggerPlayerDeath();
+            return;
+        }
+
+        if (this.isDead) {
+            this.player.setVelocity(0, 0);
+            return;
+        }
+
+        if (this.isBossDefeatedSequence || this.waitingForBossChoice) {
+            this.player.setVelocity(0, 0);
+            if (this.player.anims.currentAnim?.key !== 'idle') {
+                this.player.play('idle');
+            }
+            if (this.playerShadow && this.player.active) {
+                this.playerShadow.setPosition(this.player.x, this.player.y + 16);
+            }
+            return;
+        }
+
+        this.updatePlayerPositionCache();
+        this.persistSaveTimer += delta;
+        if (this.persistSaveTimer >= this.persistSaveIntervalMs) {
+            this.persistSaveTimer = 0;
+            this.persistPlayerLocation();
+        }
+
         if (this.glossaryInteractZone) {
             this.isNearGlossary = this.glossaryInteractZone.getBounds().contains(this.player.x, this.player.y);
         }
 
-        if (this.isNearGlossary && this.isGlossaryInteractable && !this.barrierActive && !this.isHoldingGlossary) {
+        if (this.isNearGlossary && this.isGlossaryInteractable && !this.barrierActive && !this.isHoldingGlossary && !this.isBossDefeatedSequence) {
             this.interactSystem.show(this.glossaryInteractZone!.x, this.glossaryInteractZone!.y - 30, 0);
 
             if ((this.interactKey.isDown || this.glossaryKey.isDown) && !this.isHoldingGlossary) {
@@ -610,17 +1350,38 @@ export class LevelScene extends Phaser.Scene {
         }
 
         if (this.bossAttackSystem) this.bossAttackSystem.update();
-        if (this.runeIndicatorSystem) this.runeIndicatorSystem.update(delta);
+        if (this.runeIndicatorSystem) this.runeIndicatorSystem.update(delta, this.interactKey.isDown);
+        this.dashIndicatorHUD?.update(this.dashSystem);
+        if (this.damageOverlay) this.damageOverlay.update(_time);
+
+        if (this.pushDurationTimer > 0) {
+            this.pushDurationTimer -= delta;
+            this.player.setVelocity(this.pushVelocity.x, this.pushVelocity.y);
+            if (this.playerShadow && this.player.active) {
+                this.playerShadow.setPosition(this.player.x, this.player.y + 16);
+                this.playerShadow.setFlipX(this.player.flipX);
+            }
+            return;
+        }
+
         if (this.dashSystem.updateTimers(delta, this.player, this.playerShadow)) return;
 
-        handleDoorInteraction(this, this.doors, this.player, this.interactKey.isDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => { this.isCinematic = val; });
+        handleDoorInteraction(this, this.doors, this.player, this.interactKey.isDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => {
+            this.isCinematic = val;
+        });
         handleSettlementDoorInteraction(this, this.settlementDoors, this.player, this.interactKey.isDown, this.wasInteractPressed);
         handleMechanicDoorInteraction(this, this.mechanicDoors, this.player, this.interactKey.isDown, this.wasInteractPressed);
-        handleBossButtonInteraction(this, this.bossButtons, this.player, this.interactKey.isDown, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => { this.isCinematic = val; }, this.mapKey, delta);
+        handleBossButtonInteraction(this, this.bossButtons, this.player, this.interactKey.isDown, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => {
+            this.isCinematic = val;
+        }, this.mapKey, delta);
         handleChestInteraction(this, this.chests, this.player, this.interactKey.isDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering);
-        if (this.mapKey === 'summit-trade') handleTradeInteraction(this, this.trades, this.player, this.interactKey.isDown, this.wasInteractPressed, (val) => { this.isCinematic = val; });
+        if (this.mapKey === 'summit-trade') handleTradeInteraction(this, this.trades, this.player, this.interactKey.isDown, this.wasInteractPressed, (val) => {
+            this.isCinematic = val;
+        });
         handleSlateInteraction(this, this.slates, this.player, this.interactKey.isDown, this.wasInteractPressed, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, this.mapKey);
-        if (this.raidhoRuneSystem) this.raidhoRuneSystem.update(this.player, this.interactKey.isDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => { this.isCinematic = val; });
+        if (this.raidhoRuneSystem) this.raidhoRuneSystem.update(this.player, this.interactKey.isDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => {
+            this.isCinematic = val;
+        });
         if (this.mapKey === 'merchant') handleMerchantInteraction(this, this.merchants, this.player, this.interactKey.isDown, this.wasInteractPressed, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering);
 
         this.currentSlowFactor = Phaser.Math.Linear(this.currentSlowFactor, this.targetSlowFactor, 0.05);
@@ -631,7 +1392,8 @@ export class LevelScene extends Phaser.Scene {
 
         if (this.portalSystem.getIsTeleporting()) {
             const dir = this.portalSystem.getTeleportDirection();
-            moveX = dir.x; moveY = dir.y;
+            moveX = dir.x;
+            moveY = dir.y;
             if (moveX < 0) this.player.setFlipX(true);
             else if (moveX > 0) this.player.setFlipX(false);
             const modifier = this.portalSystem.getTeleportSpeedModifier();
@@ -696,16 +1458,26 @@ export class LevelScene extends Phaser.Scene {
 
     private getPlayerDepth(mapKey: string): number {
         switch (mapKey) {
-            case 'boss-floor-abandoned': return 9;
-            case 'boss-floor-desert': return 12;
-            case 'boss-floor-mechanic': return 10;
-            case 'summit-settlement': return 9;
-            case 'abandoned-settlement': return 13;
-            case 'desert-settlement': return 14;
-            case 'mechanic-settlement': return 13;
-            case 'summit-trade': return 4;
-            case 'merchant': return 9;
-            default: return 14;
+            case 'boss-floor-abandoned':
+                return 9;
+            case 'boss-floor-desert':
+                return 12;
+            case 'boss-floor-mechanic':
+                return 10;
+            case 'summit-settlement':
+                return 9;
+            case 'abandoned-settlement':
+                return 13;
+            case 'desert-settlement':
+                return 14;
+            case 'mechanic-settlement':
+                return 13;
+            case 'summit-trade':
+                return 4;
+            case 'merchant':
+                return 9;
+            default:
+                return 14;
         }
     }
 
@@ -726,5 +1498,122 @@ export class LevelScene extends Phaser.Scene {
         }
         while (selected.length < 3) selected.push(allItems[0]);
         this.merchantItems = selected;
+    }
+
+    private createPlayerHpLevelHUD(): void {
+        const w = this.scale.width;
+        const h = this.scale.height;
+        const camZoom = 2;
+
+        const hpLeftX = 40;
+        const hpTopY = 32;
+
+        const cx = (hpLeftX - w / 2) / camZoom + w / 2;
+        const cy = (hpTopY - h / 2) / camZoom + h / 2;
+
+        this.levelHpHudIcon = this.add.sprite(cx, cy, 'currency', 0)
+            .setOrigin(0, 0.5)
+            .setScrollFactor(0)
+            .setDepth(201)
+            .setScale(2 / camZoom);
+
+        const playerData = PlayerData.getInstance();
+        this.levelHpHudText = this.add.text(cx + 40 / camZoom, cy, `${playerData.hp} / ${playerData.maxHp}`, {
+            fontSize: '18px',
+            color: '#FFFFFF',
+            fontFamily: FONT_FAMILY
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(201).setScale(1 / camZoom);
+
+        this.setPlayerHpHudVisible(false);
+    }
+
+    private setPlayerHpHudVisible(visible: boolean): void {
+        this.levelHpHudIcon?.setVisible(visible);
+        this.levelHpHudText?.setVisible(visible);
+    }
+
+    private triggerPlayerDeath(): void {
+        this.isDead = true;
+        this.isCinematic = true;
+        this.player.setVelocity(0, 0);
+        this.player.setFixedRotation();
+
+        if (this.bossAttackSystem) {
+            this.bossAttackSystem.stopAttacks();
+        }
+
+        this.player.play('death');
+
+        if (this.playerShadow) {
+            this.playerShadow.setAlpha(0);
+        }
+
+        this.cameras.main.flash(500, 200, 0, 0);
+
+        this.time.delayedCall(1500, () => {
+            const darkVignette = createVignette(this, 250, true);
+            darkVignette.setAlpha(0);
+            const onSummit = this.mapKey === 'summit-settlement';
+
+            fadeIn(this, darkVignette, 1000, () => {
+                const playerData = PlayerData.getInstance();
+                const wasBossActive = localStorage.getItem('glossary_boss_fight_active') === 'true';
+
+                if (wasBossActive || onSummit) {
+                    playerData.hp = 100;
+                } else {
+                    playerData.hp = playerData.maxHp;
+                }
+
+                playerData.inCombat = false;
+                playerData.combatEnemyId = null;
+                playerData.save();
+
+                if (wasBossActive) {
+                    playerData.clearSummitBossFightLocalStorage();
+                } else {
+                    localStorage.removeItem('glossary_boss_fight_active');
+                    localStorage.removeItem('glossary_boss_current_combat_pillar');
+                }
+
+                const respawnMapKey = onSummit ? 'summit-settlement' : 'hub';
+
+                fadeOutAndDestroy(this, darkVignette, 300, () => {
+                    this.scene.launch('TransitionScene', {
+                        targetScene: 'LevelScene',
+                        currentScene: 'LevelScene',
+                        targetData: {mapKey: respawnMapKey}
+                    });
+                });
+            });
+        });
+    }
+
+    private createGlossaryUIButton(): void {
+        const w = this.scale.width;
+        const h = this.scale.height;
+        const camZoom = 2;
+
+        const buttonX = (80 - w / 2) / camZoom + w / 2;
+        const buttonY = (h - 80 - h / 2) / camZoom + h / 2;
+
+        this.glossaryButton = this.add.sprite(buttonX, buttonY, 'glossary', 0)
+            .setOrigin(0.5, 0.5)
+            .setScrollFactor(0)
+            .setDepth(200)
+            .setScale(1)
+            .setInteractive({useHandCursor: true});
+
+        this.glossaryButton.on('pointerdown', () => {
+            if (!this.scene.isActive('GlossaryUI')) {
+                this.scene.pause();
+                this.scene.launch('GlossaryUI', {
+                    previousScene: 'LevelScene',
+                    isPaused: true
+                });
+            }
+        });
+
+        this.isGlossaryUIVisible = true;
     }
 }

@@ -163,6 +163,11 @@ export class MainMenu extends Phaser.Scene {
         localStorage.removeItem('glossary_echojar_completed_combats');
         localStorage.removeItem('glossary_seraphs_plume_consumed');
         localStorage.removeItem('glossary_boss_presses');
+        localStorage.removeItem('glossary_boss_fight_active');
+        localStorage.removeItem('glossary_boss_pillars_defeated');
+        localStorage.removeItem('glossary_boss_remaining_pillars');
+        localStorage.removeItem('glossary_boss_current_combat_pillar');
+        localStorage.removeItem('glossary_boss_combat_victory');
         localStorage.removeItem('glossary_last_floor');
         localStorage.removeItem('merchant_shop_state')
         localStorage.removeItem('glossary_mechanic_doors')
@@ -291,17 +296,31 @@ export class MainMenu extends Phaser.Scene {
                 if (this.hasExistingGame()) {
                     this.inputLocked = true;
                     const pData = PlayerData.getInstance();
-                    if (pData.inCombat) {
+                    if (PlayerData.shouldReturnToSummitBossBattle(pData)) {
+                        pData.returnToSummitBossBattle();
+                        this.scene.launch('TransitionScene', {
+                            targetScene: 'LevelScene',
+                            currentScene: 'MainMenu',
+                            targetData: { mapKey: 'summit-settlement' }
+                        });
+                    } else if (pData.inCombat) {
                         this.scene.launch('TransitionScene', { 
                             targetScene: 'CombatScene', 
                             currentScene: 'MainMenu', 
                             targetData: { encounterTier: pData.combatTier, mapKey: pData.lastMap, enemyId: pData.combatEnemyId } 
                         });
                     } else {
-                        this.scene.launch('TransitionScene', { 
-                            targetScene: 'LevelScene', 
-                            currentScene: 'MainMenu', 
-                            targetData: { mapKey: pData.lastMap, spawnX: pData.lastX, spawnY: pData.lastY } 
+                        const targetData: { mapKey: string; spawnX?: number; spawnY?: number } = {
+                            mapKey: pData.lastMap || 'hub'
+                        };
+                        if (pData.lastX != null && pData.lastY != null) {
+                            targetData.spawnX = pData.lastX;
+                            targetData.spawnY = pData.lastY;
+                        }
+                        this.scene.launch('TransitionScene', {
+                            targetScene: 'LevelScene',
+                            currentScene: 'MainMenu',
+                            targetData
                         });
                     }
                 }

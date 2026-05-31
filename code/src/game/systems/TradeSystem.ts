@@ -516,7 +516,7 @@ function showRuneTooltip(scene: Phaser.Scene, cardX: number, cardY: number): voi
 
     const typeText = scene.add.text(0, yPos, selectedRune.effectType.toUpperCase(), {
         fontFamily: FONT_FAMILY,
-        fontSize: '7px',
+        fontSize: '8px',
         color: getEffectColor(selectedRune.effectType),
         resolution: 2,
         align: 'center'
@@ -525,9 +525,9 @@ function showRuneTooltip(scene: Phaser.Scene, cardX: number, cardY: number): voi
 
     const powerText = scene.add.text(0, yPos, `Power: ${selectedRune.basePower}`, {
         fontFamily: FONT_FAMILY,
-        fontSize: '6px',
+        fontSize: '7px',
         color: '#cccccc',
-        resolution: 2,
+        resolution: 4,
         align: 'center'
     }).setOrigin(0.5, 0.5);
     yPos += 14;
@@ -536,7 +536,7 @@ function showRuneTooltip(scene: Phaser.Scene, cardX: number, cardY: number): voi
     if (selectedRune.statusEffect) {
         statusText = scene.add.text(0, yPos, selectedRune.statusEffect.toUpperCase(), {
             fontFamily: FONT_FAMILY,
-            fontSize: '6px',
+            fontSize: '7px',
             color: '#ffaa00',
             resolution: 2,
             align: 'center'

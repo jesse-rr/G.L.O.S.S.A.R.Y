@@ -146,21 +146,21 @@ export class CombatTrackerHUD {
             fontFamily: FONT_FAMILY,
             fontSize: '14px',
             color: '#FFD700',
-            resolution: 2
+            resolution: 4
         }).setOrigin(0.5);
 
         const enemyText = this.scene.add.text(0, -1, enemyTextStr, {
             fontFamily: FONT_FAMILY,
             fontSize: '12px',
             color: '#ffffff',
-            resolution: 2
+            resolution: 4
         }).setOrigin(0.5);
 
         const rewardText = this.scene.add.text(0, 15, rewardTextStr, {
             fontFamily: FONT_FAMILY,
             fontSize: '11px',
             color: '#aaffaa',
-            resolution: 2
+            resolution: 4
         }).setOrigin(0.5);
 
         const bg = this.scene.add.rectangle(0, 0, 150, 62, 0x000000, 0.85)

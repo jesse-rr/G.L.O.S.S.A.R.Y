@@ -36,6 +36,7 @@ export class PlayerData {
     combatTier: number = 1;
     currentFloor: number = 1;
     private static instance: PlayerData | null = null;
+    glossaryReplaced: boolean = false;
 
     static getInstance(): PlayerData {
         if (!PlayerData.instance) {
@@ -153,6 +154,11 @@ export class PlayerData {
         }
     }
 
+    public replaceGlossary(): void {
+        this.glossaryReplaced = true;
+        this.save();
+    }
+
     takeDamage(damage: number): void {
         this.hp = Math.max(0, this.hp - damage);
         this.save();
@@ -160,6 +166,69 @@ export class PlayerData {
 
     heal(amount: number): void {
         this.hp = Math.min(this.maxHp, this.hp + amount);
+        this.save();
+    }
+
+    setLastLocation(mapKey: string, x: number | null, y: number | null): void {
+        const normalizedMap = mapKey === 'central-hub' ? 'hub' : mapKey;
+        if (this.lastMap === normalizedMap && this.lastX === x && this.lastY === y) {
+            return;
+        }
+        this.lastMap = normalizedMap;
+        this.lastX = x;
+        this.lastY = y;
+        this.save();
+    }
+
+    /** Saved while in turn-based pillar CombatScene for summit boss. */
+    static isSummitBossCombat(data: PlayerData): boolean {
+        if (!data.inCombat) return false;
+        if (data.lastMap === 'summit-settlement') return true;
+        if (data.combatEnemyId?.startsWith('pillar_core_')) return true;
+        try {
+            return localStorage.getItem('glossary_combat_return_map') === 'summit-settlement';
+        } catch {
+            return false;
+        }
+    }
+
+    /** Environmental boss fight on LevelScene (attacks / runes), not CombatScene. */
+    static isSummitBossFightInProgress(): boolean {
+        try {
+            return localStorage.getItem('glossary_boss_fight_active') === 'true';
+        } catch {
+            return false;
+        }
+    }
+
+    static shouldReturnToSummitBossBattle(data: PlayerData): boolean {
+        return PlayerData.isSummitBossCombat(data) || PlayerData.isSummitBossFightInProgress();
+    }
+
+    clearSummitBossFightLocalStorage(): void {
+        localStorage.removeItem('glossary_boss_fight_active');
+        localStorage.removeItem('glossary_boss_pillars_defeated');
+        localStorage.removeItem('glossary_boss_remaining_pillars');
+        localStorage.removeItem('glossary_boss_current_combat_pillar');
+        localStorage.removeItem('glossary_boss_combat_victory');
+        localStorage.removeItem('glossary_boss_presses');
+        localStorage.removeItem('glossary_combat_return_map');
+        localStorage.removeItem('glossary_combat_player_x');
+        localStorage.removeItem('glossary_combat_player_y');
+    }
+
+    /**
+     * After F5 during summit boss content: LevelScene at spawn, no CombatScene,
+     * full reset of boss fight (barrier, pillars, runes, tentacles state).
+     */
+    returnToSummitBossBattle(): void {
+        this.hp = 100;
+        this.inCombat = false;
+        this.combatEnemyId = null;
+        this.lastMap = 'summit-settlement';
+        this.lastX = null;
+        this.lastY = null;
+        this.clearSummitBossFightLocalStorage();
         this.save();
     }
 

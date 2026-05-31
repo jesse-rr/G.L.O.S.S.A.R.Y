@@ -1684,6 +1684,65 @@
         }, 
         {
          "draworder":"topdown",
+         "id":77,
+         "name":"pillars",
+         "objects":[
+                {
+                 "height":64,
+                 "id":3563,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":64,
+                 "x":-256,
+                 "y":-256
+                }, 
+                {
+                 "height":64,
+                 "id":3564,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":64,
+                 "x":192,
+                 "y":-256
+                }, 
+                {
+                 "height":64,
+                 "id":3566,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":64,
+                 "x":192,
+                 "y":128
+                }, 
+                {
+                 "height":64,
+                 "id":3567,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":64,
+                 "x":-256,
+                 "y":128
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
          "id":65,
          "name":"spawn",
          "objects":[
@@ -2137,7 +2196,8 @@
          "visible":true,
          "x":0,
          "y":0
-        }, 
+        },
+    
         {
          "draworder":"topdown",
          "id":71,
@@ -2161,8 +2221,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":77,
- "nextobjectid":3560,
+ "nextlayerid":78,
+ "nextobjectid":3578,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",

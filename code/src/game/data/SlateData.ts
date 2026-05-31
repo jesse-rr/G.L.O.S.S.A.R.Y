@@ -170,34 +170,34 @@ export const SLATE_DEFINITIONS: SlateDefinition[] = [
         enticingLore: 'Nyx Cipher Morth, Jinx Quell Basalt, Umbra Echo Prism, Xael Fyre Thorn. A spatial loop or recursion Lux Sigil Dusk; Aether Kael Ymir.'
     },
     {
-        id: 'slate_eclipse',
-        title: 'Slate IX',
-        fragments: [
-            { runic: 'Prism Lux Orin', translated: 'When the sun dies' },
-            { runic: 'Umbra Dusk Fyre', translated: 'and the moon turns red' },
-            { runic: 'Sigil Basalt Nyx', translated: 'the old gates open' },
-            { runic: 'Kael Thorn Aether', translated: 'revealing forgotten paths' },
-            { runic: 'Cipher Wyrd Jinx', translated: 'during the alignment' },
-            { runic: 'Echo Morth Rime', translated: 'allowing mortals to glimpse' },
-        ],
-        loreText: 'When the sun dies and the moon turns red, the old gates open, revealing forgotten paths. It is during the alignment of celestial bodies that the veil grows thin, allowing mortals to glimpse the eternal fire.',
-        location: 'Boss Floor - Abandoned',
-        enticingLore: 'Prism Lux Orin Umbra Dusk Fyre, Sigil Basalt Nyx, Kael Thorn Aether. It is Cipher Wyrd Jinx of celestial bodies that the veil grows thin, Echo Morth Rime the eternal fire.'
-    },
-    {
-        id: 'slate_rebirth',
+        id: 'slate_merchant',
         title: 'Slate X',
         fragments: [
-            { runic: 'Fyre Prism Hallow', translated: 'Out of the ashes' },
-            { runic: 'Ymir Ignis Echo', translated: 'a new world blooms' },
-            { runic: 'Lux Vox Aether', translated: 'cleansed of past sins' },
-            { runic: 'Morth Thorn Quell', translated: 'by the eternal flame' },
-            { runic: 'Nyx Sigil Dusk', translated: 'the cycle of death' },
-            { runic: 'Cipher Basalt Rime', translated: 'only remade into a shape' },
+            { runic: 'Vox Umbra Kael', translated: 'A figure walks the ruins' },
+            { runic: 'Jinx Prism Hallow', translated: 'appearing where hope fades' },
+            { runic: 'Sigil Nyx Aether', translated: 'cloaked in shifting robes' },
+            { runic: 'Basalt Wyrd Morth', translated: 'with eyes like old stars' },
+            { runic: 'Cipher Lux Dusk', translated: 'The Merchant knows no home' },
+            { runic: 'Fyre Echo Thorn', translated: 'yet is found in every settlement' },
         ],
-        loreText: 'Out of the ashes, a new world blooms, cleansed of past sins by the eternal flame. The cycle of death and rebirth is absolute; nothing is truly destroyed, only remade into a shape more fitting for the coming age.',
-        location: 'Boss Floor - Desert',
-        enticingLore: 'Fyre Prism Hallow, Ymir Ignis Echo, Lux Vox Aether Morth Thorn Quell. Nyx Sigil Dusk and rebirth is absolute; nothing is truly destroyed, Cipher Basalt Rime more fitting for the coming age.'
+        loreText: 'A figure walks the ruins, appearing where hope fades. Cloaked in shifting robes with eyes like old stars, The Merchant knows no home yet is found in every settlement. What do they seek? What do they trade? The runes offer no answer, only silent warning.',
+        location: 'Merchant - Hidden Outpost',
+        enticingLore: 'Vox Umbra Kael Jinx Prism Hallow, cloaked in shifting robes Basalt Wyrd Morth with eyes like old stars. Cipher Lux Dusk, yet Fyre Echo Thorn is found in every settlement. The runes offer no answer, only silent warning.'
+    },
+    {
+        id: 'slate_tentacles',
+        title: 'Slate XI',
+        fragments: [
+            { runic: 'Nyx Cipher Basalt', translated: 'It grips the tower' },
+            { runic: 'Umbra Quell Prism', translated: 'tendrils wrapped around stone' },
+            { runic: 'Wyrd Thorn Jinx', translated: 'a parasite of flesh and ink' },
+            { runic: 'Aether Morth Echo', translated: 'feeding on forgotten light' },
+            { runic: 'Sigil Lux Orin', translated: 'The Glossary is its heart' },
+            { runic: 'Fyre Dusk Kael', translated: 'The Beholder is its eye' },
+        ],
+        loreText: 'It grips the tower, tendrils wrapped around stone. A parasite of flesh and ink, feeding on forgotten light. The Glossary is its heart; The Beholder is its eye. Those who reach the summit must face not a guardian, but the tower\'s own sickness made manifest.',
+        location: 'Boss Floor - Summit',
+        enticingLore: 'Nyx Cipher Basalt Umbra Quell Prism, a parasite of flesh and ink Wyrd Thorn Jinx feeding on forgotten light. Aether Morth Echo is its heart; Sigil Lux Orin is its eye. Fyre Dusk Kael must face not a guardian, but the tower\'s own sickness made manifest.'
     },
     {
         id: 'slate_prophecy',

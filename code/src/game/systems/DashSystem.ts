@@ -43,6 +43,23 @@ export class DashSystem {
         return this.isDashing;
     }
 
+    isDashAvailable(): boolean {
+        return this.dashAvailable && !this.isDashing;
+    }
+
+    getCooldownRemaining(): number {
+        return Math.max(0, this.dashCooldownTimer);
+    }
+
+    getCooldownTotal(): number {
+        return this.dashCooldownTime;
+    }
+
+    getCooldownProgress(): number {
+        if (this.dashAvailable && this.dashCooldownTimer <= 0) return 1;
+        return 1 - this.dashCooldownTimer / this.dashCooldownTime;
+    }
+
     updateTimers(
         delta: number,
         player: Phaser.Physics.Matter.Sprite,

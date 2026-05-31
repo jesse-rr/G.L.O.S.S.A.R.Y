@@ -120,6 +120,50 @@ export const BESTIARY: BestiaryDefinition[] = [
         hp: 200,
         baseDamage: 22,
         tier: 3
+    },
+    {
+        id: 'pillar_core_syntax',
+        name: 'Core of Syntax',
+        description: 'The first pillar of the Glossary. It guards the structures of language with high-frequency wards.',
+        texture: 'golem',
+        frame: 10,
+        rarity: 'Rare',
+        hp: 60,
+        baseDamage: 10,
+        tier: 3
+    },
+    {
+        id: 'pillar_core_semantics',
+        name: 'Core of Semantics',
+        description: 'The second pillar of the Glossary. It twists the meaning of runes, distorting spells and energy.',
+        texture: 'golem',
+        frame: 10,
+        rarity: 'Rare',
+        hp: 70,
+        baseDamage: 12,
+        tier: 3
+    },
+    {
+        id: 'pillar_core_lexicon',
+        name: 'Core of Lexicon',
+        description: 'The third pillar of the Glossary. It links its life force directly to the trespasser, draining their energy.',
+        texture: 'golem',
+        frame: 10,
+        rarity: 'Rare',
+        hp: 75,
+        baseDamage: 12,
+        tier: 3
+    },
+    {
+        id: 'pillar_core_etymology',
+        name: 'Core of Etymology',
+        description: 'The final pillar of the Glossary. It silences and alters ancient symbols, fracturing rune connections.',
+        texture: 'golem',
+        frame: 10,
+        rarity: 'Rare',
+        hp: 80,
+        baseDamage: 14,
+        tier: 3
     }
 ];
 

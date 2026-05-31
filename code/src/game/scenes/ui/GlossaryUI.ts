@@ -74,6 +74,8 @@ export class GlossaryUI extends Scene implements ScrambleContext {
         });
         this.load.image('map-central-hub', 'assets/Models/exports/Objects/map-central-hub.png');
         this.load.image('map-trade-hub', 'assets/Models/exports/Objects/map-trade-hub.png');
+        this.load.image('map-merchant', 'assets/Models/exports/Objects/map-merchant.png');
+        this.load.image('map-summit', 'assets/Models/exports/Objects/map-summit.png');
     }
 
     create(data: any) {

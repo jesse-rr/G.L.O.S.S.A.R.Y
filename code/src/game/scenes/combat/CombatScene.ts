@@ -41,6 +41,9 @@ export class CombatScene extends Phaser.Scene {
     private enemyTooltipDesc: Phaser.GameObjects.Text | null = null;
     private transitionStarted: boolean = false;
     private combatEnded: boolean = false;
+    private pillarWhiteout?: Phaser.GameObjects.Rectangle;
+    private static readonly PILLAR_WHITE_HOLD_MS = 850;
+    private static readonly PILLAR_WHITE_FADE_OUT_MS = 1400;
 
     constructor() {
         super('CombatScene');
@@ -108,6 +111,11 @@ export class CombatScene extends Phaser.Scene {
     }
 
     create(data?: any) {
+        const fadeFromWhite = !!data?.fadeFromWhite;
+        if (fadeFromWhite) {
+            this.ensurePillarWhiteout();
+        }
+
         this.playerData = this.registry.get('playerData') as PlayerData;
         this.encounterTier = data?.encounterTier || this.playerData.combatTier || 1;
         this.encounterMapKey = data?.mapKey || '';
@@ -296,6 +304,44 @@ export class CombatScene extends Phaser.Scene {
 
         this.updateStatusEffects();
         this.updateTurnIndicator('YOUR TURN - Select Runes');
+
+        if (fadeFromWhite) {
+            this.scene.bringToTop('CombatScene');
+            if (this.scene.isActive('LevelScene')) {
+                this.scene.stop('LevelScene');
+            }
+            this.finalizePillarWhiteoutTransition();
+        }
+    }
+
+    private ensurePillarWhiteout(): void {
+        this.cameras.main.setBackgroundColor('#ffffff');
+        const { width, height } = this.scale;
+        if (this.pillarWhiteout?.active) return;
+
+        this.pillarWhiteout = this.add
+            .rectangle(width / 2, height / 2, width + 64, height + 64, 0xffffff, 1)
+            .setScrollFactor(0)
+            .setDepth(99999)
+            .setAlpha(1);
+    }
+
+    private finalizePillarWhiteoutTransition(): void {
+        this.time.delayedCall(CombatScene.PILLAR_WHITE_HOLD_MS, () => {
+            if (!this.pillarWhiteout?.active) return;
+
+            this.tweens.add({
+                targets: this.pillarWhiteout,
+                alpha: 0,
+                duration: CombatScene.PILLAR_WHITE_FADE_OUT_MS,
+                ease: 'Sine.easeInOut',
+                onComplete: () => {
+                    this.pillarWhiteout?.destroy();
+                    this.pillarWhiteout = undefined;
+                    this.cameras.main.setBackgroundColor('#000000');
+                }
+            });
+        });
     }
 
     private pickEnemyFromBestiary(): { id: string, name: string; hp: number; attack: number; defense: number; texture: string; frame: number } {
@@ -832,11 +878,16 @@ export class CombatScene extends Phaser.Scene {
         this.statusEffectUI.syncIcons(playerEffects, this.playerStatusContainer);
     }
 
-    private syncPlayerDataFromCombat(): void {
+    private syncPlayerDataFromCombat(result?: string): void {
         if (!this.combatSystem || !this.playerData) return;
         const combatPlayer = this.combatSystem.getLocalPlayer();
         if (!combatPlayer) return;
-        this.playerData.hp = this.playerData.maxHp;
+        if (this.encounterMapKey === 'summit-settlement') {
+            const isDefeat = result === 'DEFEAT' || combatPlayer.stats.hp <= 0;
+            this.playerData.hp = isDefeat ? 100 : combatPlayer.stats.hp;
+        } else {
+            this.playerData.hp = this.playerData.maxHp;
+        }
         this.playerData.specialCurrency = combatPlayer.specialCurrency;
         this.playerData.save();
         this.registry.set('playerData', this.playerData);
@@ -846,13 +897,17 @@ export class CombatScene extends Phaser.Scene {
         if (this.combatEnded) return;
         this.combatEnded = true;
 
-        this.syncPlayerDataFromCombat();
+        this.syncPlayerDataFromCombat(result);
 
         let earnedGems = 0;
         let earnedSpecial = 0;
         let defeatedEnemyName = 'Unknown Enemy';
 
         if (result === 'VICTORY' && this.playerData) {
+            if (this.encounterMapKey === 'summit-settlement') {
+                localStorage.setItem('glossary_boss_combat_victory', 'true');
+            }
+
             const enemy = this.combatSystem ? this.combatSystem.getAllEnemies()[0] : null;
             defeatedEnemyName = enemy ? enemy.name : 'Unknown Enemy';
 

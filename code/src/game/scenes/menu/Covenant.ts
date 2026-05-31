@@ -344,6 +344,11 @@ export class Covenant extends Phaser.Scene {
         if (userData) userData.discoverCovenant(covenant);
         
         localStorage.removeItem('glossary_boss_presses');
+        localStorage.removeItem('glossary_boss_fight_active');
+        localStorage.removeItem('glossary_boss_pillars_defeated');
+        localStorage.removeItem('glossary_boss_remaining_pillars');
+        localStorage.removeItem('glossary_boss_current_combat_pillar');
+        localStorage.removeItem('glossary_boss_combat_victory');
 
         let mapKey = 'hub';
         let uniqueRune = '';

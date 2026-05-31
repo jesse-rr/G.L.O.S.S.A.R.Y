@@ -18,6 +18,7 @@ import { NotificationOverlay } from './scenes/ui/NotificationOverlay';
 import { ItemModal } from './scenes/ui/ItemModal';
 import { SlateMinigame } from './scenes/ui/SlateMinigame';
 import { MerchantShop } from './scenes/ui/MerchantShop';
+import { LocationDisplayScene } from "./utils/LocationDefinition";
 
 let useVsync = true;
 
@@ -40,7 +41,7 @@ const config: Phaser.Types.Core.GameConfig = {
     antialias: false,
     fps: {
         forceSetTimeOut: !useVsync,
-        target: useVsync ? 30 : 144
+        target: useVsync ? 30 : 60
     },
     scale: {
         mode: Scale.NONE,
@@ -72,7 +73,8 @@ const config: Phaser.Types.Core.GameConfig = {
         NotificationOverlay,
         ItemModal,
         SlateMinigame,
-        MerchantShop
+        MerchantShop,
+        LocationDisplayScene
     ]
 };
 

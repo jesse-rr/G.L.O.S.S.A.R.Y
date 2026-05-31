@@ -12,21 +12,21 @@ export const SETTLEMENTS: LocationDefinition[] = [
         id: 'settlement_abandoned',
         name: 'Abandoned Settlement',
         type: 'settlement',
-        description: 'A drowned ruin sinking into the muck. Murky waters hide what lurks beneath.',
+        description: 'An water filled swampy place. \nIts abandoned, yet nature lives here.',
         frame: 0
     },
     {
         id: 'settlement_mechanic',
         name: 'Mechanic Settlement',
         type: 'settlement',
-        description: 'An industrial hub built on grinding gears and hissing steam vents. It never sleeps.',
+        description: 'An industrial hub built on grinding gears and chains. \nIt never sleeps even tho there is noone to see.',
         frame: 1
     },
     {
         id: 'settlement_desert',
         name: 'Desert Settlement',
         type: 'settlement',
-        description: 'An oasis of life surrounded by endless dunes. Trade flows as freely as the sand.',
+        description: 'An old now abadoned sand filled place, no people, all doors closed. \nYet, it remains.',
         frame: 2
     }
 ];
@@ -34,23 +34,23 @@ export const SETTLEMENTS: LocationDefinition[] = [
 export const BOSSES: LocationDefinition[] = [
     {
         id: 'boss_abandoned',
-        name: 'The Usurper',
+        name: 'Trial of the Drowned',
         type: 'boss',
-        description: 'A swollen abomination reigning over a drowned court. It drags victims into the suffocating mire.',
+        description: 'An forgotten place, no beast awaits, only the weight of the waters and its sounds.',
         frame: 2
     },
     {
         id: 'boss_mechanic',
-        name: 'The Machine God',
+        name: 'Trial of the Gears',
         type: 'boss',
-        description: 'A towering construct of brass and oil. It seeks to optimize everything into scrap.',
+        description: 'An ancient proving mechanic island of. \nThe machine judges your worth.',
         frame: 0
     },
     {
         id: 'boss_desert',
-        name: 'The Sand Leviathan',
+        name: 'Trial of the Sands',
         type: 'boss',
-        description: 'An ancient terror that swims through the dunes as if they were water. It consumes all.',
+        description: 'A circular arena swallowed by dunes. \nThe desert itself rises to challenge the unworthy.',
         frame: 1
     }
 ];
@@ -60,7 +60,7 @@ export const HUBS: LocationDefinition[] = [
         id: 'central_hub',
         name: 'Central Hub',
         type: 'hub',
-        description: 'The crossroads of all covenants. Every path begins and ends here.',
+        description: 'The crossroads of all covenants. \nEvery path begins and ends here.',
         frame: 0,
         texture: 'map-central-hub'
     },
@@ -68,7 +68,7 @@ export const HUBS: LocationDefinition[] = [
         id: 'summit_trade',
         name: 'Trade Hub',
         type: 'hub',
-        description: 'A summit where merchants gather. Runes and relics exchange hands under watchful eyes.',
+        description: 'A place where Runes exchange hands for a price.',
         frame: 0,
         texture: 'map-trade-hub'
     },
@@ -76,8 +76,17 @@ export const HUBS: LocationDefinition[] = [
         id: 'merchant',
         name: 'Merchant Base',
         type: 'hub',
-        description: 'A hidden merchant outpost nestled above the settlements. Rare goods await the intrepid.',
-        frame: 0
+        description: 'A hidden interdimentional merchant outpost nestled in the settlements. \nRare goods await.',
+        frame: 0,
+        texture: "map-merchant"
+    },
+    {
+        id: 'summit',
+        name: 'Summit',
+        type: 'hub',
+        description: 'The origin of all things. The Glossary pulses at its core, channeling the towers \nunfathomable power.',
+        frame: 0,
+        texture: "map-summit"
     }
 ];
 

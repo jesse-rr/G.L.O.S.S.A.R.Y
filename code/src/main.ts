@@ -2,6 +2,7 @@ import StartGame from './game/main';
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    StartGame('game-container');
+    const game = StartGame('game-container');
+    (window as any).game = game;
 
 });

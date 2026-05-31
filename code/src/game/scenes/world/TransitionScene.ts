@@ -14,68 +14,95 @@ export class TransitionScene extends Scene {
         this.scene.bringToTop();
 
         const centerX = this.scale.width / 2;
+        const topTargetY = 180;
+        const bottomTargetY = this.scale.height - 180;
 
         const topSprite = this.add.sprite(centerX, -180, 'transition')
             .setScrollFactor(0)
             .setDepth(99999)
             .setScale(2);
 
-        const bottomSprite = this.add.sprite(centerX, 900, 'transition')
+        const bottomSprite = this.add.sprite(centerX, this.scale.height + 180, 'transition')
             .setScrollFactor(0)
             .setDepth(99999)
             .setScale(2)
             .setFlipY(true);
 
         const durationMs = 500;
-        const holdDelay = 250;
 
-        let swapped = false;
+        let targetSceneLoaded = false;
 
-        const handleSwap = () => {
-            if (swapped) return;
-            swapped = true;
-            this.scene.launch(data.targetScene, data.targetData);
-            this.scene.bringToTop('TransitionScene');
-            if (data.currentScene) {
-                this.scene.stop(data.currentScene);
+        const finishTransition = () => {
+            this.tweens.add({
+                targets: topSprite,
+                y: -180,
+                duration: durationMs,
+                ease: 'Sine.easeInOut',
+                onComplete: () => {
+                    TransitionScene.isPlaying = false;
+                    this.scene.stop();
+                }
+            });
+
+            this.tweens.add({
+                targets: bottomSprite,
+                y: this.scale.height + 180,
+                duration: durationMs,
+                ease: 'Sine.easeInOut'
+            });
+        };
+
+        const onTargetSceneReady = () => {
+            if (targetSceneLoaded) return;
+            targetSceneLoaded = true;
+            finishTransition();
+        };
+
+        const loadTargetScene = () => {
+            if (data.currentScene && data.currentScene === data.targetScene) {
+                const existingScene = this.scene.get(data.targetScene);
+                if (existingScene) {
+                    existingScene.scene.restart(data.targetData);
+                    this.scene.bringToTop('TransitionScene');
+                    this.time.delayedCall(100, onTargetSceneReady);
+                } else {
+                    onTargetSceneReady();
+                }
+            } else {
+                this.scene.launch(data.targetScene, data.targetData);
+                this.scene.bringToTop('TransitionScene');
+
+                const targetScene = this.scene.get(data.targetScene);
+
+                if (targetScene && targetScene.scene.isActive()) {
+                    this.time.delayedCall(100, onTargetSceneReady);
+                } else {
+                    this.scene.get(data.targetScene).sys.events.once('create', onTargetSceneReady);
+                    this.time.delayedCall(5000, () => {
+                        if (!targetSceneLoaded) onTargetSceneReady();
+                    });
+                }
+
+                if (data.currentScene) {
+                    this.scene.stop(data.currentScene);
+                }
             }
         };
 
         this.tweens.add({
             targets: topSprite,
-            y: 180,
+            y: topTargetY,
             duration: durationMs,
-            ease: 'Sine.easeInOut',
-            onComplete: () => {
-                handleSwap();
-
-                this.tweens.add({
-                    targets: topSprite,
-                    y: -180,
-                    duration: durationMs,
-                    delay: holdDelay,
-                    ease: 'Sine.easeInOut',
-                    onComplete: () => {
-                        TransitionScene.isPlaying = false;
-                        this.scene.stop();
-                    }
-                });
-            }
+            ease: 'Sine.easeInOut'
         });
 
         this.tweens.add({
             targets: bottomSprite,
-            y: 540,
+            y: bottomTargetY,
             duration: durationMs,
             ease: 'Sine.easeInOut',
             onComplete: () => {
-                this.tweens.add({
-                    targets: bottomSprite,
-                    y: 900,
-                    duration: durationMs,
-                    delay: holdDelay,
-                    ease: 'Sine.easeInOut'
-                });
+                loadTargetScene();
             }
         });
     }
