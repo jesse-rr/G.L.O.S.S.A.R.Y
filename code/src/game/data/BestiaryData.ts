@@ -8,162 +8,190 @@ export interface BestiaryDefinition {
     hp: number;
     baseDamage: number;
     tier: number;
+    animProfile?: string;
 }
 
 export const BESTIARY: BestiaryDefinition[] = [
     {
-        id: 'rationalist',
-        name: 'Rationalist',
-        description: 'A pale entity resembling a statue of Michelangelo. In combat, it guards its mind fiercely, rendering it completely immune to psychic status effects.',
-        texture: 'rationalist',
-        frame: 0,
-        rarity: 'Rare',
-        hp: 300,
-        baseDamage: 25,
-        tier: 3
-    },
-    {
-        id: 'cultist_1',
-        name: 'Lost Shadow',
-        description: 'A shadow wrapped in a tattered cape, wandering without purpose. It attacks with erratic lunges, occasionally inflicting the "Bleed" status.',
-        texture: 'cultist',
+        id: 'bat',
+        name: 'Giant Bat',
+        description: 'A swift flying creature of the dark. It strikes quickly and returns to the shadows, relying on speed to confuse its prey.\nEffect: Applies Poison on hit (Takes damage each round for 3 rounds).',
+        texture: 'bat_fly',
         frame: 0,
         rarity: 'Common',
-        hp: 60,
-        baseDamage: 5,
-        tier: 1
+        hp: 75,
+        baseDamage: 9,
+        tier: 1,
+        animProfile: 'bat'
     },
     {
-        id: 'cultist_2',
-        name: 'The Fool',
-        description: 'A twisted shadow wearing a broken crown. It uses horrific tentacles hidden beneath its cloak to "Bind" you, interrupting Rune chain progression.',
-        texture: 'cultist',
-        frame: 4,
-        rarity: 'Rare',
-        hp: 270,
-        baseDamage: 18,
-        tier: 2
-    },
-    {
-        id: 'scavenger',
-        name: 'Scavenger',
-        description: 'A vulture adorned with a stolen golden chain and shoes. It actively attempts to "Steal" unidentified Runes directly from your hand.',
-        texture: 'scavenger',
+        id: 'crab',
+        name: 'Chitin Crab',
+        description: 'A heavily armored crustacean native to the ruins\' flooded corridors. Its claws pack a powerful punch, and its thick shell absorbs physical damage.',
+        texture: 'crab_idle',
         frame: 0,
         rarity: 'Uncommon',
-        hp: 90,
-        baseDamage: 8,
-        tier: 2
+        hp: 150,
+        baseDamage: 13,
+        tier: 2,
+        animProfile: 'crab'
+    },
+    {
+        id: 'rat',
+        name: 'Dire Rat',
+        description: `A vicious rodent that hunts in the dark corners of the ruins. Quick and aggressive, it bites with disease-coated fangs.
+Effect: Applies Poison on hit (Takes damage each round for 3 rounds).`,
+        texture: 'rat_idle',
+        frame: 0,
+        rarity: 'Common',
+        hp: 88,
+        baseDamage: 10,
+        tier: 1,
+        animProfile: 'rat'
+    },
+    {
+        id: 'skull',
+        name: 'Lost Soul',
+        description: `A floating skull animated by ancient runic magic. It flies erratically and channels unstable energy from the beyond.
+Effect: Applies Dazed on hit (50% chance to miss attacks for 2 rounds).`,
+        texture: 'skull_idle',
+        frame: 0,
+        rarity: 'Uncommon',
+        hp: 113,
+        baseDamage: 15,
+        tier: 2,
+        animProfile: 'skull'
     },
     {
         id: 'slime_1',
         name: 'Green Slime',
-        description: 'A gelatinous creature wearing glasses. Its highly acidic body inflicts "Corrosion", permanently lowering your defense each turn it survives.',
-        texture: 'slime',
+        description: `A gelatinous creature wearing glasses. Its highly acidic body inflicts "Corrosion", lowering your defense over time.
+Effect: Passive 25% damage reduction.`,
+        texture: 'slime_green_idle',
         frame: 0,
         rarity: 'Common',
-        hp: 40,
-        baseDamage: 3,
-        tier: 1
+        hp: 63,
+        baseDamage: 6,
+        tier: 1,
+        animProfile: 'slime_green'
     },
     {
         id: 'slime_2',
         name: 'Blue Slime',
-        description: 'A denser ooze with a shattered sword lodged within. It boasts immense physical resistance and reflects a portion of physical damage back at the attacker.',
-        texture: 'slime',
-        frame: 10,
+        description: `A denser ooze with a shattered sword lodged within. It boasts immense physical resistance and reflects a portion of physical damage back.
+Effect: Passive 25% damage reduction.`,
+        texture: 'slime_blue_idle',
+        frame: 0,
         rarity: 'Uncommon',
-        hp: 120,
-        baseDamage: 6,
-        tier: 2
+        hp: 138,
+        baseDamage: 9,
+        tier: 2,
+        animProfile: 'slime_blue'
     },
     {
-        id: 'wisp_1',
-        name: 'Ember Wisp',
-        description: 'A floating head engulfed in eternal flames. It casts "Burn" upon contact, dealing small but continuous Fire damage over time.',
-        texture: 'wisp',
+        id: 'pebble',
+        name: 'Pebble',
+        description: `A small animated stone construct. It is mostly passive and defensive, observing its environment quietly.
+Effect: Reflects 50% of received damage back to the attacker.`,
+        texture: 'pebble_idle',
         frame: 0,
         rarity: 'Common',
         hp: 50,
-        baseDamage: 10,
-        tier: 1
+        baseDamage: 0,
+        tier: 1,
+        animProfile: 'pebble'
     },
     {
-        id: 'wisp_2',
-        name: 'Necro Wisp',
-        description: 'A blazing torso with fiery arms. It uses its intense heat to manipulate the bones of the dead, capable of "Reviving" fallen skeletons as allies.',
-        texture: 'wisp',
-        frame: 10,
-        rarity: 'Rare',
-        hp: 160,
-        baseDamage: 18,
-        tier: 2
+        id: 'skeleton_warrior',
+        name: 'Skeleton Warrior',
+        description: 'A reanimated skeletal warrior clad in decaying steel. It swings its heavy sword with tireless, lethal force.',
+        texture: 'skeleton_warrior_idle',
+        frame: 0,
+        rarity: 'Uncommon',
+        hp: 300,
+        baseDamage: 14,
+        tier: 2,
+        animProfile: 'skeleton_warrior'
+    },
+    {
+        id: 'skeleton_mage',
+        name: 'Skeleton Mage',
+        description: 'A skeletal practitioner of the dark arts. It channels necrotic energy to sap the life force of its foes.',
+        texture: 'skeleton_mage_idle',
+        frame: 0,
+        rarity: 'Uncommon',
+        hp: 106,
+        baseDamage: 17,
+        tier: 2,
+        animProfile: 'skeleton_mage'
     },
     {
         id: 'golem_1',
         name: 'Moss Golem',
-        description: 'An animated rock construct overgrown with ancient foliage. It possesses immense health and occasionally "Stuns" with heavy, earth-shattering slams.',
-        texture: 'golem',
+        description: 'An animated rock construct overgrown with ancient foliage. It possesses immense health and occasionally stuns with heavy slams.',
+        texture: 'golem_na_idleA',
         frame: 0,
         rarity: 'Uncommon',
-        hp: 240,
-        baseDamage: 15,
-        tier: 2
+        hp: 150,
+        baseDamage: 17,
+        tier: 3,
+        animProfile: 'golem_noarmor'
     },
     {
         id: 'golem_2',
         name: 'Runic Golem',
-        description: 'A volatile construct seeping arcane energy, oddly wearing a cowboy hat. Highly unstable, its attacks can "Silence" your ability to use specific Runes.',
-        texture: 'golem',
-        frame: 10,
+        description: 'A volatile construct seeping arcane energy, armored in dark stone. Its attacks can disrupt your rune spells.',
+        texture: 'golem_ar_idle',
+        frame: 0,
         rarity: 'Rare',
-        hp: 400,
-        baseDamage: 22,
-        tier: 3
+        hp: 250,
+        baseDamage: 24,
+        tier: 3,
+        animProfile: 'golem_armored'
     },
     {
-        id: 'pillar_core_syntax',
+        id: 'pillar_1',
         name: 'Core of Syntax',
         description: 'The first pillar of the Glossary. It guards the structures of language with high-frequency wards.',
-        texture: 'golem',
-        frame: 10,
-        rarity: 'Rare',
-        hp: 120,
-        baseDamage: 10,
-        tier: 3
-    },
-    {
-        id: 'pillar_core_semantics',
-        name: 'Core of Semantics',
-        description: 'The second pillar of the Glossary. It twists the meaning of runes, distorting spells and energy.',
-        texture: 'golem',
-        frame: 10,
-        rarity: 'Rare',
-        hp: 140,
-        baseDamage: 12,
-        tier: 3
-    },
-    {
-        id: 'pillar_core_lexicon',
-        name: 'Core of Lexicon',
-        description: 'The third pillar of the Glossary. It links its life force directly to the trespasser, draining their energy.',
-        texture: 'golem',
-        frame: 10,
+        texture: 'pillar-1',
+        frame: 0,
         rarity: 'Rare',
         hp: 150,
-        baseDamage: 12,
-        tier: 3
+        baseDamage: 11,
+        tier: 4
     },
     {
-        id: 'pillar_core_etymology',
+        id: 'pillar_2',
+        name: 'Core of Semantics',
+        description: 'The second pillar of the Glossary. It twists the meaning of runes, distorting spells and energy.',
+        texture: 'pillar-2',
+        frame: 0,
+        rarity: 'Rare',
+        hp: 175,
+        baseDamage: 13,
+        tier: 4
+    },
+    {
+        id: 'pillar_3',
+        name: 'Core of Lexicon',
+        description: 'The third pillar of the Glossary. It links its life force directly to the trespasser, draining their energy.',
+        texture: 'pillar-3',
+        frame: 0,
+        rarity: 'Rare',
+        hp: 188,
+        baseDamage: 13,
+        tier: 4
+    },
+    {
+        id: 'pillar_4',
         name: 'Core of Etymology',
         description: 'The final pillar of the Glossary. It silences and alters ancient symbols, fracturing rune connections.',
-        texture: 'golem',
-        frame: 10,
+        texture: 'pillar-4',
+        frame: 0,
         rarity: 'Rare',
-        hp: 160,
-        baseDamage: 14,
-        tier: 3
+        hp: 200,
+        baseDamage: 15,
+        tier: 4
     }
 ];
 

@@ -23,6 +23,7 @@ export class GlossaryBestiaryPage {
         const baseEntries = BESTIARY.filter(def => !def.id.endsWith('_2'));
 
         baseEntries.forEach((def, index) => {
+            if (def.id.includes("pillar")) return;
             const col = index % 5;
             const row = Math.floor(index / 5);
             const x = leftPageX + col * 110;
@@ -33,7 +34,7 @@ export class GlossaryBestiaryPage {
 
             const isUnlocked = bestiaryData.isDiscovered(def.id);
             const sprite = this.scene.add.sprite(x, y, def.texture, def.frame)
-                .setOrigin(0.5).setScale(1.2).setAlpha(isUnlocked ? 0.9 : 0.6);
+                .setOrigin(0.5).setScale(2).setAlpha(isUnlocked ? 0.9 : 0.6);
             if (!isUnlocked) sprite.setTint(0x000000);
 
             box.on('pointerover', () => box.setAlpha(1));

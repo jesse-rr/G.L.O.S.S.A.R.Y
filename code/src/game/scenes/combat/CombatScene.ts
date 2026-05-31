@@ -11,6 +11,7 @@ import { getSelectedItems } from '../ui/glossary/GlossaryItemsPage';
 import { PlayerPanelSystem } from '../../systems/PlayerPanelSystem';
 import { BESTIARY, BestiaryData } from '../../data/BestiaryData';
 import { RuneData } from '../../data/RuneData';
+import { EnemyAnimator } from '../../combat/EnemyAnimator';
 
 export class CombatScene extends Phaser.Scene {
     private playerData: PlayerData | null = null;
@@ -42,6 +43,8 @@ export class CombatScene extends Phaser.Scene {
     private transitionStarted: boolean = false;
     private combatEnded: boolean = false;
     private pillarWhiteout?: Phaser.GameObjects.Rectangle;
+    private enemyAnimator: EnemyAnimator | null = null;
+    private enemyShadow: Phaser.GameObjects.Image | null = null;
     private static readonly PILLAR_WHITE_HOLD_MS = 850;
     private static readonly PILLAR_WHITE_FADE_OUT_MS = 1400;
 
@@ -89,6 +92,13 @@ export class CombatScene extends Phaser.Scene {
         this.load.spritesheet('scavenger', 'assets/Models/exports/characters/Scavenger-Sheet.png', { frameWidth: 59, frameHeight: 61 });
         this.load.spritesheet('slime', 'assets/Models/exports/characters/Slime-Sheet.png', { frameWidth: 32, frameHeight: 27 });
         this.load.spritesheet('wisp', 'assets/Models/exports/characters/Wisp-Sheet.png', { frameWidth: 27, frameHeight: 51 });
+
+        this.load.spritesheet('pillar-1', 'assets/Models/exports/characters/Pillar-1.png', { frameWidth: 48, frameHeight: 80 });
+        this.load.spritesheet('pillar-2', 'assets/Models/exports/characters/Pillar-2.png', { frameWidth: 48, frameHeight: 80 });
+        this.load.spritesheet('pillar-3', 'assets/Models/exports/characters/Pillar-3.png', { frameWidth: 48, frameHeight: 80 });
+        this.load.spritesheet('pillar-4', 'assets/Models/exports/characters/Pillar-4.png', { frameWidth: 48, frameHeight: 80 });
+
+
         this.load.spritesheet('map-outlines', 'assets/Models/exports/Objects/map-outlines.png', {
             frameWidth: 192, frameHeight: 128
         });
@@ -107,10 +117,20 @@ export class CombatScene extends Phaser.Scene {
         const covenant = this.registry.get('playerData')?.covenant || 'snake';
         this.load.spritesheet('protagonist-idle', `assets/Models/Protagonist/Idle-${covenant}.png`, { frameWidth: 48, frameHeight: 48 });
         this.load.spritesheet('protagonist-hurt', `assets/Models/Protagonist/Hurt-${covenant}.png`, { frameWidth: 48, frameHeight: 48 });
+        this.load.spritesheet('protagonist-death', `assets/Models/Protagonist/Death-${covenant}.png`, { frameWidth: 48, frameHeight: 48 });
         this.load.image('protagonist-shadow', 'assets/Models/Protagonist/Shadow.png');
+
+        EnemyAnimator.preloadAll(this);
     }
 
     create(data?: any) {
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            if (this.enemyAnimator) {
+                this.enemyAnimator.destroy();
+                this.enemyAnimator = null;
+            }
+        });
+
         const fadeFromWhite = !!data?.fadeFromWhite;
         if (fadeFromWhite) {
             this.ensurePillarWhiteout();
@@ -354,11 +374,23 @@ export class CombatScene extends Phaser.Scene {
     }
 
     private pickEnemyFromBestiary(): { id: string, name: string; hp: number; attack: number; defense: number; texture: string; frame: number } {
-        let pick = BESTIARY.find(e => e.id === this.targetEnemyId);
+        let lookupId = this.targetEnemyId;
+        if (lookupId === 'pillar_core_syntax') lookupId = 'pillar_1';
+        else if (lookupId === 'pillar_core_semantics') lookupId = 'pillar_2';
+        else if (lookupId === 'pillar_core_lexicon') lookupId = 'pillar_3';
+        else if (lookupId === 'pillar_core_etymology') lookupId = 'pillar_4';
+
+        let pick = BESTIARY.find(e => e.id === lookupId);
 
         if (!pick) {
-            const tierEnemies = BESTIARY.filter(e => e.tier === this.encounterTier);
+            let targetTier = this.encounterTier;
+            if (this.encounterMapKey === 'summit-settlement') {
+                targetTier = 4;
+            }
+
+            const tierEnemies = BESTIARY.filter(e => e.tier === targetTier);
             const pool = tierEnemies.length > 0 ? tierEnemies : BESTIARY.filter(e => e.tier === 1);
+
             const battledNames = new Set<string>();
             try {
                 const raw = localStorage.getItem('glossary_completed_combats');
@@ -394,7 +426,6 @@ export class CombatScene extends Phaser.Scene {
             frame: pick.frame
         };
     }
-
     private initCombatSystem(): void {
         this.combatSystem = new CombatSystem();
 
@@ -434,6 +465,9 @@ export class CombatScene extends Phaser.Scene {
         this.combatSystem.on('enemy_damaged', (e) => {
             this.updateEnemyHp();
             this.showDamageNumber(this.scale.width - 200, 250, e.data.damage, '#cc0000', '-');
+            if (this.enemyAnimator) {
+                this.enemyAnimator.play('hit', { chainTo: 'idle' });
+            }
         });
 
         this.combatSystem.on('player_damaged', (e) => {
@@ -493,17 +527,19 @@ export class CombatScene extends Phaser.Scene {
         this.combatSystem.on('ability_used', (e) => {
             this.updateAbilityButton();
             this.updateHUD();
-            const msg = e.data.ability === 'rewind' ? `Rewound! +${e.data.hpRestored} HP`
+            const msg = e.data.ability === 'rewind' ? `Rewind! +${e.data.hpRestored} HP & Fortified!`
                 : e.data.ability === 'burn' ? `Burned ${e.data.burnedRune}! +50% DMG`
                     : `Intimidate! Enemies -25% DMG`;
             this.showFloatingText(this.scale.width / 2, 150, msg, '#FFD700');
+            if (e.data.ability = 'rewind') {
+                this.updatePlayerHp();
+            }
         });
 
         this.combatSystem.on('ability_failed', (e) => {
             const msg = e.data.reason === 'not_enough_currency' ? 'Not enough currency!'
                 : e.data.reason === 'already_used' ? 'Already used this turn!'
-                    : e.data.reason === 'no_damage_to_rewind' ? 'No damage to rewind!'
-                        : 'Cannot use ability!';
+                    : 'Cannot use ability!';
             this.showFloatingText(this.scale.width / 2, 150, msg, '#cc0000');
         });
 
@@ -515,6 +551,10 @@ export class CombatScene extends Phaser.Scene {
                 this.showFloatingText(this.scale.width - 200, 420, "Fog of War: Enemy Stunned!", "#ffd700");
             } else if (e.data?.effect === 'dodge') {
                 this.showFloatingText(200, 420, "404: Attack Not Found!", "#3b82f6");
+            } else if (e.data?.effect === 'dazed_miss') {
+                const isPlayer = this.combatSystem?.getLocalPlayer()?.id === e.data?.targetId;
+                const mx = isPlayer ? 200 : this.scale.width - 200;
+                this.showFloatingText(mx, 380, 'Missed Attack!', '#ff6b6b');
             }
             this.updateStatusEffects();
         });
@@ -563,25 +603,48 @@ export class CombatScene extends Phaser.Scene {
 
     private createEnemyVisual(): void {
         if (!this.combatSystem) return;
-        const enemy = this.combatSystem.getAllEnemies()[0];
+
+        const enemy = this.combatSystem
+            .getAllEnemies()[0];
         if (!enemy) return;
 
         const x = this.scale.width - 200;
         const y = 450;
 
-        const idleKey = `enemy-idle-${enemy.texture}-${enemy.frame}`;
-        if (!this.anims.exists(idleKey)) {
-            this.anims.create({
-                key: idleKey,
-                frames: this.anims.generateFrameNumbers(enemy.texture, { start: enemy.frame, end: enemy.frame + 3 }),
-                frameRate: 6,
-                repeat: -1
-            });
-        }
+        const enemyDef = BESTIARY.find(e => e.id === enemy.id);
+        const animProfile = enemyDef?.animProfile;
 
-        this.enemySprite = this.add.sprite(x, y, enemy.texture, enemy.frame)
-            .setScale(2.5).setScrollFactor(0).setInteractive({ useHandCursor: true });
-        this.enemySprite.play(idleKey);
+        // Create enemy shadow (same texture as player shadow)
+        this.enemyShadow = this.add.image(x, y + 15, 'protagonist-shadow')
+            .setOrigin(0.5, 0.5)
+            .setScrollFactor(0)
+            .setAlpha(0.6)
+            .setScale(3);
+
+        if (animProfile) {
+            this.enemyAnimator = new EnemyAnimator(this, animProfile);
+            this.enemyAnimator.createAnims();
+            this.enemySprite = this.enemyAnimator.createSprite(x, y);
+            this.enemySprite.setInteractive({ useHandCursor: true });
+
+            if (animProfile === 'golem_armored' && this.enemyAnimator.hasAnim('intro')) {
+                this.enemyAnimator.play('intro', { chainTo: 'idle' });
+            }
+        } else {
+            const idleKey = `enemy-idle-${enemy.texture}-${enemy.frame}`;
+            if (!this.anims.exists(idleKey)) {
+                this.anims.create({
+                    key: idleKey,
+                    frames: this.anims.generateFrameNumbers(enemy.texture, { start: enemy.frame, end: enemy.frame + 3 }),
+                    frameRate: 6,
+                    repeat: -1
+                });
+            }
+
+            this.enemySprite = this.add.sprite(x, y, enemy.texture, enemy.frame)
+                .setScale(2.5).setScrollFactor(0).setInteractive({ useHandCursor: true });
+            this.enemySprite.play(idleKey);
+        }
 
         this.enemyHpText = this.add.text(x, y - 85, `${enemy.stats.hp}/${enemy.stats.maxHp}`, {
             fontFamily: FONT_FAMILY, fontSize: '14px', color: '#000000'
@@ -837,27 +900,37 @@ export class CombatScene extends Phaser.Scene {
                 return;
             }
 
-            const damage = this.combatSystem!.executeEnemyAttack(enemy.id);
-            if (damage > 0 && this.playerSprite) {
-                this.tweens.add({
-                    targets: [this.playerSprite, this.playerShadow].filter(Boolean),
-                    x: '-=8',
-                    duration: 50,
-                    yoyo: true,
-                    repeat: 3
-                });
-            }
+            const executeAttack = () => {
+                const damage = this.combatSystem!.executeEnemyAttack(enemy.id);
+                if (damage > 0 && this.playerSprite) {
+                    this.tweens.add({
+                        targets: [this.playerSprite, this.playerShadow].filter(Boolean),
+                        x: '-=8',
+                        duration: 50,
+                        yoyo: true,
+                        repeat: 3
+                    });
+                }
 
-            this.time.delayedCall(600, () => {
-                if (this.checkEnemyDeathAndAnimate()) {
-                    return;
-                }
-                if (this.combatSystem!.checkCombatEnd()) {
-                    this.isAnimating = false;
-                    return;
-                }
-                this.startNextRound();
-            });
+                this.time.delayedCall(600, () => {
+                    if (this.checkEnemyDeathAndAnimate()) {
+                        return;
+                    }
+                    if (this.combatSystem!.checkCombatEnd()) {
+                        this.isAnimating = false;
+                        return;
+                    }
+                    this.startNextRound();
+                });
+            };
+
+            if (this.enemyAnimator && this.enemyAnimator.hasAnim('attack')) {
+                this.enemyAnimator.playAttackWithFx({
+                    onComplete: executeAttack
+                });
+            } else {
+                executeAttack();
+            }
         });
     }
 
@@ -1135,22 +1208,34 @@ export class CombatScene extends Phaser.Scene {
         const enemy = this.combatSystem ? this.combatSystem.getAllEnemies()[0] : null;
         if (enemy && enemy.stats.hp <= 0) {
             this.isAnimating = true;
-            if (this.enemySprite) {
-                this.enemySprite.clearTint();
-                this.tweens.add({
-                    targets: this.enemySprite,
-                    alpha: 0,
-                    duration: 700,
-                    ease: 'Quad.easeIn',
-                    onComplete: () => {
-                        if (this.enemyHpText) this.enemyHpText.setAlpha(0);
-                        this.combatSystem!.checkCombatEnd();
-                        this.isAnimating = false;
-                    }
-                });
-            } else {
+
+            const cleanupAndEnd = () => {
+                if (this.enemyHpText) this.enemyHpText.setAlpha(0);
+                if (this.enemyShadow) this.enemyShadow.setAlpha(0);
                 this.combatSystem!.checkCombatEnd();
                 this.isAnimating = false;
+            };
+
+            if (this.enemySprite) {
+                this.enemySprite.clearTint();
+                if (this.enemyAnimator) {
+                    this.enemyAnimator.play('death', {
+                        onComplete: cleanupAndEnd
+                    });
+                    if (this.enemyAnimator.hasFx('death_fx')) {
+                        this.enemyAnimator.playFx('death_fx');
+                    }
+                } else {
+                    this.tweens.add({
+                        targets: this.enemySprite,
+                        alpha: 0,
+                        duration: 700,
+                        ease: 'Quad.easeIn',
+                        onComplete: cleanupAndEnd
+                    });
+                }
+            } else {
+                cleanupAndEnd();
             }
             return true;
         }

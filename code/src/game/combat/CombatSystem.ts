@@ -179,6 +179,20 @@ export class CombatSystem {
 
         for (const player of this.players) {
             if (player.stats.hp <= 0) continue;
+
+            // Process player poison DoT
+            const poison = player.statusEffects.find(s => s.effect === 'poison');
+            if (poison) {
+                const dmg = (poison.stacks || 1) * 2;
+                player.stats.hp = Math.max(0, player.stats.hp - dmg);
+                this.emit({ type: 'player_damaged', data: { playerId: player.id, damage: dmg, remainingHp: player.stats.hp, isDoT: true, effect: 'poison' } });
+                if (player.stats.hp <= 0) {
+                    this.emit({ type: 'player_defeated', data: { playerId: player.id } });
+                }
+            }
+
+            // Process player dazed (handled at attack time, just tick duration here)
+
             player.statusEffects.forEach(s => {
                 if (s.duration > 0) s.duration--;
             });
@@ -194,7 +208,7 @@ export class CombatSystem {
             }
         } catch { }
         if (hasVoidFrame) {
-            const negativeEffects = ['venom', 'ignite', 'dazed', 'slow', 'weaken', 'shatter'];
+            const negativeEffects = ['venom', 'ignite', 'dazed', 'slow', 'weaken', 'shatter', 'poison'];
             for (const player of this.players) {
                 if (!player.isLocal || player.stats.hp <= 0) continue;
                 const negIdx = player.statusEffects.findIndex(s => negativeEffects.includes(s.effect as string));
@@ -394,6 +408,16 @@ export class CombatSystem {
 
         if (!player || !enemy || !player.currentChain) return 0;
 
+        // Player dazed: 50% chance to miss attack (from skull attacks)
+        const playerDazed = player.statusEffects.find(s => s.effect === 'dazed');
+        if (playerDazed && Math.random() < 0.5) {
+            this.emit({ type: 'status_applied', data: { targetId: player.id, effect: 'dazed_miss' } });
+            // Consume dazed on miss to prevent softlock
+            player.statusEffects = player.statusEffects.filter(s => s.effect !== 'dazed');
+            player.currentChain = null;
+            return 0;
+        }
+
         this.lastEnemyDamage.clear();
 
         let damagePower = player.stats.attack;
@@ -476,10 +500,25 @@ export class CombatSystem {
             enemyDef = 0;
         }
 
+        // Slime damage reduction: 25% less damage taken
+        if (enemy.id.startsWith('slime')) {
+            rawDamage = Math.max(1, Math.floor(rawDamage * 0.75));
+        }
+
         const damage = Math.max(1, rawDamage - enemyDef);
 
         enemy.stats.hp = Math.max(0, enemy.stats.hp - damage);
         this.emit({ type: 'enemy_damaged', data: { enemyId: enemy.id, damage, remainingHp: enemy.stats.hp } });
+
+        // Pebble: reflect 50% of received damage back to attacker
+        if (enemy.id === 'pebble' && damage > 0) {
+            const reflectDmg = Math.max(1, Math.floor(damage * 0.50));
+            player.stats.hp = Math.max(0, player.stats.hp - reflectDmg);
+            this.emit({ type: 'player_damaged', data: { playerId: player.id, damage: reflectDmg, remainingHp: player.stats.hp, source: 'reflect' } });
+            if (player.stats.hp <= 0) {
+                this.emit({ type: 'player_defeated', data: { playerId: player.id } });
+            }
+        }
 
         let hasBrokenCrown = false;
         try {
@@ -616,6 +655,29 @@ export class CombatSystem {
         player.stats.hp = Math.max(0, player.stats.hp - damage);
         this.emit({ type: 'player_damaged', data: { playerId: player.id, damage, remainingHp: player.stats.hp } });
 
+        // Bat & Rat: apply poison to player on hit
+        if (damage > 0 && (enemy.id === 'bat' || enemy.id === 'rat')) {
+            const existingPoison = player.statusEffects.find(s => s.effect === 'poison');
+            if (existingPoison) {
+                existingPoison.stacks = (existingPoison.stacks || 1) + 1;
+                existingPoison.duration = 3;
+            } else {
+                player.statusEffects.push({ effect: 'poison', duration: 3, stacks: 1, name: 'Poison', desc: 'Takes damage each round.' });
+            }
+            this.emit({ type: 'status_applied', data: { targetId: player.id, effect: 'poison' } });
+        }
+
+        // Skull: apply dazed to player on hit
+        if (damage > 0 && enemy.id === 'skull') {
+            const existingDazed = player.statusEffects.find(s => s.effect === 'dazed');
+            if (existingDazed) {
+                existingDazed.duration = 2;
+            } else {
+                player.statusEffects.push({ effect: 'dazed', duration: 2, name: 'Dazed', desc: '50% chance to miss attacks.' });
+            }
+            this.emit({ type: 'status_applied', data: { targetId: player.id, effect: 'dazed' } });
+        }
+
         if (player.stats.hp <= 0) {
             this.emit({ type: 'player_defeated', data: { playerId: player.id } });
         }
@@ -648,25 +710,25 @@ export class CombatSystem {
             return false;
         }
 
-        let totalRestored = 0;
-        this.lastEnemyDamage.forEach((damage) => {
-            totalRestored += damage;
-        });
-
-        if (totalRestored === 0) {
-            this.emit({ type: 'ability_failed', data: { reason: 'no_damage_to_rewind' } });
-            return false;
-        }
-
         player.specialCurrency -= 3;
-        player.stats.hp = Math.min(player.stats.maxHp, player.stats.hp + totalRestored);
+        const healAmount = 15;
+        player.stats.hp = Math.min(player.stats.maxHp, player.stats.hp + healAmount);
+
+        const existingFortify = player.statusEffects.find(s => s.effect === 'fortify');
+        if (existingFortify) {
+            existingFortify.duration = 2;
+        } else {
+            player.statusEffects.push({ effect: 'fortify', duration: 2 });
+        }
+        this.emit({ type: 'status_applied', data: { targetId: player.id, effect: 'fortify' } });
+
         this.covenantAbilityUsedThisTurn = true;
 
         this.emit({
             type: 'ability_used', data: {
                 ability: 'rewind',
                 covenant: 'snake',
-                hpRestored: totalRestored,
+                hpRestored: healAmount,
                 newHp: player.stats.hp,
                 cost: 3
             }

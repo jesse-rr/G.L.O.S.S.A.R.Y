@@ -12,6 +12,7 @@ import { GlossaryBestiaryPage } from './glossary/GlossaryBestiaryPage';
 import { GlossaryLocationsPage } from './glossary/GlossaryLocationsPage';
 import { GlossaryCombosPage } from './glossary/GlossaryCombosPage';
 import { GlossarySlatesPage } from './glossary/GlossarySlatesPage';
+import { EnemyAnimator } from '../../combat/EnemyAnimator';
 
 export class GlossaryUI extends Scene implements ScrambleContext {
     private previousScene = 'CombatScene';
@@ -66,6 +67,11 @@ export class GlossaryUI extends Scene implements ScrambleContext {
         this.load.spritesheet('scavenger', 'assets/Models/exports/characters/Scavenger-Sheet.png', { frameWidth: 59, frameHeight: 61 });
         this.load.spritesheet('slime', 'assets/Models/exports/characters/Slime-Sheet.png', { frameWidth: 32, frameHeight: 27 });
         this.load.spritesheet('wisp', 'assets/Models/exports/characters/Wisp-Sheet.png', { frameWidth: 27, frameHeight: 51 });
+        this.load.spritesheet('pillar-1', 'assets/Models/exports/characters/Pillar-1.png', { frameWidth: 48, frameHeight: 80 });
+        this.load.spritesheet('pillar-2', 'assets/Models/exports/characters/Pillar-2.png', { frameWidth: 48, frameHeight: 80 });
+        this.load.spritesheet('pillar-3', 'assets/Models/exports/characters/Pillar-3.png', { frameWidth: 48, frameHeight: 80 });
+        this.load.spritesheet('pillar-4', 'assets/Models/exports/characters/Pillar-4.png', { frameWidth: 48, frameHeight: 80 });
+
         this.load.spritesheet('map-outlines', 'assets/Models/exports/Objects/map-outlines.png', {
             frameWidth: 192, frameHeight: 128
         });
@@ -76,6 +82,7 @@ export class GlossaryUI extends Scene implements ScrambleContext {
         this.load.image('map-trade-hub', 'assets/Models/exports/Objects/map-trade-hub.png');
         this.load.image('map-merchant', 'assets/Models/exports/Objects/map-merchant.png');
         this.load.image('map-summit', 'assets/Models/exports/Objects/map-summit.png');
+        EnemyAnimator.preloadAll(this);
     }
 
     create(data: any) {

@@ -9,7 +9,8 @@ const STATUS_DATA: Record<string, { frame: number, name: string, desc: string }>
     'shatter': { frame: 5, name: 'Shatter', desc: 'Defense reduced to 0.' },
     'dazed': { frame: 6, name: 'Dazed', desc: '50% chance to miss attacks.' },
     'weaken': { frame: 7, name: 'Weaken', desc: 'Enemy damage reduced by 50%.' },
-    'fortify': { frame: 8, name: 'Fortify', desc: '+50% defense.' }
+    'fortify': { frame: 8, name: 'Fortify', desc: '+50% defense.' },
+    'poison': { frame: 2, name: 'Poison', desc: 'Takes damage each round.' }
 };
 
 export interface StatusEffect {
