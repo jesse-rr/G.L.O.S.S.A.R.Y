@@ -36,12 +36,6 @@ npm i
 npm run dev
 ```
 
-For multiplayer lobby discovery:
-
-```bash
-node lobby-server.js
-```
-
 ---
 
 ## Author
