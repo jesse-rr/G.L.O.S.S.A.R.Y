@@ -20,9 +20,9 @@ export class AudioManager {
 
     loadAudio() {
         this.scene.load.audio('ui_click', 'assets/sfx/ui/click.mp3');
-        this.scene.load.audio('whoosh', 'assets/sfx/whoosh/whoosh-2.mp3');
-        this.scene.load.audio('rumble', 'assets/sfx/rumble.mp3');
-        this.scene.load.audio('rocks', 'assets/sfx/falling-rocks/rocks.mp3');
+        this.scene.load.audio('whoosh', 'assets/sfx/movement/dash/whoosh-2.mp3');
+        this.scene.load.audio('rumble', 'assets/sfx/world/rumble.mp3');
+        this.scene.load.audio('rocks', 'assets/sfx/world/impacts/rocks.mp3');
     }
 
     play(soundKey: string, config: { volume?: number; pitchVariation?: number; throttle?: boolean; rate?: number; seek?: number; loop?: boolean; stopDelay?: number } = {}) {

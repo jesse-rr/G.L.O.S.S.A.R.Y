@@ -8,6 +8,7 @@ This document details the atmospheric narrative structure, opening prologue flow
 **G.L.O.S.S.A.R.Y.** embraces a **silent, environmental storytelling philosophy**. The world is heavy, ancient, and fractured. There are no expansive dialogues or chatting NPCs. Instead, the story is drip-fed directly to players through:
 * **Decaying World Biomes**: Visually distinct ruins (Desert, Abandoned, Mechanic) that imply a lost unified age.
 * **The Glossary Lore Book**: A physical record that unlocks drawings, names, and poetic fragments as players defeat guardians and collect relics.
+* **Translation Slates**: Small fragment puzzles where runic phrases are restored into readable lore, revealing the tower, the covenants, the Merchant, and the Summit parasite.
 * **The Scramble Reveals**: Unidentified runic symbols programmatically reorganizing themselves into words of power, indicating the reconstruction of language.
 
 ---
@@ -59,7 +60,7 @@ When transitioning from the prologue or loaded files into any exploration map, t
 ---
 
 ## 4. The Post-Combat "Rune Revelation"
-To ensure every monolith battle victory feels monumental, the transition back to the map is replaced by a cinematic, rewarding lore delivery screen.
+To ensure major combat victories feel monumental, the transition back to the map can be replaced by a cinematic, rewarding lore delivery screen.
 
 ```
  [Monolith Defeated] ──> [Glitch Transition] ──> [Obsidian Dark Screen]
@@ -87,25 +88,28 @@ To ensure every monolith battle victory feels monumental, the transition back to
 
 ---
 
-## 5. Biome Progression: "The Sockets of Babel"
-To challenge a biome's middle boss and ascend closer to the Summit, players must complete **3 monolith battles per map (9 battles in total across the 3 Biomes)**. This progression is tracked cleanly and atmospheric on the main exploration HUD.
+## 5. Hub Progression: "The Raidho Engine"
+To climb the repeating floors of the tower, players must complete **3 combat encounters** and return that energy to the Central Hub. Each victory restores power to the ancient pipes feeding the Raidho rune. This progression is tracked in the explore HUD and echoed by the rune itself.
 
-### HUD Sockets: The Triptych Sockets
-Directly beneath the player's health bar in the explore HUD, three carved stone sockets represent the biome's progress:
+### Pipe Charges
+Each completed combat fills one pipe and changes the Raidho rune from cold stone to active light:
 
-| Active Biome Battles | HUD Indicator State | Narrative Meaning |
+| Completed Combats | Raidho / Pipe State | Narrative Meaning |
 | :--- | :--- | :--- |
-| **0 of 3 Completed** | `[ ◯ ] [ ◯ ] [ ◯ ]` (Three grey, hollow stone slots) | Biome guardian is dormant. |
-| **1 of 3 Completed** | `[ ● ] [ ◯ ] [ ◯ ]` (First slot ignites with biome runic light) | First seal broken; world hums. |
-| **2 of 3 Completed** | `[ ● ] [ ● ] [ ◯ ]` (Second slot ignites; screen slightly trembles) | Second seal broken; reality shifts. |
-| **3 of 3 Completed** | `[ ● ] [ ● ] [ ● ]` (All slots ignite; golden glint wave pulses) | Seals shattered; **Middle Boss Unlocked**. |
+| **0 of 3 Completed** | Rune is cold; pipes are empty. | The tower is dormant. |
+| **1 of 3 Completed** | One pipe glows; rune pulse is faint. | The first trace of enemy essence returns to the hub. |
+| **2 of 3 Completed** | Two pipes glow; rune is nearly active. | The tower begins asking to be moved. |
+| **3 of 3 Completed** | Rune fully glows and can be held to activate. | Raidho opens the next step of the climb. |
 
-### The Boss Gate Event
-When the third socket is activated in any biome:
-1. The camera smoothly pans away from the player to show the giant stone boss portal or door on the map.
-2. The door's heavy chains shatter and fall (using the `chain-link` frame sheet assets).
-3. The gate erupts with glowing runic smoke, and the camera returns to the player.
-4. The player can now step through to initiate the middle boss combat phase.
+### The Raidho Gate Event
+When the third charge is active:
+1. The player holds interact beside the rune.
+2. The avatar walks into position beneath Raidho.
+3. The camera fades to white as the rune takes control.
+4. Completed combat progress is cleared, the hub door resets, and the party advances to the next floor loop.
+5. On floor 3 after combat tier 3, the rune sends the party to the Summit instead of another hub loop.
+
+The lore explanation is captured by **Slate VII**: defeated enemies are gathered back to the tower, restoring dormant power and re-energizing the ancient pipes. **Slate VIII** reframes the repeated floors as a spatial loop or recursion carved into reality.
 
 ---
 
@@ -119,14 +123,30 @@ When the third socket is activated in any biome:
          ┌──────────────────────┼──────────────────────┐
          ▼                      ▼                      ▼
   [ Desert Realm ]     [ Abandoned Realm ]    [ Mechanic Realm ]
-   ├─ Monolith 1        ├─ Monolith 1          ├─ Monolith 1
-   ├─ Monolith 2        ├─ Monolith 2          ├─ Monolith 2
-   ├─ Monolith 3        ├─ Monolith 3          ├─ Monolith 3
-   └─ Dragon Boss       └─ Phoenix Boss        └─ Snake Boss
+   ├─ Combat Energy     ├─ Combat Energy       ├─ Combat Energy
+   ├─ Slates/Relics     ├─ Slates/Relics       ├─ Slates/Relics
+   ├─ Settlement Doors  ├─ Settlement Doors    ├─ Mechanic Gates
+   └─ Boss Trial        └─ Boss Trial          └─ Boss Trial
          │                      │                      │
          └──────────────────────┼──────────────────────┘
                                 │
+                     [ RAIDHO FLOOR CLIMB ]
+                                │
                           [ THE SUMMIT ]
                                 │
-                  [ Co-op / PVP End Game Duel ]
+                  [ Beholder / Glossary Reckoning ]
 ```
+
+---
+
+## 7. Slates & Summit Lore
+
+The slate set is the clearest textual lore channel currently in code:
+
+* **Origins:** The first rune shatters silence and gives the world form.
+* **Covenants:** Dragon, Phoenix, and Snake are partial truths split from the old pillar.
+* **Glossary:** The book is not just a record; it is the architecture holding reality together.
+* **Raidho Engine:** Combat returns essence to the tower and powers its ancient pipes.
+* **Floor Recursion:** Each floor repeats because the tower itself is spatially looped.
+* **Merchant:** A shifting figure appears across settlements and hidden outposts, trading without revealing a true motive.
+* **Summit Threat:** The final parasite wraps the tower in tendrils. The Glossary is its heart, and the Beholder is its eye.

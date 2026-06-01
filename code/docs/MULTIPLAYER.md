@@ -1,53 +1,106 @@
-### Multiplayer Protocol
+# Multiplayer Protocol
 
-**1. Rooms & Lobby System**
-- **Room Types:** Players can create public or private rooms, or choose to play alone.
-- **Auto-Generated Names:** Room titles are automatically randomized by combining thematic words, creating a large number of unique possibilities. (e.g. "Silent Forest", "Whispering Cave", "Forgotten Temple").
-- **Lobby Discovery Server:** A lightweight custom Node.js HTTP server (`lobby-server.js`) tracks active host sessions in real-time. It acts purely as a matchmaking list and cleans up inactive "ghost" servers via a 5-second interval heartbeat.
-- **Secure Passcodes:** Private rooms automatically generate a secure 6-character alphanumeric passcode (`A-Z`, `0-9`). 
-- **Player Capacity:** 1-3 Players.
+This document describes the current co-op flow for **G.L.O.S.S.A.R.Y.** Multiplayer is built around a lightweight lobby/signaling server plus browser-native WebRTC data channels. The server helps players find and connect to rooms; gameplay messages move peer-to-peer once the data channel is open.
 
-**2. Covenant Selection (Live Waiting Room)**
-- **Real-Time Sync:** The Covenant selection scene acts as a live waiting room. Players' mouse coordinates are continuously sent to the Host and broadcasted. Local clients use linear interpolation to display real-time dummy cursors (using drawn `Graphics` polygons) for other players.
-- **Exclusive Locking:** Each player locks a different covenant.
-- **State Management:** The Host maintains a central state of chosen Covenants.
-- **Selection Flow:** When a player selects a Covenant, they emit a `LOCK_REQUEST`. The Host verifies availability, locks it, and broadcasts `COVENANT_LOCKED`. Clients locally tint the card dark grey and completely disable its interactive hit zone, preventing others from choosing it. The player who successfully locked it sees a unique thematic color glint.
-- **Delayed Transition:** Once all players lock in, the Host broadcasts an `ALL_READY` event, and the game pauses for 0.5s before transitioning to the level map.
+---
 
-**3. Networking Infrastructure (Hybrid P2P & Discovery)**
-- **Technology Choice:** The multiplayer implementation uses **PeerJS** for WebRTC Peer-to-Peer (P2P) connections, where one player acts as the Network Host.
-- **Architecture Flow:**
+## 1. Rooms & Lobby System
+
+- **Room Types:** Players can create public rooms, private rooms, or play offline.
+- **Auto-Generated Names:** Room titles combine thematic word lists from `constants.ts`.
+- **Passcodes:** Every hosted room has a 6-character alphanumeric passcode (`A-Z`, `0-9`). Private rooms hide the passcode in the room list; open rooms expose it so joining can be one click.
+- **Player Capacity:** 1-3 players.
+- **Lobby Server:** `lobby-server.js` exposes `/rooms` for room discovery and `/signals/:roomId` for WebRTC signaling. It uses Node's built-in `http` module, CORS headers, and in-memory room/signal arrays.
+- **Cleanup:** Room entries expire after 10 seconds without a host heartbeat. Signal messages expire after 30 seconds.
+
+---
+
+## 2. Connection & Signaling
+
+The current implementation uses `RTCPeerConnection` directly, not PeerJS. The host creates a room id from the passcode, clients create temporary peer ids, and the lobby server relays `offer`, `answer`, and `ice` signal payloads while peers poll every 650 ms.
 
 ```mermaid
 sequenceDiagram
-    participant C as Client (Player 2)
-    participant L as Lobby Server (Node)
-    participant H as Host (Player 1)
-    
-    H->>L: POST /rooms (Register/Heartbeat)
-    C->>L: GET /rooms (Fetch Active Server List)
-    C->>H: PeerJS WebRTC Handshake (via Passcode ID)
-    H-->>C: Connection Established
-    C->>H: LOCK_REQUEST (Covenant Selection)
-    H->>C: COVENANT_LOCKED (State Update)
-    H->>C: ALL_READY
-    H->>C: START_GAME (Shared Runes Payload)
+    participant H as Host
+    participant L as Lobby/Signaling Server
+    participant C as Client
+
+    H->>L: POST /rooms (room heartbeat)
+    C->>L: GET /rooms (room list)
+    C->>L: POST /signals/:roomId (offer)
+    H->>L: GET /signals/:roomId?peerId=host
+    H->>L: POST /signals/:roomId (answer + ICE)
+    C->>L: GET /signals/:roomId?peerId=client
+    C-->>H: WebRTC data channel opens
 ```
 
-- **Why P2P/Host:** Removes the need for expensive dedicated servers. The Host's machine acts as the authoritative truth, instantly pushing live updates (cursor movements, locked covenants, dropped loot) to connected peer clients with minimal latency.
-- **Data Payload:** Messages are kept extremely small using minimal JSON structures (e.g., `{ type: 'CURSOR_MOVE', id: '...', x: 120, y: 50 }`) to ensure a smooth, high-tick-rate environment.
+Once connected, `NetworkManager` emits `PEER_CONNECTED`, `PEER_DISCONNECTED`, and `NETWORK_DATA_RECEIVED` through `EventBus`. Hosts relay client-originated gameplay packets to the rest of the room.
 
-**4. Map Exploration & Shared Loot (Authoritative Host)**
-- **Host Authority:** The Host holds the absolute master map configuration and state for all collectibles.
-- **Loot Interaction:** When a player touches an item like a Rune, they do not collect it instantly. The client sends an action request (`take_item`) to the Host.
-- **Global Sync:** The Host verifies if the item is still available. If accepted, it broadcasts an `item_taken` event to all players.
-- **Visual Feedback:** Only upon receiving Host confirmation does the item smoothly fade out on everyone's screen simultaneously. This fundamentally prevents race conditions where network lag causes two players to grab the same rare item. Notification of Unlocked item is shown.
-- **Shared Progression:** All acquired items, runes, and finds are shared among the team.
+---
 
-**5. Combat Mechanics**
-- Combat is turn-based with all 3 Players participating.
-- Players take turns attacking. Each attack can be different.
-- The order of attack is random.
-- All players have their own lives (100/70/1 hp - Depends on covenant).
-- Currency is `NOT` shared.
-- Encounter scaling strictly follows: 1 Player = 1 Enemy. (Except bosses - Which are buffed).
+## 3. Start Game & Shared Runes
+
+- The host is the only player who can start a networked room.
+- On start, the host unregisters the room, generates a shared rune seed in `MultiplayerData.generateSharedRunes`, and broadcasts `START_GAME`.
+- All players enter the Covenant scene with the same shared rune payload.
+- Each player still receives their covenant-specific unique rune:
+  - **Dragon:** `P`
+  - **Phoenix:** `I`
+  - **Snake:** `E`
+- Shared runes always include `A`, then five random runes excluding the covenant-only runes.
+
+---
+
+## 4. Covenant Waiting Room
+
+- **Live Cursors:** `CURSOR_MOVE` packets stream pointer positions. Remote cursors are rendered as small `Graphics` triangles and interpolated locally.
+- **Exclusive Locking:** Each covenant can only be locked by one player.
+- **Authority:** Clients send `LOCK_REQUEST`; the host validates availability and broadcasts `COVENANT_LOCKED`.
+- **Peer Metadata:** `NetworkManager` records peer covenant selections so later combat cohorts can identify each player by covenant.
+- **Start Condition:** When the host sees every connected player locked in, it broadcasts `ALL_READY`. All players wait 0.5 seconds and then transition into `LevelScene`.
+
+---
+
+## 5. Exploration Sync
+
+`LevelMultiplayerPresence` keeps players visible to one another during world exploration.
+
+- Local movement state is broadcast every 100 ms as `PLAYER_STATE`.
+- Payloads include map key, position, facing, movement state, covenant, and origin peer id.
+- Remote players are only shown when they are on the same map.
+- Remote sprites interpolate toward their latest target position and time out after 3.5 seconds without updates.
+- Hosts rebroadcast received `PLAYER_STATE` messages so every connected client sees the same party presence.
+
+---
+
+## 6. Map & Raidho Rune Sync
+
+The Central Hub Raidho rune is the current floor-advance gate.
+
+- Combat completions fill the hub pipes and charge the rune.
+- At 0, 1, and 2 completions, interacting with the rune displays short lore/status text.
+- At 3 completions, holding interact triggers the teleport sequence.
+- The teleport clears completed combat progress, advances `PlayerData.currentFloor`, closes the hub door again, and restarts the map.
+- If the party has reached combat tier 3 on floor 3, the Raidho rune sends the party to `summit-settlement`; otherwise it loops back through the hub.
+- Networked sessions broadcast this as `MAP_CHANGE`, including target map, floor state, hub-door state, and `teleportFromRune`.
+
+---
+
+## 7. Combat Start Sync
+
+Combat entry is synchronized with `CombatStartSync`.
+
+- The local scene builds a combat payload with a unique combat id, encounter tier, map key, enemy id, and combat cohort.
+- The cohort includes the local player plus known peer covenant selections.
+- `COMBAT_START` is broadcast to other peers.
+- Remote peers store their return location and launch the same combat transition.
+- Hosts rebroadcast received combat starts to keep all clients aligned.
+
+---
+
+## 8. Combat Rules
+
+- Combat is turn-based and supports up to 3 players through the shared cohort payload.
+- Players retain their own covenant-derived HP and stats.
+- Currency is not shared.
+- Rune discovery and progression are shared at run start through the shared rune seed; local save data still stores each player's unlocked knowledge.

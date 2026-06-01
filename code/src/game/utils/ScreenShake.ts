@@ -12,7 +12,7 @@ export class ScreenShake {
     }
 
     static preload(scene: Phaser.Scene) {
-        scene.load.audio('rumble', 'assets/sfx/rumble.mp3');
+        scene.load.audio('rumble', 'assets/sfx/world/rumble.mp3');
     }
 
     static trigger(scene: Phaser.Scene, duration: number = 200, intensity: number = 0.01, playSound: boolean = true): void {

@@ -37,7 +37,7 @@ export class DashSystem {
     }
 
     preloadAudio(scene: Phaser.Scene) {
-        scene.load.audio('whoosh', 'assets/sfx/whoosh/whoosh-2.mp3');
+        scene.load.audio('whoosh', 'assets/sfx/movement/dash/whoosh-2.mp3');
     }
 
     reset(): void {
