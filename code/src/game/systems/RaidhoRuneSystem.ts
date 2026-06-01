@@ -15,6 +15,7 @@ import { PlayerData } from '../data/PlayerData';
 import { NetworkManager } from '../NetworkManager';
 import { InteractSystem } from './InteractSystem';
 import { getTotalCompletedCombats } from './PipeSystem';
+import { clearCompletedCombats } from '../utils/CombatProgress';
 
 const MAX_COMBATS = 3;
 
@@ -96,6 +97,21 @@ export class RaidhoRuneSystem {
             ease: 'Sine.easeInOut'
         });
         this.tweens.push(glintTween);
+    }
+
+    refreshProgress(): void {
+        const nextCompletedCombats = getTotalCompletedCombats();
+        if (nextCompletedCombats === this.completedCombats) return;
+
+        this.completedCombats = nextCompletedCombats;
+        this.runeText.setColor(this.buildColorString(this.completedCombats));
+        this.glintOverlay.setAlpha(0);
+
+        this.tweens.forEach(t => t.stop());
+        this.tweens = [];
+        if (this.completedCombats > 0) {
+            this.startPulseAnimation();
+        }
     }
 
     private wasInteractPressed: boolean = false;
@@ -256,14 +272,14 @@ export class RaidhoRuneSystem {
 
         if (playerData.combatTier >= 3 && playerData.currentFloor == 3) {
             playerData.currentFloor = 3;
-            localStorage.removeItem('glossary_completed_combats');
+            clearCompletedCombats();
             playerData.hubDoorOpened = false;
             playerData.save();
             this.broadcastMapChange('summit-settlement', playerData);
             this.scene.scene.restart({ mapKey: 'summit-settlement', teleportFromRune: true });
         } else {
             playerData.currentFloor = nextFloor > MAX_FLOORS ? 1 : nextFloor;
-            localStorage.removeItem('glossary_completed_combats');
+            clearCompletedCombats();
             playerData.hubDoorOpened = false;
             playerData.save();
             this.broadcastMapChange('hub', playerData);

@@ -1,15 +1,15 @@
 import * as Phaser from 'phaser';
 import { PlayerData } from '../../data/PlayerData';
-import { FONT_FAMILY, COVENANT_COLORS, COVENANT_TINTS } from '../../constants';
+import { FONT_FAMILY, COVENANT_COLORS } from '../../constants';
 import { createVignette } from '../../utils/Vignette';
-import { CombatSystem } from '../../combat/CombatSystem';
+import { EventBus, GameEvents } from '../../EventBus';
+import { NetworkManager } from '../../NetworkManager';
+import { CombatEnemy, CombatPlayer, CombatSystem } from '../../combat/CombatSystem';
 import { CombatHUD } from '../../combat/CombatHUD';
 import { StatusEffectUI } from '../../combat/StatusEffectUI';
 import { RunePickerSystem } from '../../systems/RunePickerSystem';
 import { CombatInventoryUI } from '../../combat/CombatInventoryUI';
 import { getSelectedItems } from '../ui/glossary/GlossaryItemsPage';
-import { PlayerPanelSystem } from '../../systems/PlayerPanelSystem';
-import { BESTIARY } from '../../data/BestiaryData';
 import { RuneData } from '../../data/RuneData';
 import { EnemyAnimator } from '../../combat/EnemyAnimator';
 import { preloadCombatSceneAssets, ensureCombatSceneAnimations } from '../../combat/CombatSceneAssets';
@@ -19,15 +19,26 @@ import { CombatEndController } from '../../combat/CombatEndController';
 import { createCombatSceneControls } from '../../combat/CombatSceneControls';
 import { getRuneFrame, getSpecialCurrencyFrame } from '../../combat/CombatFrameUtils';
 
+interface CombatLaneView {
+    player: CombatPlayer;
+    enemy: CombatEnemy;
+    playerSprite: Phaser.GameObjects.Sprite;
+    playerShadow: Phaser.GameObjects.Image;
+    enemySprite: Phaser.GameObjects.Sprite;
+    enemyShadow: Phaser.GameObjects.Image;
+    enemyHpText: Phaser.GameObjects.Text;
+    enemyAnimator?: EnemyAnimator;
+}
+
 export class CombatScene extends Phaser.Scene {
     private playerData: PlayerData | null = null;
+    private combatId: string = '';
     private combatHUD: CombatHUD | null = null;
     private statusEffectUI: StatusEffectUI | null = null;
     private combatSystem: CombatSystem | null = null;
     private runePickerSystem: RunePickerSystem | null = null;
     private inventoryUI: CombatInventoryUI | null = null;
     private equippedItemStatus: Map<number, boolean> = new Map();
-    private playerPanelSystem: PlayerPanelSystem | null = null;
     private encounterTier: number = 1;
     private encounterMapKey: string = '';
     private targetEnemyId: string | null = null;
@@ -39,7 +50,6 @@ export class CombatScene extends Phaser.Scene {
     private abilityBtnText: Phaser.GameObjects.Text | null = null;
     private abilityWobbleTween: Phaser.Tweens.Tween | null = null;
     private enemyStatusContainer: Phaser.GameObjects.Container | null = null;
-    private playerStatusContainer: Phaser.GameObjects.Container | null = null;
     private combatTimer: number = 0;
     private enemyTooltip: Phaser.GameObjects.Container | null = null;
     private enemyTooltipTitle: Phaser.GameObjects.Text | null = null;
@@ -47,6 +57,11 @@ export class CombatScene extends Phaser.Scene {
     private pillarWhiteout?: Phaser.GameObjects.Rectangle;
     private enemyAnimator: EnemyAnimator | null = null;
     private enemyShadow: Phaser.GameObjects.Image | null = null;
+    private laneViews: Map<string, CombatLaneView> = new Map();
+    private pendingCombatChains: Map<string, string[]> = new Map();
+    private bufferedCombatActions: Map<number, Array<{ playerId: string, chain: string[] }>> = new Map();
+    private localChainBroadcasted = false;
+    private combatEndBroadcasted = false;
     private turnController: CombatTurnController | null = null;
     private endController: CombatEndController | null = null;
     private static readonly PILLAR_WHITE_HOLD_MS = 850;
@@ -66,6 +81,9 @@ export class CombatScene extends Phaser.Scene {
                 this.enemyAnimator.destroy();
                 this.enemyAnimator = null;
             }
+            this.laneViews.forEach(lane => lane.enemyAnimator?.destroy());
+            this.bufferedCombatActions.clear();
+            EventBus.off(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
         });
 
         const fadeFromWhite = !!data?.fadeFromWhite;
@@ -74,11 +92,12 @@ export class CombatScene extends Phaser.Scene {
         }
 
         this.playerData = this.registry.get('playerData') as PlayerData;
+        this.combatId = data?.combatId || `combat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
         this.encounterTier = data?.encounterTier || this.playerData.combatTier || 1;
         this.encounterMapKey = data?.mapKey || '';
         this.targetEnemyId = data?.enemyId || null;
 
-        if (this.encounterMapKey) {
+        if (this.encounterMapKey && !localStorage.getItem('glossary_combat_return_map')) {
             localStorage.setItem('glossary_combat_return_map', this.encounterMapKey);
         }
 
@@ -93,12 +112,15 @@ export class CombatScene extends Phaser.Scene {
         this.combatTimer = 0;
         this.turnController = null;
         this.endController = null;
+        this.bufferedCombatActions = new Map();
+        this.combatEndBroadcasted = false;
 
         const encounter = createCombatEncounter({
             playerData: this.playerData,
             encounterTier: this.encounterTier,
             encounterMapKey: this.encounterMapKey,
-            targetEnemyId: this.targetEnemyId
+            targetEnemyId: this.targetEnemyId,
+            cohort: data?.cohort
         });
         this.combatSystem = encounter.combatSystem;
         this.targetEnemyId = encounter.targetEnemyId;
@@ -165,7 +187,6 @@ export class CombatScene extends Phaser.Scene {
         this.createPlayerVisual();
         this.createEnemyVisual();
         this.createAbilityButton();
-        this.createPlayerPanel();
 
         this.runePickerSystem = new RunePickerSystem(
             this,
@@ -173,7 +194,7 @@ export class CombatScene extends Phaser.Scene {
             getRuneFrame,
             (cov) => COVENANT_COLORS[cov] ?? COVENANT_COLORS['default'],
             (chain) => this.onComboConfirmed(chain),
-            (chain) => this.combatSystem!.previewAttack('local', chain)
+            (chain) => this.combatSystem!.previewAttack(this.combatSystem!.getLocalPlayerId(), chain)
         );
         this.runePickerSystem.createDimOverlay();
         this.runePickerSystem.createChainSlots();
@@ -182,6 +203,7 @@ export class CombatScene extends Phaser.Scene {
         this.createTurnController();
         this.createEndController();
         this.setupCombatEvents();
+        EventBus.on(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
         createCombatSceneControls(this, {
             clearRuneChain: () => this.runePickerSystem?.clearChain(),
             hideInventory: () => this.inventoryUI?.hide(),
@@ -252,12 +274,12 @@ export class CombatScene extends Phaser.Scene {
             updateStatusEffects: () => this.updateStatusEffects(),
             updateTurnIndicator: (text) => this.updateTurnIndicator(text),
             getEnemyAnimator: () => this.enemyAnimator,
-            getEnemyHpText: () => this.enemyHpText,
-            getEnemyShadow: () => this.enemyShadow,
-            getEnemySprite: () => this.enemySprite,
+            getEnemyHpText: () => this.getCurrentEnemyLane()?.enemyHpText ?? this.enemyHpText,
+            getEnemyShadow: () => this.getCurrentEnemyLane()?.enemyShadow ?? this.enemyShadow,
+            getEnemySprite: () => this.getCurrentEnemyLane()?.enemySprite ?? this.enemySprite,
             getEnemyTooltip: () => this.enemyTooltip,
-            getPlayerShadow: () => this.playerShadow,
-            getPlayerSprite: () => this.playerSprite
+            getPlayerShadow: () => this.getLocalLane()?.playerShadow ?? this.playerShadow,
+            getPlayerSprite: () => this.getLocalLane()?.playerSprite ?? this.playerSprite
         });
     }
 
@@ -270,7 +292,8 @@ export class CombatScene extends Phaser.Scene {
             encounterTier: this.encounterTier,
             playerData: this.playerData,
             getPlayerShadow: () => this.playerShadow,
-            getPlayerSprite: () => this.playerSprite
+            getPlayerSprite: () => this.playerSprite,
+            combatId: this.combatId
         });
     }
 
@@ -279,20 +302,29 @@ export class CombatScene extends Phaser.Scene {
 
         this.combatSystem.on('enemy_damaged', (e) => {
             this.updateEnemyHp();
-            this.showDamageNumber(this.scale.width - 200, 250, e.data.damage, '#cc0000', '-');
-            if (this.enemyAnimator) {
-                this.enemyAnimator.play('hit', { chainTo: 'idle' });
+            const lane = this.getLaneForEnemy(e.data.enemyId);
+            const enemySprite = lane?.enemySprite;
+            this.showDamageNumber(enemySprite?.x ?? this.scale.width - 200, (enemySprite?.y ?? 320) - 80, e.data.damage, '#cc0000', '-');
+            if (lane?.enemyAnimator?.hasAnim('hit')) {
+                lane.enemyAnimator.play('hit', { chainTo: 'idle' });
+            } else if (enemySprite) {
+                enemySprite.setTint(0xff0000);
+                this.time.delayedCall(180, () => enemySprite.clearTint());
             }
         });
 
         this.combatSystem.on('player_damaged', (e) => {
+            const attackingLane = e.data.enemyId ? this.getLaneForEnemy(e.data.enemyId) : null;
+            if (attackingLane?.enemyAnimator?.hasAnim('attack')) {
+                attackingLane.enemyAnimator.playAttackWithFx({ chainTo: 'idle' });
+            }
             const player = this.combatSystem ? this.combatSystem.getLocalPlayer() : null;
             if (player) {
                 if (this.equippedItemStatus.has(4) && !this.equippedItemStatus.get(4)) {
                     this.equippedItemStatus.set(4, true);
                     const reflectDmg = Math.floor(e.data.damage * 0.5);
                     if (reflectDmg > 0) {
-                        const enemy = this.combatSystem!.getAllEnemies()[0];
+                        const enemy = this.combatSystem!.getAttackTargetEnemy(player.id);
                         if (enemy) {
                             enemy.stats.hp = Math.max(0, enemy.stats.hp - reflectDmg);
                             this.time.delayedCall(400, () => {
@@ -316,26 +348,45 @@ export class CombatScene extends Phaser.Scene {
                 }
             }
             this.updatePlayerHp();
-            this.showDamageNumber(200, 250, e.data.damage, '#0000cc', '-');
-            if (this.playerSprite) {
-                this.playerSprite.play('combat-player-hurt').chain('combat-player-idle');
-                this.playerSprite.setTint(0xff0000);
+            const lane = this.laneViews.get(e.data.playerId) ?? this.getLocalLane();
+            this.showDamageNumber(lane?.playerSprite.x ?? 200, (lane?.playerSprite.y ?? 330) - 80, e.data.damage, '#0000cc', '-');
+            if (lane?.playerSprite) {
+                lane.playerSprite.play(`combat-hurt-${lane.player.covenant}`).chain(`combat-idle-${lane.player.covenant}`);
+                lane.playerSprite.setTint(0xff0000);
                 this.time.delayedCall(250, () => {
-                    this.playerSprite?.clearTint();
+                    lane.playerSprite.clearTint();
                 });
             }
         });
 
         this.combatSystem.on('player_healed', (e) => {
             this.updatePlayerHp();
-            this.showDamageNumber(200, 250, e.data.amount, '#00cc00', '+');
+            const lane = this.laneViews.get(e.data.playerId) ?? this.getLocalLane();
+            this.showDamageNumber(lane?.playerSprite.x ?? 200, (lane?.playerSprite.y ?? 330) - 80, e.data.amount, '#00cc00', '+');
+        });
+
+        this.combatSystem.on('enemy_defeated', (e) => {
+            const lane = this.getLaneForEnemy(e.data.enemyId);
+            if (!lane?.enemyAnimator) return;
+
+            if (lane.enemyAnimator.hasFx('death_fx')) {
+                lane.enemyAnimator.playFx('death_fx', {
+                    x: lane.enemySprite.x,
+                    y: lane.enemySprite.y
+                });
+            }
+            if (lane.enemyAnimator.hasAnim('death')) {
+                lane.enemyAnimator.play('death');
+            }
         });
 
         this.combatSystem.on('combat_victory', () => {
+            this.broadcastCombatEnd('VICTORY');
             this.endController?.show('VICTORY');
         });
 
         this.combatSystem.on('combat_defeat', () => {
+            this.broadcastCombatEnd('DEFEAT');
             this.endController?.show('DEFEAT');
         });
 
@@ -368,84 +419,127 @@ export class CombatScene extends Phaser.Scene {
                 this.showFloatingText(200, 420, "404: Attack Not Found!", "#3b82f6");
             } else if (e.data?.effect === 'dazed_miss') {
                 const isPlayer = this.combatSystem?.getLocalPlayer()?.id === e.data?.targetId;
-                const mx = isPlayer ? 200 : this.scale.width - 200;
-                this.showFloatingText(mx, 380, 'Missed Attack!', '#ff6b6b');
+                const lane = isPlayer ? this.getLocalLane() : this.getCurrentEnemyLane();
+                this.showFloatingText(lane?.playerSprite.x ?? (isPlayer ? 200 : this.scale.width - 200), 380, 'Missed Attack!', '#ff6b6b');
             }
             this.updateStatusEffects();
         });
 
         this.combatSystem.on('turn_start', () => {
             this.updateStatusEffects();
+            this.applyBufferedCombatActions();
         });
     }
 
     private createPlayerVisual(): void {
-        const x = 200;
-        const y = 500;
+        if (!this.combatSystem) return;
 
-        this.playerShadow = this.add.image(x, y + 30, 'protagonist-shadow')
-            .setOrigin(0.5, 0.95)
-            .setScrollFactor(0)
-            .setAlpha(0.6)
-            .setScale(3);
+        const players = this.combatSystem.getAllPlayers();
+        const enemies = this.combatSystem.getAllEnemies();
+        this.laneViews.clear();
 
-        this.playerSprite = this.add.sprite(x, y, 'protagonist-idle')
-            .setOrigin(0.5, 0.75)
-            .setScrollFactor(0)
-            .setScale(3);
+        players.forEach((player, index) => {
+            const enemy = enemies.find(e => e.targetPlayerId === player.id);
+            if (!enemy) return;
 
-        this.playerSprite.play('combat-player-idle');
+            const y = this.getLaneY(index, players.length);
+            const x = 230;
+            const scale = players.length === 1 ? 3 : 2.35;
 
-        this.playerStatusContainer = this.add.container(40, 95).setScrollFactor(0);
+            const playerShadow = this.add.image(x, y + 25, 'protagonist-shadow')
+                .setOrigin(0.5, 0.95)
+                .setScrollFactor(0)
+                .setAlpha(0.6)
+                .setScale(scale);
+
+            const playerSprite = this.add.sprite(x, y, `combat-protagonist-idle-${player.covenant}`)
+                .setOrigin(0.5, 0.75)
+                .setScrollFactor(0)
+                .setScale(scale);
+            playerSprite.play(`combat-idle-${player.covenant}`);
+
+            const lane: CombatLaneView = {
+                player,
+                enemy,
+                playerSprite,
+                playerShadow,
+                enemySprite: null as any,
+                enemyShadow: null as any,
+                enemyHpText: null as any
+            };
+            this.laneViews.set(player.id, lane);
+
+            if (player.isLocal) {
+                this.playerSprite = playerSprite;
+                this.playerShadow = playerShadow;
+            }
+
+            this.bindPlayerTooltip(player, playerSprite);
+        });
     }
 
     private createEnemyVisual(): void {
         if (!this.combatSystem) return;
 
-        const enemy = this.combatSystem
-            .getAllEnemies()[0];
-        if (!enemy) return;
+        const players = this.combatSystem.getAllPlayers();
+        const x = this.scale.width - 230;
+        const scale = players.length === 1 ? 2.5 : 1.9;
 
-        const x = this.scale.width - 200;
-        const y = 450;
+        this.combatSystem.getAllEnemies().forEach((enemy, index) => {
+            const y = this.getLaneY(index, players.length) - 35;
+            const lane = this.laneViews.get(enemy.targetPlayerId);
+            if (!lane) return;
 
-        const enemyDef = BESTIARY.find(e => e.id === enemy.id);
-        const animProfile = enemyDef?.animProfile;
+            const enemyShadow = this.add.image(x, y + 15, 'protagonist-shadow')
+                .setOrigin(0.5, 0.5)
+                .setScrollFactor(0)
+                .setAlpha(0.6)
+                .setScale(scale);
 
-        this.enemyShadow = this.add.image(x, y + 15, 'protagonist-shadow')
-            .setOrigin(0.5, 0.5)
-            .setScrollFactor(0)
-            .setAlpha(0.6)
-            .setScale(3);
-
-        if (animProfile) {
-            this.enemyAnimator = new EnemyAnimator(this, animProfile);
-            this.enemyAnimator.createAnims();
-            this.enemySprite = this.enemyAnimator.createSprite(x, y);
-            this.enemySprite.setInteractive({ useHandCursor: true });
-
-            if (animProfile === 'golem_armored' && this.enemyAnimator.hasAnim('intro')) {
-                this.enemyAnimator.play('intro', { chainTo: 'idle' });
+            let enemySprite: Phaser.GameObjects.Sprite;
+            if (enemy.animProfile) {
+                const animator = new EnemyAnimator(this, enemy.animProfile);
+                animator.createAnims();
+                enemySprite = animator.createSprite(x, y, scale).setInteractive({ useHandCursor: true });
+                lane.enemyAnimator = animator;
+                if (enemy.animProfile === 'golem_armored' && animator.hasAnim('intro')) {
+                    animator.play('intro', { chainTo: 'idle' });
+                }
+            } else {
+                const idleKey = `enemy-idle-${enemy.texture}-${enemy.frame}`;
+                if (!this.anims.exists(idleKey)) {
+                    this.anims.create({
+                        key: idleKey,
+                        frames: this.anims.generateFrameNumbers(enemy.texture, { start: enemy.frame, end: enemy.frame + 3 }),
+                        frameRate: 6,
+                        repeat: -1
+                    });
+                }
+                enemySprite = this.add.sprite(x, y, enemy.texture, enemy.frame)
+                    .setScale(scale)
+                    .setScrollFactor(0)
+                    .setInteractive({ useHandCursor: true });
+                enemySprite.play(idleKey);
             }
-        } else {
-            const idleKey = `enemy-idle-${enemy.texture}-${enemy.frame}`;
-            if (!this.anims.exists(idleKey)) {
-                this.anims.create({
-                    key: idleKey,
-                    frames: this.anims.generateFrameNumbers(enemy.texture, { start: enemy.frame, end: enemy.frame + 3 }),
-                    frameRate: 6,
-                    repeat: -1
-                });
+
+            const enemyHpText = this.add.text(x, y - 76, `${enemy.stats.hp}/${enemy.stats.maxHp}`, {
+                fontFamily: FONT_FAMILY,
+                fontSize: '14px',
+                color: '#000000'
+            }).setOrigin(0.5).setScrollFactor(0);
+
+            lane.enemySprite = enemySprite;
+            lane.enemyShadow = enemyShadow;
+            lane.enemyHpText = enemyHpText;
+
+            if (!this.enemySprite) {
+                this.enemySprite = enemySprite;
+                this.enemyShadow = enemyShadow;
+                this.enemyHpText = enemyHpText;
             }
 
-            this.enemySprite = this.add.sprite(x, y, enemy.texture, enemy.frame)
-                .setScale(2.5).setScrollFactor(0).setInteractive({ useHandCursor: true });
-            this.enemySprite.play(idleKey);
-        }
-
-        this.enemyHpText = this.add.text(x, y - 85, `${enemy.stats.hp}/${enemy.stats.maxHp}`, {
-            fontFamily: FONT_FAMILY, fontSize: '14px', color: '#000000'
-        }).setOrigin(0.5).setScrollFactor(0);
+            this.bindEnemyTooltip(enemy, enemySprite);
+        });
 
         this.enemyStatusContainer = this.add.container(this.scale.width - 40, 95).setScrollFactor(0);
 
@@ -458,8 +552,10 @@ export class CombatScene extends Phaser.Scene {
             fontFamily: FONT_FAMILY, fontSize: '12px', color: '#FFFFFF', wordWrap: { width: 130 }
         }).setOrigin(0, 0);
         this.enemyTooltip.add([bg, this.enemyTooltipTitle, this.enemyTooltipDesc]);
+    }
 
-        this.enemySprite.on('pointerover', (pointer: Phaser.Input.Pointer) => {
+    private bindEnemyTooltip(enemy: CombatEnemy, enemySprite: Phaser.GameObjects.Sprite): void {
+        enemySprite.on('pointerover', (pointer: Phaser.Input.Pointer) => {
             if (this.enemyTooltip && this.enemyTooltipTitle && this.enemyTooltipDesc) {
                 this.enemyTooltipTitle.setText(enemy.name);
                 this.enemyTooltipDesc.setText(`HP: ${enemy.stats.hp}/${enemy.stats.maxHp}\nDMG: ${enemy.stats.attack}\nDEF: ${enemy.stats.defense}`);
@@ -469,18 +565,83 @@ export class CombatScene extends Phaser.Scene {
             }
         });
 
-        this.enemySprite.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+        enemySprite.on('pointermove', (pointer: Phaser.Input.Pointer) => {
             if (this.enemyTooltip && this.enemyTooltip.alpha > 0) {
                 const tx = pointer.x > this.scale.width / 2 ? pointer.x - 170 : pointer.x + 20;
                 this.enemyTooltip.setPosition(tx, pointer.y - 10);
             }
         });
 
-        this.enemySprite.on('pointerout', () => {
+        enemySprite.on('pointerout', () => {
             if (this.enemyTooltip) {
                 this.enemyTooltip.setAlpha(0);
             }
         });
+    }
+
+    private bindPlayerTooltip(player: CombatPlayer, playerSprite: Phaser.GameObjects.Sprite): void {
+        playerSprite.setInteractive({ useHandCursor: true });
+
+        playerSprite.on('pointerover', (pointer: Phaser.Input.Pointer) => {
+            if (this.enemyTooltip && this.enemyTooltipTitle && this.enemyTooltipDesc) {
+                this.enemyTooltipTitle.setText(player.name);
+                this.enemyTooltipDesc.setText(this.buildPlayerTooltipText(player));
+                const tx = pointer.x > this.scale.width / 2 ? pointer.x - 170 : pointer.x + 20;
+                this.enemyTooltip.setPosition(tx, pointer.y - 10);
+                this.enemyTooltip.setAlpha(1);
+            }
+        });
+
+        playerSprite.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            if (this.enemyTooltip && this.enemyTooltip.alpha > 0) {
+                const tx = pointer.x > this.scale.width / 2 ? pointer.x - 170 : pointer.x + 20;
+                this.enemyTooltip.setPosition(tx, pointer.y - 10);
+            }
+        });
+
+        playerSprite.on('pointerout', () => {
+            if (this.enemyTooltip) {
+                this.enemyTooltip.setAlpha(0);
+            }
+        });
+    }
+
+    private buildPlayerTooltipText(player: CombatPlayer): string {
+        const statusLine = player.statusEffects.length > 0
+            ? player.statusEffects.map(effect => {
+                const name = effect.name || String(effect.effect);
+                const suffix = effect.stacks ? ` x${effect.stacks}` : '';
+                const duration = effect.duration === -1 ? ' perm' : ` ${effect.duration}t`;
+                return `${name}${suffix}${duration}`;
+            }).join(', ')
+            : 'None';
+
+        return `HP: ${player.stats.hp}/${player.stats.maxHp}\nDMG: ${player.stats.attack}\nDEF: ${player.stats.defense + (player.roundDefense || 0)}\nStatus: ${statusLine}`;
+    }
+
+    private getLaneY(index: number, total: number): number {
+        if (total <= 1) return 500;
+        if (total === 2) return index === 0 ? 455 : 535;
+        return [410, 500, 590][index] ?? 500;
+    }
+
+    private getLocalLane(): CombatLaneView | null {
+        if (!this.combatSystem) return null;
+        return this.laneViews.get(this.combatSystem.getLocalPlayerId()) ?? null;
+    }
+
+    private getCurrentEnemyLane(): CombatLaneView | null {
+        if (!this.combatSystem) return null;
+        const enemy = this.combatSystem.getAttackTargetEnemy(this.combatSystem.getLocalPlayerId());
+        if (!enemy) return null;
+        return this.laneViews.get(enemy.targetPlayerId) ?? null;
+    }
+
+    private getLaneForEnemy(enemyId: string): CombatLaneView | null {
+        for (const lane of this.laneViews.values()) {
+            if (lane.enemy.id === enemyId) return lane;
+        }
+        return null;
     }
 
     private createAbilityButton(): void {
@@ -575,10 +736,10 @@ export class CombatScene extends Phaser.Scene {
             const discovered = RuneData.getInstance().getDiscoveredDefinitions();
             if (discovered.length > 0) {
                 const randomRune = discovered[Math.floor(Math.random() * discovered.length)];
-                success = this.combatSystem.useCovenantAbility('local', { runeLetter: randomRune.letter });
+                success = this.combatSystem.useCovenantAbility(this.combatSystem.getLocalPlayerId(), { runeLetter: randomRune.letter });
             }
         } else {
-            success = this.combatSystem.useCovenantAbility('local');
+            success = this.combatSystem.useCovenantAbility(this.combatSystem.getLocalPlayerId());
         }
 
         if (success && this.abilityBtnSprite) {
@@ -620,9 +781,13 @@ export class CombatScene extends Phaser.Scene {
     }
 
     private updateEnemyHp(): void {
-        if (!this.enemyHpText || !this.combatSystem) return;
-        const enemy = this.combatSystem.getAllEnemies()[0];
-        if (enemy) this.enemyHpText.setText(`${enemy.stats.hp}/${enemy.stats.maxHp}`);
+        if (!this.combatSystem) return;
+        this.laneViews.forEach(lane => {
+            lane.enemyHpText.setText(`${lane.enemy.stats.hp}/${lane.enemy.stats.maxHp}`);
+            const alive = lane.enemy.stats.hp > 0;
+            lane.enemySprite.setAlpha(alive ? 1 : 0.25);
+            lane.enemyShadow.setAlpha(alive ? 0.6 : 0.15);
+        });
     }
 
     private showDamageNumber(x: number, y: number, value: number, color: string, prefix: string = '-'): void {
@@ -634,28 +799,151 @@ export class CombatScene extends Phaser.Scene {
     }
 
     public onComboConfirmed(chain: string[]): void {
-        this.turnController?.submitPlayerChain(chain);
+        if (!this.combatSystem || this.turnController?.isBusy() || this.combatSystem.getPhase() !== 'player_select') return;
+        const localPlayerId = this.combatSystem.getLocalPlayerId();
+        this.pendingCombatChains.set(localPlayerId, chain);
+        this.localChainBroadcasted = false;
+        this.tryResolvePendingCombos();
     }
+
+    private broadcastCombatAction(chain: string[]): void {
+        if (!this.combatSystem) return;
+        const nm = NetworkManager.getInstance();
+        if (nm.role === 'offline') return;
+
+        nm.broadcast({
+            type: 'COMBAT_ACTION',
+            combatId: this.combatId,
+            playerId: this.combatSystem.getLocalPlayerId(),
+            chain,
+            round: this.combatSystem.getCurrentRound(),
+            originPeerId: nm.myPeerId
+        });
+    }
+
+    private onNetworkData(payload: any): void {
+        const data = payload.data;
+        if (!data || (data.type !== 'COMBAT_ACTION' && data.type !== 'COMBAT_END')) return;
+
+        const nm = NetworkManager.getInstance();
+        if (data.originPeerId === nm.myPeerId) return;
+        if (nm.role === 'host') {
+            nm.broadcast(data);
+        }
+
+        if (data.combatId && data.combatId !== this.combatId) return;
+
+        if (data.type === 'COMBAT_END') {
+            if (data.result === 'VICTORY' || data.result === 'DEFEAT') {
+                this.endController?.show(data.result);
+            }
+            return;
+        }
+
+        if (!this.combatSystem || typeof data.playerId !== 'string' || !Array.isArray(data.chain)) return;
+
+        const currentRound = this.combatSystem.getCurrentRound();
+        if (typeof data.round === 'number' && data.round > currentRound) {
+            if (!this.bufferedCombatActions.has(data.round)) {
+                this.bufferedCombatActions.set(data.round, []);
+            }
+            this.bufferedCombatActions.get(data.round)!.push({ playerId: data.playerId, chain: data.chain });
+            return;
+        }
+
+        if (typeof data.round === 'number' && data.round !== currentRound) return;
+        if (data.playerId === this.combatSystem.getLocalPlayerId()) return;
+
+        this.receiveRemoteCombatAction(data.playerId, data.chain);
+    }
+
+    private applyBufferedCombatActions(): void {
+        if (!this.combatSystem) return;
+        const currentRound = this.combatSystem.getCurrentRound();
+        const actions = this.bufferedCombatActions.get(currentRound);
+        if (actions) {
+            actions.forEach(act => {
+                this.pendingCombatChains.set(act.playerId, act.chain);
+            });
+            this.bufferedCombatActions.delete(currentRound);
+            this.tryResolvePendingCombos();
+        }
+    }
+
+    private receiveRemoteCombatAction(playerId: string, chain: string[]): void {
+        if (!this.combatSystem) return;
+        if (this.turnController?.isBusy() || this.combatSystem.getPhase() !== 'player_select') return;
+        const player = this.combatSystem.getPlayer(playerId);
+        if (!player || player.stats.hp <= 0) return;
+
+        this.pendingCombatChains.set(playerId, chain);
+        this.tryResolvePendingCombos();
+    }
+
+    private tryResolvePendingCombos(): void {
+        if (!this.combatSystem || !this.turnController) return;
+
+        const waitingFor = this.combatSystem.getAllPlayers()
+            .filter(player => {
+                if (player.stats.hp <= 0) return false;
+
+                const ownEnemy = this.combatSystem?.getEnemyForPlayer(player.id);
+                if (ownEnemy && ownEnemy.stats.hp > 0) return true;
+
+                return this.pendingCombatChains.has(player.id) && !!this.combatSystem?.getAttackTargetEnemy(player.id);
+            })
+            .map(player => player.id);
+
+        const localPlayerId = this.combatSystem.getLocalPlayerId();
+        const localChain = this.pendingCombatChains.get(localPlayerId);
+        if (localChain && !this.localChainBroadcasted) {
+            this.broadcastCombatAction(localChain);
+            this.localChainBroadcasted = true;
+        }
+
+        const missing = waitingFor.filter(playerId => !this.pendingCombatChains.has(playerId));
+        if (missing.length > 0) {
+            const localPlayer = this.combatSystem.getLocalPlayer();
+            const localCanAssist = !!localPlayer
+                && localPlayer.stats.hp > 0
+                && !localChain
+                && !!this.combatSystem.getAttackTargetEnemy(localPlayerId);
+
+            if (missing.includes(localPlayerId) || localCanAssist) {
+                this.updateTurnIndicator('YOUR TURN - Select Runes');
+            } else {
+                this.updateTurnIndicator(`WAITING FOR ALLIES (${waitingFor.length - missing.length}/${waitingFor.length})`);
+            }
+            return;
+        }
+
+        const chains = new Map(this.pendingCombatChains);
+        this.pendingCombatChains.clear();
+        this.localChainBroadcasted = false;
+        this.turnController.submitPlayerChains(chains);
+    }
+
+    private broadcastCombatEnd(result: 'VICTORY' | 'DEFEAT'): void {
+        if (this.combatEndBroadcasted) return;
+        this.combatEndBroadcasted = true;
+
+        const nm = NetworkManager.getInstance();
+        if (nm.role === 'offline') return;
+
+        nm.broadcast({
+            type: 'COMBAT_END',
+            combatId: this.combatId,
+            result,
+            originPeerId: nm.myPeerId
+        });
+    }
+
 
     private updateStatusEffects(): void {
-        if (!this.combatSystem || !this.statusEffectUI || !this.enemyStatusContainer || !this.playerStatusContainer) return;
+        if (!this.combatSystem || !this.statusEffectUI || !this.enemyStatusContainer) return;
 
-        const enemy = this.combatSystem.getAllEnemies()[0];
-        const enemyEffects = enemy ? enemy.statusEffects : [];
+        const enemyEffects = this.combatSystem.getAttackTargetEnemy(this.combatSystem.getLocalPlayerId())?.statusEffects ?? [];
         this.statusEffectUI.syncIcons(enemyEffects, this.enemyStatusContainer);
-
-        const player = this.combatSystem.getLocalPlayer();
-        const playerEffects = player ? player.statusEffects : [];
-        this.statusEffectUI.syncIcons(playerEffects, this.playerStatusContainer);
-    }
-
-    private createPlayerPanel(): void {
-        if (!this.combatSystem) return;
-        this.playerPanelSystem = new PlayerPanelSystem(this);
-        this.playerPanelSystem.create(
-            this.combatSystem.getOtherPlayers(),
-            (cov) => COVENANT_TINTS[cov] ?? COVENANT_TINTS['default']
-        );
     }
 
     private updateTimer(): void {

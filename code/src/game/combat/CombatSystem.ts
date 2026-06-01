@@ -52,6 +52,7 @@ export interface CombatEnemy {
     targetPlayerId: string;
     texture: string;
     frame: number;
+    animProfile?: string;
     damageModifier: number;
     statusEffects: ActiveStatusEffect[];
     slowSkipNext: boolean;
@@ -246,7 +247,7 @@ export class CombatSystem {
             defenseLine: ''
         };
         const player = this.getPlayer(playerId);
-        const enemy = this.enemies.find(e => e.targetPlayerId === playerId);
+        const enemy = this.getAttackTargetEnemy(playerId);
         if (!player || !enemy) return result;
 
         const damageParts: string[] = [];
@@ -395,7 +396,7 @@ export class CombatSystem {
 
     executePlayerAttack(playerId: string): number {
         const player = this.getPlayer(playerId);
-        const enemy = this.enemies.find(e => e.targetPlayerId === playerId);
+        const enemy = this.getAttackTargetEnemy(playerId);
 
         if (!player || !enemy || !player.currentChain) return 0;
 
@@ -640,9 +641,9 @@ export class CombatSystem {
 
         this.lastEnemyDamage.set(enemyId, damage);
         player.stats.hp = Math.max(0, player.stats.hp - damage);
-        this.emit({ type: 'player_damaged', data: { playerId: player.id, damage, remainingHp: player.stats.hp } });
+        this.emit({ type: 'player_damaged', data: { playerId: player.id, enemyId: enemy.id, damage, remainingHp: player.stats.hp } });
 
-        if (damage > 0 && (enemy.id === 'bat' || enemy.id === 'rat')) {
+        if (damage > 0 && (enemy.id.startsWith('bat') || enemy.id.startsWith('rat'))) {
             const existingPoison = player.statusEffects.find(s => s.effect === 'poison');
             if (existingPoison) {
                 existingPoison.stacks = (existingPoison.stacks || 1) + 1;
@@ -653,7 +654,7 @@ export class CombatSystem {
             this.emit({ type: 'status_applied', data: { targetId: player.id, effect: 'poison' } });
         }
 
-        if (damage > 0 && enemy.id === 'skull') {
+        if (damage > 0 && enemy.id.startsWith('skull')) {
             const existingDazed = player.statusEffects.find(s => s.effect === 'dazed');
             if (existingDazed) {
                 existingDazed.duration = 2;
@@ -840,6 +841,12 @@ export class CombatSystem {
         return this.enemies.find(e => e.targetPlayerId === playerId);
     }
 
+    getAttackTargetEnemy(playerId: string): CombatEnemy | undefined {
+        const ownEnemy = this.getEnemyForPlayer(playerId);
+        if (ownEnemy && ownEnemy.stats.hp > 0) return ownEnemy;
+        return this.enemies.find(e => e.stats.hp > 0);
+    }
+
     getOtherPlayers(): CombatPlayer[] {
         return this.players.filter(p => !p.isLocal).slice(0, 2);
     }
@@ -850,6 +857,10 @@ export class CombatSystem {
 
     getLocalPlayer(): CombatPlayer | undefined {
         return this.players.find(p => p.isLocal);
+    }
+
+    getLocalPlayerId(): string {
+        return this.getLocalPlayer()?.id ?? 'local';
     }
 
     getAllEnemies(): CombatEnemy[] {

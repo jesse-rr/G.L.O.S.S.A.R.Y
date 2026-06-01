@@ -230,6 +230,7 @@ export class PlayerData {
         this.covenant = 'phoenix';
         this.gemstones = 0;
         this.specialCurrency = 0;
+        this.maxHp = 100;
         this.hp = this.maxHp;
         this.items = [];
         this.runes = [];
@@ -242,6 +243,7 @@ export class PlayerData {
         this.combatEnemyId = null;
         this.combatTier = 1;
         this.currentFloor = 1;
+        this.glossaryReplaced = false;
         this.save();
     }
 

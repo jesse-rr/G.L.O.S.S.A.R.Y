@@ -1,7 +1,9 @@
 import { BESTIARY, BestiaryData } from '../data/BestiaryData';
-import { PlayerData } from '../data/PlayerData';
+import { PlayerData, CovenantType } from '../data/PlayerData';
+import { NetworkManager } from '../NetworkManager';
 import { UserData } from '../data/UserData';
 import { GodMode } from '../utils/GodMode';
+import { CombatCohortEntry } from '../utils/CombatStartSync';
 import { CombatEnemy, CombatPlayer, CombatSystem } from './CombatSystem';
 
 interface EnemyCombatDefinition {
@@ -12,6 +14,7 @@ interface EnemyCombatDefinition {
     defense: number;
     texture: string;
     frame: number;
+    animProfile?: string;
 }
 
 export interface CombatEncounterConfig {
@@ -19,6 +22,7 @@ export interface CombatEncounterConfig {
     encounterTier: number;
     encounterMapKey: string;
     targetEnemyId: string | null;
+    cohort?: CombatCohortEntry[];
 }
 
 export interface CombatEncounterState {
@@ -29,44 +33,74 @@ export interface CombatEncounterState {
 export function createCombatEncounter(config: CombatEncounterConfig): CombatEncounterState {
     const combatSystem = new CombatSystem();
     const godModeStats = GodMode.getActiveStats();
-    const localPlayer: CombatPlayer = {
-        id: 'local',
-        name: 'You',
-        covenant: config.playerData.covenant,
+    const roster = buildCombatRoster(config.playerData, config.cohort);
+    const players: CombatPlayer[] = roster.map((entry, index) => ({
+        id: entry.id,
+        name: entry.isLocal ? 'You' : `Ally ${index + 1}`,
+        covenant: entry.covenant,
         stats: {
-            hp: godModeStats?.hp ?? config.playerData.hp,
-            maxHp: godModeStats?.hp ?? config.playerData.maxHp,
-            attack: godModeStats?.attack ?? 0,
+            hp: entry.isLocal ? (godModeStats?.hp ?? config.playerData.hp) : config.playerData.maxHp,
+            maxHp: entry.isLocal ? (godModeStats?.hp ?? config.playerData.maxHp) : config.playerData.maxHp,
+            attack: entry.isLocal ? (godModeStats?.attack ?? 0) : 0,
             defense: 3
         },
-        gemstones: config.playerData.gemstones,
-        specialCurrency: config.playerData.specialCurrency,
+        gemstones: entry.isLocal ? config.playerData.gemstones : 0,
+        specialCurrency: entry.isLocal ? config.playerData.specialCurrency : 0,
         currentChain: null,
-        isLocal: true,
+        isLocal: entry.isLocal,
         statusEffects: [],
         roundDefense: 0
-    };
+    }));
 
     const enemyDef = pickEnemyFromBestiary(config);
-    const enemies: CombatEnemy[] = [{
-        id: enemyDef.id,
+    const enemies: CombatEnemy[] = players.map((player) => ({
+        id: `${enemyDef.id}-${player.id}`,
         name: enemyDef.name,
         stats: { hp: enemyDef.hp, maxHp: enemyDef.hp, attack: enemyDef.attack, defense: enemyDef.defense },
-        targetPlayerId: 'local',
+        targetPlayerId: player.id,
         texture: enemyDef.texture,
         frame: enemyDef.frame,
+        animProfile: enemyDef.animProfile,
         damageModifier: 1.0,
         statusEffects: [],
         slowSkipNext: false
-    }];
+    }));
 
-    combatSystem.initCombat([localPlayer], enemies);
+    combatSystem.initCombat(players, enemies);
     combatSystem.startRound();
 
     return {
         combatSystem,
         targetEnemyId: enemyDef.id
     };
+}
+
+function buildCombatRoster(playerData: PlayerData, combatCohort?: CombatCohortEntry[]): Array<{ id: string; covenant: CovenantType; isLocal: boolean }> {
+    const nm = NetworkManager.getInstance();
+    const localId = nm.role === 'offline' ? 'local' : nm.myPeerId || 'local';
+    const byPeer = new Map<string, CovenantType>();
+
+    if (combatCohort && combatCohort.length > 0) {
+        combatCohort.forEach(entry => {
+            if (entry.peerId && entry.covenant) {
+                byPeer.set(entry.peerId, entry.covenant);
+            }
+        });
+    } else if (nm.role !== 'offline') {
+        for (const peer of nm.getPeerCovenants()) {
+            byPeer.set(peer.peerId, peer.covenant);
+        }
+    }
+
+    byPeer.set(localId, playerData.covenant);
+
+    const roster = Array.from(byPeer.entries()).map(([id, covenant]) => ({
+        id,
+        covenant,
+        isLocal: id === localId
+    }));
+
+    return roster.sort((a, b) => Number(b.isLocal) - Number(a.isLocal) || a.id.localeCompare(b.id)).slice(0, 3);
 }
 
 function pickEnemyFromBestiary(config: CombatEncounterConfig): EnemyCombatDefinition {
@@ -92,7 +126,11 @@ function pickEnemyFromBestiary(config: CombatEncounterConfig): EnemyCombatDefini
         if (unbattled.length === 0) {
             unbattled = pool;
         }
-        pick = unbattled[Math.floor(Math.random() * unbattled.length)];
+        if (NetworkManager.getInstance().role === 'offline') {
+            pick = unbattled[Math.floor(Math.random() * unbattled.length)];
+        } else {
+            pick = [...unbattled].sort((a, b) => a.id.localeCompare(b.id))[0];
+        }
     }
 
     BestiaryData.getInstance().discoverEntity(pick.id);
@@ -105,7 +143,8 @@ function pickEnemyFromBestiary(config: CombatEncounterConfig): EnemyCombatDefini
         attack: pick.baseDamage,
         defense: Math.floor(pick.baseDamage * 0.2),
         texture: pick.texture,
-        frame: pick.frame
+        frame: pick.frame,
+        animProfile: pick.animProfile
     };
 }
 

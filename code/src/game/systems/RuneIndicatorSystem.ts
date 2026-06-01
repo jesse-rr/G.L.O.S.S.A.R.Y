@@ -3,6 +3,7 @@ import { createVignette } from '../utils/Vignette';
 import { fadeIn, fadeOutAndDestroy } from '../utils/TweenUtils';
 import { ScreenShake } from '../utils/ScreenShake';
 import { InteractSystem } from './InteractSystem';
+import { broadcastCombatStart, buildCombatStartData } from '../utils/CombatStartSync';
 
 const RUNE_INTERACT_WIDTH = 110;
 const RUNE_INTERACT_HEIGHT = 81;
@@ -771,11 +772,16 @@ class RuneIndicator {
                     return;
                 }
 
-                this.scene.scene.launch('CombatScene', {
+                const combatStartData = buildCombatStartData({
                     encounterTier: 3,
                     mapKey: 'summit-settlement',
                     enemyId: targetEnemyId,
                     fadeFromWhite: true
+                });
+                broadcastCombatStart(combatStartData);
+
+                this.scene.scene.launch('CombatScene', {
+                    ...combatStartData
                 });
             }
         });

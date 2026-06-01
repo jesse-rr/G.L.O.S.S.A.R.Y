@@ -5,6 +5,7 @@ export const GameEvents = {
     PEER_CONNECTED: 'peer-connected',
     PEER_DISCONNECTED: 'peer-disconnected',
     SHOW_NOTIFICATION: 'show-notification',
+    COMBAT_PROGRESS_CHANGED: 'combat-progress-changed',
 } as const;
 
 export const EventBus = new Events.EventEmitter();

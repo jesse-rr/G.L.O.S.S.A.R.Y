@@ -3,6 +3,7 @@ import { ScreenShake } from '../utils/ScreenShake';
 import { createVignette } from '../utils/Vignette';
 import { InteractSystem } from './InteractSystem';
 import { hasReachedMaxCombats } from './PipeSystem';
+import { broadcastCombatStart, buildCombatStartData } from '../utils/CombatStartSync';
 
 const INTERACT_DISTANCE = 30;
 const SYMBOL_Y_OFFSET = -6;
@@ -199,11 +200,13 @@ export function handleBossButtonInteraction(
                         btn.button.on('animationcomplete', () => {
                             localStorage.setItem('glossary_combat_player_x', String(player.x));
                             localStorage.setItem('glossary_combat_player_y', String(player.y));
+                            const combatStartData = buildCombatStartData({ encounterTier, mapKey });
+                            broadcastCombatStart(combatStartData);
 
                             scene.scene.launch('TransitionScene', {
                                 targetScene: 'CombatScene',
                                 currentScene: 'LevelScene',
-                                targetData: { encounterTier, mapKey }
+                                targetData: combatStartData
                             });
                         });
                     }

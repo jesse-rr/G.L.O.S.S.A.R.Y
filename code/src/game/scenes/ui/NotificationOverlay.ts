@@ -5,6 +5,7 @@ import { PlayerData } from '../../data/PlayerData';
 import { UserData } from '../../data/UserData';
 import { NetworkManager } from '../../NetworkManager';
 import { FONT_FAMILY } from '../../constants';
+import { recordCompletedCombat } from '../../utils/CombatProgress';
 import { fadeIn, fadeOutAndDestroy } from '../../utils/TweenUtils';
 
 const NOTIFICATION_DURATION = 3000;
@@ -36,6 +37,9 @@ export class NotificationOverlay extends Phaser.Scene {
             if (data.originPeerId === NetworkManager.getInstance().myPeerId) return;
             this.receiveSharedItem(data);
             this.handleShowNotification(`Ally found: ${data.itemName}`);
+        } else if (data && data.type === 'COMBAT_COMPLETED') {
+            if (data.originPeerId === NetworkManager.getInstance().myPeerId) return;
+            this.receiveSharedCombatCompletion(data);
         }
     }
 
@@ -52,6 +56,19 @@ export class NotificationOverlay extends Phaser.Scene {
         PlayerData.getInstance().addItem(item.id.toString());
         ItemData.getInstance().discoverItem(item.id);
         UserData.getInstance().discoverItem(item.name);
+    }
+
+    private receiveSharedCombatCompletion(data: any): void {
+        const nm = NetworkManager.getInstance();
+        if (nm.role === 'host' && data.originPeerId !== nm.myPeerId) {
+            nm.broadcast(data);
+        }
+        if (typeof data.mapKey !== 'string' || !data.combatRecord) return;
+
+        if (recordCompletedCombat(data.mapKey, data.combatRecord)) {
+            EventBus.emit(GameEvents.COMBAT_PROGRESS_CHANGED);
+            this.handleShowNotification('Ally completed a combat');
+        }
     }
 
     private handleShowNotification(text: string) {

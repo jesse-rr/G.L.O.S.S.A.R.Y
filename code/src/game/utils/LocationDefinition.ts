@@ -80,14 +80,20 @@ export class LocationDisplayScene extends Phaser.Scene {
         this.activeDescription.setDepth(10001);
         this.activeDescription.setAlpha(0);
 
+        const title = this.activeTitle;
+        const description = this.activeDescription;
+
         this.tweens.add({
-            targets: this.activeTitle,
+            targets: title,
             alpha: 1,
             duration: 500,
             ease: 'Cubic.easeOut',
             onComplete: () => {
+                if (!description?.active) {
+                    return;
+                }
                 this.tweens.add({
-                    targets: this.activeDescription,
+                    targets: description,
                     alpha: 1,
                     duration: 500,
                     ease: 'Cubic.easeOut'
@@ -95,17 +101,25 @@ export class LocationDisplayScene extends Phaser.Scene {
             }
         });
 
-        this.tweens.add({
-            targets: this.activeDescription,
-            alpha: 0.5,
-            duration: 500,
-            ease: 'Cubic.easeOut',
-            delay: 200
-        });
+        if (description?.active) {
+            this.tweens.add({
+                targets: description,
+                alpha: 0.5,
+                duration: 500,
+                ease: 'Cubic.easeOut',
+                delay: 200
+            });
+        }
 
         this.hideTimer = this.time.delayedCall(duration, () => {
+            const targets = [title, description].filter((target): target is Phaser.GameObjects.Text => !!target?.active);
+            if (targets.length === 0) {
+                this.hide();
+                this.scene.sleep();
+                return;
+            }
             this.tweens.add({
-                targets: [this.activeTitle, this.activeDescription],
+                targets,
                 alpha: 0,
                 duration: 600,
                 ease: 'Cubic.easeIn',

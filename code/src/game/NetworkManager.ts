@@ -1,4 +1,5 @@
 import { EventBus, GameEvents } from './EventBus';
+import { CovenantType } from './data/PlayerData';
 
 export type NetworkRole = 'host' | 'client' | 'offline';
 
@@ -36,6 +37,7 @@ export class NetworkManager {
     private roomId = '';
     private connections: Map<string, PeerConnectionState> = new Map();
     private hostConnection: PeerConnectionState | null = null;
+    private peerCovenants: Map<string, CovenantType> = new Map();
     private seenSignals: Set<string> = new Set();
     private pollTimer: number | null = null;
 
@@ -103,6 +105,14 @@ export class NetworkManager {
             .map(([peerId]) => peerId);
     }
 
+    public setPeerCovenant(peerId: string, covenant: CovenantType): void {
+        this.peerCovenants.set(peerId, covenant);
+    }
+
+    public getPeerCovenants(): Array<{ peerId: string; covenant: CovenantType }> {
+        return Array.from(this.peerCovenants.entries()).map(([peerId, covenant]) => ({ peerId, covenant }));
+    }
+
     public disconnect() {
         if (this.pollTimer !== null) {
             window.clearInterval(this.pollTimer);
@@ -127,6 +137,7 @@ export class NetworkManager {
         this.myPeerId = '';
         this.roomId = '';
         this.seenSignals.clear();
+        this.peerCovenants.clear();
     }
 
     public async registerRoom(roomData: any) {

@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import { FONT_FAMILY, RUNE_FONT } from '../constants';
 import { EnemyAnimator } from './EnemyAnimator';
 
+const COVENANTS = ['dragon', 'phoenix', 'snake'] as const;
+
 export function preloadCombatSceneAssets(scene: Phaser.Scene): void {
     scene.load.image('combat-bg-desert', 'assets/Models/exports/backgrounds/Desert-Floor.png');
     scene.load.image('combat-bg-abandoned', 'assets/Models/exports/backgrounds/Abandoned-Floor.png');
@@ -60,6 +62,11 @@ export function preloadCombatSceneAssets(scene: Phaser.Scene): void {
     scene.load.spritesheet('protagonist-idle', `assets/Models/Protagonist/Idle-${covenant}.png`, { frameWidth: 48, frameHeight: 48 });
     scene.load.spritesheet('protagonist-hurt', `assets/Models/Protagonist/Hurt-${covenant}.png`, { frameWidth: 48, frameHeight: 48 });
     scene.load.spritesheet('protagonist-death', `assets/Models/Protagonist/Death-${covenant}.png`, { frameWidth: 48, frameHeight: 48 });
+    COVENANTS.forEach(remoteCovenant => {
+        scene.load.spritesheet(`combat-protagonist-idle-${remoteCovenant}`, `assets/Models/Protagonist/Idle-${remoteCovenant}.png`, { frameWidth: 48, frameHeight: 48 });
+        scene.load.spritesheet(`combat-protagonist-hurt-${remoteCovenant}`, `assets/Models/Protagonist/Hurt-${remoteCovenant}.png`, { frameWidth: 48, frameHeight: 48 });
+        scene.load.spritesheet(`combat-protagonist-death-${remoteCovenant}`, `assets/Models/Protagonist/Death-${remoteCovenant}.png`, { frameWidth: 48, frameHeight: 48 });
+    });
     scene.load.image('protagonist-shadow', 'assets/Models/Protagonist/Shadow.png');
 
     EnemyAnimator.preloadAll(scene);
@@ -111,6 +118,33 @@ export function ensureCombatSceneAnimations(scene: Phaser.Scene): void {
             repeat: 0
         });
     }
+
+    COVENANTS.forEach(covenant => {
+        if (!scene.anims.exists(`combat-idle-${covenant}`)) {
+            scene.anims.create({
+                key: `combat-idle-${covenant}`,
+                frames: scene.anims.generateFrameNumbers(`combat-protagonist-idle-${covenant}`, { start: 0, end: 6 }),
+                frameRate: 8,
+                repeat: -1
+            });
+        }
+        if (!scene.anims.exists(`combat-hurt-${covenant}`)) {
+            scene.anims.create({
+                key: `combat-hurt-${covenant}`,
+                frames: scene.anims.generateFrameNumbers(`combat-protagonist-hurt-${covenant}`, { start: 0, end: 2 }),
+                frameRate: 8,
+                repeat: 0
+            });
+        }
+        if (!scene.anims.exists(`combat-death-${covenant}`)) {
+            scene.anims.create({
+                key: `combat-death-${covenant}`,
+                frames: scene.anims.generateFrameNumbers(`combat-protagonist-death-${covenant}`, { start: 0, end: 16 }),
+                frameRate: 12,
+                repeat: 0
+            });
+        }
+    });
 
     if (!scene.anims.exists('ability-btn-loop')) {
         scene.anims.create({

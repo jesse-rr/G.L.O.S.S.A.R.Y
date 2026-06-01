@@ -30,6 +30,8 @@ import { DamageOverlay } from '../../utils/DamageOverlay';
 import {LocationDisplayScene} from "../../utils/LocationDefinition";
 import {AudioManager} from "../../utils/AudioManager";
 import {ScreenShake} from "../../utils/ScreenShake";
+import { launchCombat } from '../../utils/CombatStartSync';
+import { clearCompletedCombats } from '../../utils/CombatProgress';
 import {
     ensureLevelDoorAnimations,
     ensureLevelPlayerAnimations,
@@ -42,6 +44,7 @@ import {
     stopPlayerIntoIdle,
     updateLevelPlayerMovement
 } from './level/LevelPlayerController';
+import { LevelMultiplayerPresence } from './level/LevelMultiplayerPresence';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -124,6 +127,7 @@ export class LevelScene extends Phaser.Scene {
     private gamepadDashJustPressed = false;
     private previousGamepadInteractDown = false;
     private previousGamepadDashDown = false;
+    private multiplayerPresence?: LevelMultiplayerPresence;
 
     constructor() {
         super('LevelScene');
@@ -227,6 +231,8 @@ export class LevelScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor('#111111');
         if (this.portalSystem) this.portalSystem.destroy();
         this.portalSystem = new PortalSystem(this);
+        this.multiplayerPresence?.destroy();
+        this.multiplayerPresence = undefined;
 
         if (this.mapKey === 'summit-settlement') {
             this.createPlayerHpLevelHUD();
@@ -283,6 +289,8 @@ export class LevelScene extends Phaser.Scene {
         EventBus.on(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
         this.events.once('shutdown', () => {
             EventBus.off(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
+            this.multiplayerPresence?.destroy();
+            this.multiplayerPresence = undefined;
         });
 
         const w = this.scale.width, h = this.scale.height, camZoom = 2;
@@ -312,6 +320,8 @@ export class LevelScene extends Phaser.Scene {
             this.summitBossHUD = undefined;
             this.dashIndicatorHUD?.destroy();
             this.dashIndicatorHUD = undefined;
+            this.multiplayerPresence?.destroy();
+            this.multiplayerPresence = undefined;
             this.persistPlayerLocation();
         });
 
@@ -1140,6 +1150,22 @@ export class LevelScene extends Phaser.Scene {
 
         this.updatePlayerPositionCache();
         this.persistPlayerLocation();
+        this.multiplayerPresence?.destroy();
+        this.multiplayerPresence = new LevelMultiplayerPresence(this, () => {
+            if (!this.player?.active) {
+                return null;
+            }
+
+            const body = this.player.body as MatterJS.BodyType | null;
+            const velocity = body?.velocity;
+            return {
+                mapKey: this.mapKey,
+                x: this.player.x,
+                y: this.player.y,
+                flipX: this.player.flipX,
+                moving: !!velocity && (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05)
+            };
+        });
     }
 
     private updatePlayerPositionCache(): void {
@@ -1164,6 +1190,7 @@ export class LevelScene extends Phaser.Scene {
 
     update(_time: number, delta: number) {
         this.updateGamepadInput();
+        this.multiplayerPresence?.update(_time);
         const interactDown = this.interactKey.isDown || this.gamepadInteractDown;
         const interactJustPressed = Phaser.Input.Keyboard.JustDown(this.interactKey) || this.gamepadInteractJustPressed;
         const playerData = PlayerData.getInstance();
@@ -1395,10 +1422,17 @@ export class LevelScene extends Phaser.Scene {
 
     private onNetworkData(payload: any): void {
         const data = payload.data;
+        if (this.multiplayerPresence?.handleNetworkData(data)) {
+            return;
+        }
+        if (data?.type === 'COMBAT_START') {
+            this.onCombatStartData(data);
+            return;
+        }
         if (!data || data.type !== 'MAP_CHANGE') return;
 
         const nm = NetworkManager.getInstance();
-        if (data.originPeerId === nm.myPeerId) return;
+        if (data.originPeerId === nm.myPeerId || !data.teleportFromRune) return;
 
         if (nm.role === 'host') {
             nm.broadcast(data);
@@ -1411,6 +1445,7 @@ export class LevelScene extends Phaser.Scene {
         if (typeof data.hubDoorOpened === 'boolean') {
             playerData.hubDoorOpened = data.hubDoorOpened;
         }
+        clearCompletedCombats();
         playerData.save();
 
         this.scene.launch('TransitionScene', {
@@ -1423,6 +1458,30 @@ export class LevelScene extends Phaser.Scene {
                 entryDirY: data.entryDirY ?? 0,
                 teleportFromRune: !!data.teleportFromRune
             }
+        });
+    }
+
+    private onCombatStartData(data: any): void {
+        const nm = NetworkManager.getInstance();
+        if (data.originPeerId === nm.myPeerId) return;
+
+        if (nm.role === 'host') {
+            nm.broadcast(data);
+        }
+
+        if (this.player?.active) {
+            localStorage.setItem('glossary_combat_return_map', this.mapKey);
+            localStorage.setItem('glossary_combat_player_x', String(this.player.x));
+            localStorage.setItem('glossary_combat_player_y', String(this.player.y));
+        }
+
+        launchCombat(this, {
+            combatId: data.combatId,
+            encounterTier: data.encounterTier ?? PlayerData.getInstance().combatTier ?? 1,
+            mapKey: data.mapKey ?? this.mapKey,
+            enemyId: data.enemyId ?? null,
+            fadeFromWhite: !!data.fadeFromWhite,
+            cohort: data.cohort
         });
     }
 

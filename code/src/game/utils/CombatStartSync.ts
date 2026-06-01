@@ -1,0 +1,68 @@
+import * as Phaser from 'phaser';
+import { NetworkManager } from '../NetworkManager';
+import { PlayerData, CovenantType } from '../data/PlayerData';
+
+export interface CombatCohortEntry {
+    peerId: string;
+    covenant: CovenantType;
+}
+
+export interface CombatStartPayload {
+    type: 'COMBAT_START';
+    combatId?: string;
+    encounterTier: number;
+    mapKey: string;
+    enemyId?: string | null;
+    fadeFromWhite?: boolean;
+    cohort?: CombatCohortEntry[];
+    originPeerId: string;
+}
+
+export function buildCombatStartData(data: Omit<CombatStartPayload, 'type' | 'originPeerId' | 'cohort'>): Omit<CombatStartPayload, 'type' | 'originPeerId'> {
+    return {
+        combatId: data.combatId || `combat-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        ...data,
+        cohort: buildCombatCohort()
+    };
+}
+
+export function broadcastCombatStart(data: Omit<CombatStartPayload, 'type' | 'originPeerId'>): void {
+    const nm = NetworkManager.getInstance();
+    if (nm.role === 'offline') return;
+
+    nm.broadcast({
+        type: 'COMBAT_START',
+        ...data,
+        originPeerId: nm.myPeerId
+    });
+}
+
+export function launchCombat(scene: Phaser.Scene, data: Omit<CombatStartPayload, 'type' | 'originPeerId'>): void {
+    if (scene.scene.isActive('CombatScene')) return;
+
+    scene.scene.launch('TransitionScene', {
+        targetScene: 'CombatScene',
+        currentScene: scene.sys.settings.key,
+        targetData: {
+            combatId: data.combatId,
+            encounterTier: data.encounterTier,
+            mapKey: data.mapKey,
+            enemyId: data.enemyId ?? null,
+            fadeFromWhite: !!data.fadeFromWhite,
+            cohort: data.cohort
+        }
+    });
+}
+
+function buildCombatCohort(): CombatCohortEntry[] {
+    const nm = NetworkManager.getInstance();
+    const localId = nm.role === 'offline' ? 'local' : nm.myPeerId || 'local';
+    const cohort = new Map<string, CovenantType>();
+
+    cohort.set(localId, PlayerData.getInstance().covenant);
+    nm.getPeerCovenants().forEach(peer => {
+        cohort.set(peer.peerId, peer.covenant);
+    });
+
+    return Array.from(cohort.entries()).map(([peerId, covenant]) => ({ peerId, covenant }));
+}

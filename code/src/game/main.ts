@@ -47,6 +47,7 @@ const config: Phaser.Types.Core.GameConfig = {
     pixelArt: true,
     roundPixels: true,
     antialias: false,
+    pauseOnBlur: false,
     fps: {
         forceSetTimeOut: !useVsync,
         target: useVsync ? 30 : 60

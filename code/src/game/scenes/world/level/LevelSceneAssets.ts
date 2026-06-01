@@ -3,6 +3,8 @@ import { AudioManager } from '../../../utils/AudioManager';
 import { DashSystem } from '../../../systems/DashSystem';
 import { ScreenShake } from '../../../utils/ScreenShake';
 
+const COVENANTS = ['dragon', 'phoenix', 'snake'] as const;
+
 export function preloadLevelSceneAssets(
     scene: Phaser.Scene,
     covenant: string,
@@ -53,6 +55,16 @@ export function preloadLevelSceneAssets(
     scene.load.spritesheet('protagonist-death', `assets/Models/Protagonist/Death-${covenant}.png`, {
         frameWidth: 48,
         frameHeight: 48
+    });
+    COVENANTS.forEach(remoteCovenant => {
+        scene.load.spritesheet(`remote-protagonist-idle-${remoteCovenant}`, `assets/Models/Protagonist/Idle-${remoteCovenant}.png`, {
+            frameWidth: 48,
+            frameHeight: 48
+        });
+        scene.load.spritesheet(`remote-protagonist-run-${remoteCovenant}`, `assets/Models/Protagonist/Run-${remoteCovenant}.png`, {
+            frameWidth: 48,
+            frameHeight: 48
+        });
     });
     scene.load.image('protagonist-shadow', 'assets/Models/Protagonist/Shadow.png');
 
@@ -144,43 +156,62 @@ export function preloadLevelSceneAssets(
 }
 
 export function ensureLevelPlayerAnimations(scene: Phaser.Scene): void {
-    if (scene.anims.exists('idle')) return;
+    if (!scene.anims.exists('idle')) {
+        scene.anims.create({
+            key: 'idle',
+            frames: scene.anims.generateFrameNumbers('protagonist-idle', { start: 0, end: 6 }),
+            frameRate: 8,
+            repeat: -1
+        });
+        scene.anims.create({
+            key: 'run-start',
+            frames: scene.anims.generateFrameNumbers('protagonist-run', { start: 0, end: 7 }),
+            frameRate: 12,
+            repeat: 0
+        });
+        scene.anims.create({
+            key: 'run-loop',
+            frames: scene.anims.generateFrameNumbers('protagonist-run', { start: 0, end: 7 }),
+            frameRate: 12,
+            repeat: -1
+        });
+        scene.anims.create({
+            key: 'stop',
+            frames: scene.anims.generateFrameNumbers('protagonist-idle', { start: 0, end: 0 }),
+            frameRate: 12,
+            repeat: 0
+        });
+        scene.anims.create({
+            key: 'dash',
+            frames: scene.anims.generateFrameNumbers('protagonist-dash', { start: 0, end: 11 }),
+            frameRate: 80,
+            repeat: 0
+        });
+        scene.anims.create({
+            key: 'death',
+            frames: scene.anims.generateFrameNumbers('protagonist-death', { start: 0, end: 16 }),
+            frameRate: 12,
+            repeat: 0
+        });
+    }
 
-    scene.anims.create({
-        key: 'idle',
-        frames: scene.anims.generateFrameNumbers('protagonist-idle', { start: 0, end: 6 }),
-        frameRate: 8,
-        repeat: -1
-    });
-    scene.anims.create({
-        key: 'run-start',
-        frames: scene.anims.generateFrameNumbers('protagonist-run', { start: 0, end: 7 }),
-        frameRate: 12,
-        repeat: 0
-    });
-    scene.anims.create({
-        key: 'run-loop',
-        frames: scene.anims.generateFrameNumbers('protagonist-run', { start: 0, end: 7 }),
-        frameRate: 12,
-        repeat: -1
-    });
-    scene.anims.create({
-        key: 'stop',
-        frames: scene.anims.generateFrameNumbers('protagonist-idle', { start: 0, end: 0 }),
-        frameRate: 12,
-        repeat: 0
-    });
-    scene.anims.create({
-        key: 'dash',
-        frames: scene.anims.generateFrameNumbers('protagonist-dash', { start: 0, end: 11 }),
-        frameRate: 80,
-        repeat: 0
-    });
-    scene.anims.create({
-        key: 'death',
-        frames: scene.anims.generateFrameNumbers('protagonist-death', { start: 0, end: 16 }),
-        frameRate: 12,
-        repeat: 0
+    COVENANTS.forEach(covenant => {
+        if (!scene.anims.exists(`remote-idle-${covenant}`)) {
+            scene.anims.create({
+                key: `remote-idle-${covenant}`,
+                frames: scene.anims.generateFrameNumbers(`remote-protagonist-idle-${covenant}`, { start: 0, end: 6 }),
+                frameRate: 8,
+                repeat: -1
+            });
+        }
+        if (!scene.anims.exists(`remote-run-loop-${covenant}`)) {
+            scene.anims.create({
+                key: `remote-run-loop-${covenant}`,
+                frames: scene.anims.generateFrameNumbers(`remote-protagonist-run-${covenant}`, { start: 0, end: 7 }),
+                frameRate: 12,
+                repeat: -1
+            });
+        }
     });
 }
 

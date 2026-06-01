@@ -1,7 +1,10 @@
 import * as Phaser from 'phaser';
 import { FONT_FAMILY } from '../constants';
+import { EventBus, GameEvents } from '../EventBus';
+import { NetworkManager } from '../NetworkManager';
 import { PlayerData } from '../data/PlayerData';
 import { UserData } from '../data/UserData';
+import { CombatCompletionRecord, recordCompletedCombat } from '../utils/CombatProgress';
 import { CombatSystem } from './CombatSystem';
 
 type CombatResult = 'VICTORY' | 'DEFEAT';
@@ -13,6 +16,7 @@ interface CombatEndControllerDeps {
     playerData: PlayerData;
     getPlayerShadow: () => Phaser.GameObjects.Image | null;
     getPlayerSprite: () => Phaser.GameObjects.Sprite | null;
+    combatId?: string;
 }
 
 export class CombatEndController {
@@ -81,15 +85,39 @@ export class CombatEndController {
         this.deps.playerData.gemstones += earnedGems;
         this.deps.playerData.specialCurrency += earnedSpecial;
 
-        incrementEchojarCombatCount();
-        recordCompletedCombat(this.deps.encounterMapKey, {
+        const completionRecord: CombatCompletionRecord = {
             enemyName: defeatedEnemyName,
             gems: earnedGems,
             specialCur: earnedSpecial,
-            tokens: earnedTokens
-        });
+            tokens: earnedTokens,
+            completionId: this.deps.combatId || this.createCompletionId()
+        };
+
+        incrementEchojarCombatCount();
+        if (recordCompletedCombat(this.deps.encounterMapKey, completionRecord)) {
+            EventBus.emit(GameEvents.COMBAT_PROGRESS_CHANGED);
+            this.broadcastCombatCompletion(completionRecord);
+        }
 
         return { earnedGems, earnedSpecial, earnedTokens, defeatedEnemyName };
+    }
+
+    private createCompletionId(): string {
+        const nm = NetworkManager.getInstance();
+        const sourceId = nm.myPeerId || 'solo';
+        return `${sourceId}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    private broadcastCombatCompletion(combatRecord: CombatCompletionRecord): void {
+        const nm = NetworkManager.getInstance();
+        if (nm.role === 'offline') return;
+
+        nm.broadcast({
+            type: 'COMBAT_COMPLETED',
+            mapKey: this.deps.encounterMapKey,
+            combatRecord,
+            originPeerId: nm.myPeerId
+        });
     }
 
     private playDefeatAnimation(): void {
@@ -226,7 +254,7 @@ export class CombatEndController {
             return;
         }
 
-        const returnMap = this.deps.encounterMapKey || localStorage.getItem('glossary_combat_return_map') || 'hub';
+        const returnMap = localStorage.getItem('glossary_combat_return_map') || this.deps.encounterMapKey || 'hub';
         const savedX = localStorage.getItem('glossary_combat_player_x');
         const savedY = localStorage.getItem('glossary_combat_player_y');
         localStorage.removeItem('glossary_combat_return_map');
@@ -273,29 +301,6 @@ function incrementEchojarCombatCount(): void {
         const echoCount = (parseInt(echoRaw || '0', 10) || 0) + 1;
         localStorage.setItem('glossary_echojar_completed_combats', echoCount.toString());
     } catch { }
-}
-
-function recordCompletedCombat(encounterMapKey: string, combatRecord: any): void {
-    const key = 'glossary_completed_combats';
-    let allCompleted: Record<string, any[]> = {};
-    try {
-        const existing = localStorage.getItem(key);
-        if (existing) allCompleted = JSON.parse(existing);
-    } catch { }
-
-    const mapList = allCompleted[encounterMapKey] || [];
-    let globalTotal = 0;
-    for (const k of Object.keys(allCompleted)) {
-        if (Array.isArray(allCompleted[k])) globalTotal += allCompleted[k].length;
-    }
-
-    if (mapList.length >= 3 || globalTotal >= 3) {
-        return;
-    }
-
-    mapList.push(combatRecord);
-    allCompleted[encounterMapKey] = mapList;
-    localStorage.setItem(key, JSON.stringify(allCompleted));
 }
 
 function clearBossCombatStorage(): void {

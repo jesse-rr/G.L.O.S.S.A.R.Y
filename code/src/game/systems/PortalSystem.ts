@@ -211,8 +211,6 @@ export class PortalSystem {
 
             const { x: dirX, y: dirY } = this.getFixedDirection(mapKey, targetMap, isMerchant);
             this.teleportDirection = { x: dirX, y: dirY };
-            this.broadcastMapChange(targetMap, mapKey, dirX, dirY, false);
-
             if (isMerchant) {
                 this.teleportSpeedModifier = 1;
 
@@ -269,24 +267,6 @@ export class PortalSystem {
 
     getTeleportDirection(): { x: number, y: number } {
         return this.teleportDirection;
-    }
-
-    private broadcastMapChange(targetMap: string, previousMap: string, entryDirX: number, entryDirY: number, teleportFromRune: boolean): void {
-        const nm = NetworkManager.getInstance();
-        if (nm.role === 'offline') return;
-
-        const playerData = PlayerData.getInstance();
-        nm.broadcast({
-            type: 'MAP_CHANGE',
-            targetMap,
-            previousMap,
-            entryDirX,
-            entryDirY,
-            teleportFromRune,
-            currentFloor: playerData.currentFloor,
-            hubDoorOpened: playerData.hubDoorOpened,
-            originPeerId: nm.myPeerId
-        });
     }
 
     getTeleportSpeedModifier(): number {

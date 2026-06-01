@@ -123,13 +123,13 @@ export class EnemyAnimator {
         }
     }
 
-    createSprite(x: number, y: number): Phaser.GameObjects.Sprite {
+    createSprite(x: number, y: number, scale: number = 2.5): Phaser.GameObjects.Sprite {
         const idleAnim = this.resolveIdleAnimKey();
         const firstSheet = this.resolveIdleSheet();
 
         this.sprite = this.scene.add
             .sprite(x, y, firstSheet.key, 0)
-            .setScale(2.5)
+            .setScale(scale)
             .setScrollFactor(0)
             .setFlipX(!this.profile.enemyKey.startsWith('slime'));
 

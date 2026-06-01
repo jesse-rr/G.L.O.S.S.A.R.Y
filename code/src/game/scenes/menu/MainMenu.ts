@@ -7,6 +7,7 @@ import { LocationData } from '../../data/LocationData';
 import { BestiaryData } from '../../data/BestiaryData';
 import { SlateProgress } from '../../data/SlateData';
 import { AudioManager } from "../../utils/AudioManager";
+import { clearGameplayStorageForNewRun } from '../../utils/SaveReset';
 
 const BG_FRAME_RATE = 8;
 const SELECTOR_FRAME_RATE = 10;
@@ -176,28 +177,13 @@ export class MainMenu extends Phaser.Scene {
 
     private startNewGame() {
         this.inputLocked = true;
+        clearGameplayStorageForNewRun();
         try { PlayerData.getInstance().reset(); } catch (_e) {}
         try { ItemData.getInstance().reset(); } catch (_e) {}
         try { RuneData.getInstance().reset(); } catch (_e) {}
         try { LocationData.getInstance().reset(); } catch (_e) {}
         try { BestiaryData.getInstance().reset(); } catch (_e) {}
         try { SlateProgress.getInstance().reset(); } catch (_e) {}
-        localStorage.removeItem('glossary_selected_items');
-        localStorage.removeItem('glossary_physical_slate_mapping');
-        localStorage.removeItem('glossary_selected_slate_id');
-        localStorage.removeItem('glossary_completed_combats');
-        localStorage.removeItem('glossary_echojar_completed_combats');
-        localStorage.removeItem('glossary_seraphs_plume_consumed');
-        localStorage.removeItem('glossary_boss_presses');
-        localStorage.removeItem('glossary_boss_fight_active');
-        localStorage.removeItem('glossary_boss_pillars_defeated');
-        localStorage.removeItem('glossary_boss_remaining_pillars');
-        localStorage.removeItem('glossary_boss_current_combat_pillar');
-        localStorage.removeItem('glossary_boss_combat_victory');
-        localStorage.removeItem('glossary_last_floor');
-        localStorage.removeItem('merchant_shop_state')
-        localStorage.removeItem('glossary_mechanic_doors')
-        localStorage.removeItem('glossary_settlement_doors')
         this.scene.launch('TransitionScene', { targetScene: 'Covenant', currentScene: 'MainMenu' });
     }
 

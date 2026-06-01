@@ -1,17 +1,18 @@
 import * as Phaser from 'phaser';
-import { PlayerData } from '../../data/PlayerData';
+import { PlayerData, CovenantType } from '../../data/PlayerData';
 import { UserData } from '../../data/UserData';
 import { MultiplayerData } from '../../data/MultiplayerData';
 import { RuneData } from '../../data/RuneData';
 import { ItemData } from '../../data/ItemData';
 import { LocationData } from '../../data/LocationData';
 import { BestiaryData } from '../../data/BestiaryData';
+import { SlateProgress } from '../../data/SlateData';
 import { NetworkManager } from '../../NetworkManager';
 import { EventBus, GameEvents } from '../../EventBus';
 import { COVENANT_CARD_TINTS, InputKeys, FONT_FAMILY } from '../../constants';
 import { resetOpenedChests } from '../../systems/ChestSystem';
 import { resetCompletedTrades } from '../../systems/TradeSystem';
-import { CovenantType } from '../../data/PlayerData';
+import { clearGameplayStorageForNewRun } from '../../utils/SaveReset';
 
 const BG_FRAME_RATE = 8;
 const CARD_FRAME_RATE = 8;
@@ -37,6 +38,8 @@ export class Covenant extends Phaser.Scene {
     private lockedCovenants: Map<string, string> = new Map();
     private myLock: string | null = null;
     private inputReady = false;
+    private isStartingGame = false;
+    private startGameTimer: Phaser.Time.TimerEvent | null = null;
 
     constructor() {
         super('Covenant');
@@ -69,6 +72,8 @@ export class Covenant extends Phaser.Scene {
         this.lockedCovenants.clear();
         this.myLock = null;
         this.inputReady = false;
+        this.isStartingGame = false;
+        this.startGameTimer = null;
 
         const centerX = this.scale.width / 2;
         const centerY = this.scale.height / 2;
@@ -100,12 +105,12 @@ export class Covenant extends Phaser.Scene {
             ).setOrigin(0.5).setScale(CARD_BASE_SCALE).setFrame(1).setAlpha(0.88).setInteractive({ useHandCursor: true });
 
             sprite.on('pointerover', () => {
-                if (!this.inputReady || this.myLock) return;
+                if (!this.inputReady || this.myLock || this.isStartingGame) return;
                 this.setSelectedCard(i);
             });
 
             sprite.on('pointerdown', () => {
-                if (!this.inputReady || this.myLock) return;
+                if (!this.inputReady || this.myLock || this.isStartingGame) return;
                 this.selectCovenant(covenant.key as CovenantType);
             });
 
@@ -115,22 +120,22 @@ export class Covenant extends Phaser.Scene {
         this.setSelectedCard(this.selectedCardIndex);
 
         this.input.keyboard!.on(InputKeys.LEFT, () => {
-            if (!this.inputReady || this.myLock) return;
+            if (!this.inputReady || this.myLock || this.isStartingGame) return;
             this.setSelectedCard(this.selectedCardIndex - 1);
         });
 
         this.input.keyboard!.on(InputKeys.ENTER, () => {
-            if (!this.inputReady || this.myLock) return;
+            if (!this.inputReady || this.myLock || this.isStartingGame) return;
             this.selectCovenant(COVENANTS[this.selectedCardIndex].key as CovenantType);
         });
 
         this.input.keyboard!.on(InputKeys.RIGHT, () => {
-            if (!this.inputReady || this.myLock) return;
+            if (!this.inputReady || this.myLock || this.isStartingGame) return;
             this.setSelectedCard(this.selectedCardIndex + 1);
         });
 
         this.input.keyboard!.on(InputKeys.INTERACT, () => {
-            if (!this.inputReady || this.myLock) return;
+            if (!this.inputReady || this.myLock || this.isStartingGame) return;
             this.selectCovenant(COVENANTS[this.selectedCardIndex].key as CovenantType);
         });
 
@@ -146,6 +151,8 @@ export class Covenant extends Phaser.Scene {
         EventBus.on(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
         this.events.on('shutdown', () => {
             EventBus.off(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
+            this.startGameTimer?.remove(false);
+            this.startGameTimer = null;
         });
 
         const interactText = this.add.text(centerX, this.scale.height - 30, 'PRESS/HOLD X TO INTERACT', {
@@ -200,20 +207,24 @@ export class Covenant extends Phaser.Scene {
                 this.targetPositions.set(data.id, { x: data.x, y: data.y });
             }
         } else if (data.type === 'LOCK_REQUEST') {
+            if (this.isStartingGame) return;
             if (nm.role === 'host') {
                 this.handleLockRequest(data.id, data.covenant);
             }
         } else if (data.type === 'COVENANT_LOCKED') {
+            if (this.isStartingGame) return;
             if (nm.role === 'host' && data.id !== nm.myPeerId) nm.broadcast(data);
             this.lockedCovenants.set(data.covenant, data.id);
+            nm.setPeerCovenant(data.id, data.covenant);
             if (data.id === nm.myPeerId) this.myLock = data.covenant;
             this.updateCardLocks();
         } else if (data.type === 'ALL_READY') {
-            this.time.delayedCall(500, () => this.startGameWithLock());
+            this.scheduleStartGame();
         }
     }
 
     private handleLockRequest(peerId: string, covenant: string) {
+        if (this.isStartingGame) return;
         if (this.lockedCovenants.has(covenant)) return;
 
         for (const [cov, id] of Array.from(this.lockedCovenants.entries())) {
@@ -221,7 +232,14 @@ export class Covenant extends Phaser.Scene {
         }
 
         this.lockedCovenants.set(covenant, peerId);
-        NetworkManager.getInstance().broadcast({ type: 'COVENANT_LOCKED', id: peerId, covenant });
+        NetworkManager.getInstance().setPeerCovenant(peerId, covenant as CovenantType);
+        for (const [lockedCovenant, lockedPeerId] of this.lockedCovenants.entries()) {
+            NetworkManager.getInstance().broadcast({
+                type: 'COVENANT_LOCKED',
+                id: lockedPeerId,
+                covenant: lockedCovenant
+            });
+        }
 
         if (peerId === NetworkManager.getInstance().myPeerId) {
             this.myLock = covenant;
@@ -274,7 +292,7 @@ export class Covenant extends Phaser.Scene {
         const totalPlayers = nm.getConnectedPeers().length + 1;
         if (this.lockedCovenants.size === totalPlayers) {
             nm.broadcast({ type: 'ALL_READY' });
-            this.time.delayedCall(500, () => this.startGameWithLock());
+            this.scheduleStartGame();
         }
     }
 
@@ -320,12 +338,14 @@ export class Covenant extends Phaser.Scene {
 
 
     private selectCovenant(covenant: 'dragon' | 'phoenix' | 'snake'): void {
+        if (this.isStartingGame) return;
+
         const nm = NetworkManager.getInstance();
         if (nm.role === 'offline') {
             this.myLock = covenant;
             this.lockedCovenants.set(covenant, 'offline');
             this.updateCardLocks();
-            this.time.delayedCall(500, () => this.startGameWithLock());
+            this.scheduleStartGame();
         } else if (nm.role === 'client') {
             nm.broadcast({ type: 'LOCK_REQUEST', id: nm.myPeerId, covenant });
         } else if (nm.role === 'host') {
@@ -333,22 +353,28 @@ export class Covenant extends Phaser.Scene {
         }
     }
 
+    private scheduleStartGame(): void {
+        if (this.isStartingGame || this.startGameTimer) return;
+
+        this.startGameTimer = this.time.delayedCall(500, () => {
+            this.startGameTimer = null;
+            this.startGameWithLock();
+        });
+    }
+
     private startGameWithLock(): void {
-        if (!this.myLock) return;
+        if (!this.myLock || this.isStartingGame) return;
+        this.isStartingGame = true;
+        this.inputReady = false;
+
         const covenant = this.myLock as 'dragon' | 'phoenix' | 'snake';
 
         const playerData = this.registry.get('playerData') as PlayerData || PlayerData.getInstance();
+        clearGameplayStorageForNewRun();
         playerData.reset();
         playerData.setCovenantData(covenant);
         const userData = this.registry.get('userData') as UserData;
         if (userData) userData.discoverCovenant(covenant);
-        
-        localStorage.removeItem('glossary_boss_presses');
-        localStorage.removeItem('glossary_boss_fight_active');
-        localStorage.removeItem('glossary_boss_pillars_defeated');
-        localStorage.removeItem('glossary_boss_remaining_pillars');
-        localStorage.removeItem('glossary_boss_current_combat_pillar');
-        localStorage.removeItem('glossary_boss_combat_victory');
 
         let mapKey = 'hub';
         let uniqueRune = '';
@@ -369,10 +395,14 @@ export class Covenant extends Phaser.Scene {
         ItemData.getInstance().reset();
         LocationData.getInstance().reset();
         BestiaryData.getInstance().reset();
+        SlateProgress.getInstance().reset();
         resetOpenedChests();
         resetCompletedTrades();
 
         const md = MultiplayerData.getInstance();
+        if (NetworkManager.getInstance().role === 'offline') {
+            md.sharedRunes = [];
+        }
         if (md.sharedRunes.length === 0) {
             md.generateSharedRunes(RuneData.getAllDefinitions());
         }
@@ -387,6 +417,8 @@ export class Covenant extends Phaser.Scene {
                 this.scene.stop(key);
             }
         }
+
+        if (this.scene.isActive('TransitionScene')) return;
 
         this.scene.launch('TransitionScene', {
             targetScene: 'LevelScene',
