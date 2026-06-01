@@ -25,6 +25,9 @@ export class SummitBossHUD {
     setBattleVisible(visible: boolean): void {
         this.battleVisible = visible;
         this.barContainer.setVisible(visible);
+        if (visible) {
+            this.barContainer.setAlpha(1);
+        }
     }
 
     isBattleVisible(): boolean {
@@ -106,6 +109,24 @@ export class SummitBossHUD {
         const segmentIndex = SEGMENT_COUNT - count;
         this.pillarsDefeated = count;
         this.playSegmentHit(segmentIndex);
+    }
+
+    fadeOut(duration: number = 900, onComplete?: () => void): void {
+        if (!this.barContainer?.active) {
+            onComplete?.();
+            return;
+        }
+
+        this.scene.tweens.add({
+            targets: this.barContainer,
+            alpha: 0,
+            duration,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+                this.barContainer.setVisible(false);
+                onComplete?.();
+            }
+        });
     }
 
     private applySegmentDefeated(segmentIndex: number, defeated: boolean): void {

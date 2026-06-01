@@ -7,11 +7,11 @@ import { ItemData } from '../../data/ItemData';
 import { LocationData } from '../../data/LocationData';
 import { BestiaryData } from '../../data/BestiaryData';
 import { NetworkManager } from '../../NetworkManager';
-import { EventBus } from '../../EventBus';
+import { EventBus, GameEvents } from '../../EventBus';
 import { COVENANT_CARD_TINTS, InputKeys, FONT_FAMILY } from '../../constants';
 import { resetOpenedChests } from '../../systems/ChestSystem';
 import { resetCompletedTrades } from '../../systems/TradeSystem';
-import { CovenantType } from '../../types';
+import { CovenantType } from '../../data/PlayerData';
 
 const BG_FRAME_RATE = 8;
 const CARD_FRAME_RATE = 8;
@@ -143,9 +143,9 @@ export class Covenant extends Phaser.Scene {
             }
         });
 
-        EventBus.on('network-data-received', this.onNetworkData, this);
+        EventBus.on(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
         this.events.on('shutdown', () => {
-            EventBus.off('network-data-received', this.onNetworkData, this);
+            EventBus.off(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
         });
 
         const interactText = this.add.text(centerX, this.scale.height - 30, 'PRESS/HOLD X TO INTERACT', {
@@ -364,6 +364,7 @@ export class Covenant extends Phaser.Scene {
         const runeData = RuneData.getInstance();
         runeData.reset();
         runeData.discoverRune(uniqueRune);
+        userData?.discoverRune(uniqueRune);
 
         ItemData.getInstance().reset();
         LocationData.getInstance().reset();
@@ -377,6 +378,7 @@ export class Covenant extends Phaser.Scene {
         }
         for (const r of md.sharedRunes) {
             runeData.discoverRune(r);
+            userData?.discoverRune(r);
         }
 
         const sceneKeys = ['MainMenu', 'Help', 'Settings', 'SettingsUI', 'Achievements', 'AchievementsUI', 'Multiplayer'];

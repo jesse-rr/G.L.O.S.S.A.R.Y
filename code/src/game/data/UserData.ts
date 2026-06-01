@@ -1,5 +1,10 @@
-import { EventBus } from '../EventBus';
-import { BestiaryData } from './BestiaryData';
+import { EventBus, GameEvents } from '../EventBus';
+import { BestiaryData, BESTIARY } from './BestiaryData';
+import { ItemData } from './ItemData';
+import { LocationData, BOSSES, HUBS, SETTLEMENTS } from './LocationData';
+import { RuneData } from './RuneData';
+
+const VALID_COVENANTS = new Set(['dragon', 'phoenix', 'snake']);
 
 export interface AchievementData {
     id: string;
@@ -76,7 +81,7 @@ export class UserData {
         const achievement = this.achievements.find(a => a.id === id);
         if (achievement && !achievement.unlocked) {
             achievement.unlocked = true;
-            EventBus.emit('show-notification', `Achievement Unlocked: ${id.replace('_', ' ').toUpperCase()}`);
+            EventBus.emit(GameEvents.SHOW_NOTIFICATION, `Achievement Unlocked: ${id.replace('_', ' ').toUpperCase()}`);
         }
     }
 
@@ -86,23 +91,26 @@ export class UserData {
     }
 
     discoverItem(item: string): void {
+        if (!ItemData.getAllItems().some(def => def.name === item)) return;
         if (!this.itemsDiscovered.includes(item)) {
             this.itemsDiscovered.push(item);
+            this.checkGreedy();
             this.checkCompletionist();
         }
     }
 
     discoverRune(rune: string): void {
-        if (!this.runesDiscovered.includes(rune)) {
-            this.runesDiscovered.push(rune);
-            if (this.runesDiscovered.length >= 26) {
-                this.unlockAchievement('greedy');
-            }
+        const upper = rune.toUpperCase();
+        if (!RuneData.getDefinition(upper)) return;
+        if (!this.runesDiscovered.includes(upper)) {
+            this.runesDiscovered.push(upper);
+            this.checkGreedy();
             this.checkCompletionist();
         }
     }
 
     discoverCovenant(covenant: string): void {
+        if (!VALID_COVENANTS.has(covenant)) return;
         if (!this.covenantsDiscovered.includes(covenant)) {
             this.covenantsDiscovered.push(covenant);
         }
@@ -127,16 +135,26 @@ export class UserData {
     checkCompletionist(): void {
         if (!this.completedGame) return;
 
-        const otherAchievements = this.achievements.filter(a => a.id !== 'completionist');
-        if (otherAchievements.some(a => !a.unlocked)) return;
+        if (this.itemsDiscovered.length < ItemData.getAllItems().length) return;
 
-        if (this.itemsDiscovered.length < 12) return;
+        if (this.runesDiscovered.length < RuneData.getAllDefinitions().length) return;
 
-        if (this.runesDiscovered.length < 26) return;
+        if (BestiaryData.getInstance().getDiscoveredCount() < BESTIARY.length) return;
 
-        if (BestiaryData.getInstance().getDiscoveredCount() < 10) return;
+        const locationData = LocationData.getInstance();
+        const totalLocations = SETTLEMENTS.length + BOSSES.length + HUBS.length;
+        if (locationData.getDiscoveredLocations().length < totalLocations) return;
+
+        if (this.covenantsDiscovered.length < VALID_COVENANTS.size) return;
 
         this.unlockAchievement('completionist');
+    }
+
+    private checkGreedy(): void {
+        if (this.itemsDiscovered.length < ItemData.getAllItems().length) return;
+        if (this.runesDiscovered.length < RuneData.getAllDefinitions().length) return;
+
+        this.unlockAchievement('greedy');
     }
 
     toJSON(): object {
@@ -153,10 +171,34 @@ export class UserData {
     }
 
     loadFromJSON(data: any): void {
-        if (data.achievements) this.achievements = data.achievements;
-        if (data.itemsDiscovered) this.itemsDiscovered = data.itemsDiscovered;
-        if (data.runesDiscovered) this.runesDiscovered = data.runesDiscovered;
-        if (data.covenantsDiscovered) this.covenantsDiscovered = data.covenantsDiscovered;
+        if (data.achievements) {
+            const loadedAchievements = new Map<string, boolean>(
+                data.achievements
+                    .filter((achievement: any) => typeof achievement?.id === 'string')
+                    .map((achievement: AchievementData): [string, boolean] => [achievement.id, Boolean(achievement.unlocked)])
+            );
+            this.achievements = this.achievements.map(achievement => ({
+                ...achievement,
+                unlocked: loadedAchievements.get(achievement.id) ?? achievement.unlocked
+            }));
+        }
+        if (data.itemsDiscovered) {
+            const validItemNames = new Set(ItemData.getAllItems().map(item => item.name));
+            this.itemsDiscovered = data.itemsDiscovered.filter((item: unknown) => typeof item === 'string' && validItemNames.has(item));
+        }
+        if (data.runesDiscovered) {
+            this.runesDiscovered = Array.from(new Set(
+                data.runesDiscovered
+                    .filter((rune: unknown): rune is string => typeof rune === 'string')
+                    .map((rune: string) => rune.toUpperCase())
+                    .filter((rune: string) => RuneData.getDefinition(rune))
+            ));
+        }
+        if (data.covenantsDiscovered) {
+            this.covenantsDiscovered = data.covenantsDiscovered.filter((covenant: unknown) => (
+                typeof covenant === 'string' && VALID_COVENANTS.has(covenant)
+            ));
+        }
         if (data.deaths !== undefined) this.deaths = data.deaths;
         if (data.wins !== undefined) this.wins = data.wins;
         if (data.completedGame !== undefined) this.completedGame = data.completedGame;

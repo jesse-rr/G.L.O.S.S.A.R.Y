@@ -21,6 +21,12 @@ import { MerchantShop } from './scenes/ui/MerchantShop';
 import { LocationDisplayScene } from "./utils/LocationDefinition";
 import {GameOver} from "./scenes/world/GameOver";
 
+declare global {
+    interface Window {
+        __GAME__: Game;
+    }
+}
+
 let useVsync = true;
 
 const data = localStorage.getItem('glossary_user_data');

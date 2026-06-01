@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { FONT_FAMILY } from '../../constants';
-import { ScrollableScene } from '../../types';
+import { ScrollableScene } from '../../constants';
 import { AudioManager } from '../../utils/AudioManager';
 
 export class ControlsUI extends Phaser.Scene {
@@ -37,6 +37,14 @@ export class ControlsUI extends Phaser.Scene {
             }).setOrigin(0.5);
             this.container.add([bg, txt]);
         };
+        const makePadButton = (x: number, y: number, label: string) => {
+            const bg = this.add.circle(x, y, 18, 0x2f2f36, 1)
+                .setStrokeStyle(2, 0x847E87);
+            const txt = this.add.text(x, y, label, {
+                fontSize: '18px', color: '#ffffff', fontFamily: FONT_FAMILY
+            }).setOrigin(0.5);
+            this.container.add([bg, txt]);
+        };
 
         const leftX = 320;
         const keyY = 210;
@@ -56,15 +64,15 @@ export class ControlsUI extends Phaser.Scene {
         const actionsYStart = 210;
         const actSpacing = 68;
 
-        makeKey(rightX, actionsYStart, 'G');
-        this.container.add(this.add.text(rightX + 45, actionsYStart, '- Glossary / Book', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
+        makeKey(rightX, actionsYStart, 'X');
+        this.container.add(this.add.text(rightX + 45, actionsYStart, '- Interact (Press/Hold)', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
 
-        const rightColumnX = rightX + 300;
+        const rightColumnX = rightX + 320;
         makeKey(rightColumnX, actionsYStart, 'C');
         this.container.add(this.add.text(rightColumnX + 45, actionsYStart, '- Open Items (Combat)', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
 
-        makeKey(rightX, actionsYStart + actSpacing, 'X');
-        this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing, '- Interact (Press/Hold)', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
+        makeKey(rightX, actionsYStart + actSpacing, 'G');
+        this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing, '- Glossary / Book', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
 
         makeKey(rightX, actionsYStart + actSpacing * 2, 'Q');
         this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing * 2, '- Settings', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
@@ -75,6 +83,24 @@ export class ControlsUI extends Phaser.Scene {
         const shiftFrame = this.textures.get('ui-items').frameTotal - 2;
         makeKey(rightX, actionsYStart + actSpacing * 4, 'Shift', shiftFrame);
         this.container.add(this.add.text(rightX + 45, actionsYStart + actSpacing * 4, '- View Rune Info (While in combat) / Dash', { fontSize: '20px', color: '#847E87', fontFamily: FONT_FAMILY }).setOrigin(0, 0.5));
+
+        const padX = rightX + 290;
+        const padY = actSpacing * 4 + 20;
+        this.container.add(this.add.text(padX, padY, 'GAMEPAD', {
+            fontSize: '20px', color: '#ffffff', fontFamily: FONT_FAMILY
+        }).setOrigin(0, 0.5));
+        this.container.add(this.add.text(padX, padY + 36, 'Left Stick / D-Pad - Move', {
+            fontSize: '18px', color: '#847E87', fontFamily: FONT_FAMILY
+        }).setOrigin(0, 0.5));
+        makePadButton(padX + 18, padY + 76, 'A');
+        this.container.add(this.add.text(padX + 45, padY + 76, '- Interact (Press/Hold)', {
+            fontSize: '18px', color: '#847E87', fontFamily: FONT_FAMILY
+        }).setOrigin(0, 0.5));
+        makePadButton(padX + 18, padY + 116, 'B');
+        makePadButton(padX + 68, padY + 116, 'RB');
+        this.container.add(this.add.text(padX + 100, padY + 116, '- Dash', {
+            fontSize: '18px', color: '#847E87', fontFamily: FONT_FAMILY
+        }).setOrigin(0, 0.5));
 
         this.input.on('wheel', (_: any, __: any, ___: number, dy: number) => {
             const parent = this.parentScene as ScrollableScene;

@@ -2,21 +2,22 @@ import * as Phaser from 'phaser';
 import { createVignette } from '../../utils/Vignette';
 import { InputKeys, FONT_FAMILY } from '../../constants';
 import { LocationData } from '../../data/LocationData';
-import { parseCollisionObjects, parseStairObjects } from '../../systems/CollisionParser';
-import {DoorState, createDoors, handleDoorInteraction, initDoorAudio} from '../../systems/DoorSystem';
-import { SettlementDoor, createSettlementDoors, handleSettlementDoorInteraction } from '../../systems/SettlementDoorSystem';
-import { MechanicDoor, createMechanicDoors, handleMechanicDoorInteraction } from '../../systems/MechanicDoorSystem';
-import { BossButtonState, createBossButtons, handleBossButtonInteraction } from '../../systems/BossButtonSystem';
-import { ChestState, createChests, handleChestInteraction } from '../../systems/ChestSystem';
-import { TradeState, createTrades, handleTradeInteraction } from "../../systems/TradeSystem";
-import { SlateState, createSlates, handleSlateInteraction } from '../../systems/SlateInteraction';
+import { UserData } from '../../data/UserData';
+import { EventBus, GameEvents } from '../../EventBus';
+import { NetworkManager } from '../../NetworkManager';
+import {DoorState, handleDoorInteraction, initDoorAudio} from '../../systems/DoorSystem';
+import { SettlementDoor, handleSettlementDoorInteraction } from '../../systems/SettlementDoorSystem';
+import { MechanicDoor, handleMechanicDoorInteraction } from '../../systems/MechanicDoorSystem';
+import { BossButtonState, handleBossButtonInteraction } from '../../systems/BossButtonSystem';
+import { ChestState, handleChestInteraction } from '../../systems/ChestSystem';
+import { TradeState, handleTradeInteraction } from "../../systems/TradeSystem";
+import { SlateState, handleSlateInteraction } from '../../systems/SlateInteraction';
 import { PortalSystem } from '../../systems/PortalSystem';
 import { PlayerData } from '../../data/PlayerData';
-import { ItemData, ItemDefinition } from '../../data/ItemData';
+import { ItemDefinition } from '../../data/ItemData';
 import { CombatTrackerHUD } from '../../systems/CombatTrackerHUD';
-import { isPipeLayer, fillPipeLayer } from '../../systems/PipeSystem';
 import { RaidhoRuneSystem } from '../../systems/RaidhoRuneSystem';
-import { MerchantState, createMerchants, handleMerchantInteraction } from '../../systems/MerchantSystem';
+import { MerchantState, handleMerchantInteraction } from '../../systems/MerchantSystem';
 import { DashSystem } from '../../systems/DashSystem';
 import { LightSystem } from '../../systems/LightSystem';
 import { BossAttackSystem } from '../../systems/BossAttackSystem';
@@ -29,12 +30,24 @@ import { DamageOverlay } from '../../utils/DamageOverlay';
 import {LocationDisplayScene} from "../../utils/LocationDefinition";
 import {AudioManager} from "../../utils/AudioManager";
 import {ScreenShake} from "../../utils/ScreenShake";
+import {
+    ensureLevelDoorAnimations,
+    ensureLevelPlayerAnimations,
+    preloadLevelSceneAssets
+} from './level/LevelSceneAssets';
+import { createLevelMap, discoverLocationForMap } from './level/LevelMapBuilder';
+import {
+    LevelMovementKeys,
+    syncPlayerShadow,
+    stopPlayerIntoIdle,
+    updateLevelPlayerMovement
+} from './level/LevelPlayerController';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
     private playerShadow!: Phaser.GameObjects.Image;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-    private keys!: { W: Phaser.Input.Keyboard.Key, A: Phaser.Input.Keyboard.Key, S: Phaser.Input.Keyboard.Key, D: Phaser.Input.Keyboard.Key };
+    private keys!: LevelMovementKeys;
     private mapKey!: string;
     private portalSystem!: PortalSystem;
 
@@ -104,6 +117,13 @@ export class LevelScene extends Phaser.Scene {
     private waitingForBossChoice = false;
     private audioManager: AudioManager;
     private replaceGlossaryText?: Phaser.GameObjects.Text;
+    private gamepadMoveX = 0;
+    private gamepadMoveY = 0;
+    private gamepadInteractDown = false;
+    private gamepadInteractJustPressed = false;
+    private gamepadDashJustPressed = false;
+    private previousGamepadInteractDown = false;
+    private previousGamepadDashDown = false;
 
     constructor() {
         super('LevelScene');
@@ -140,6 +160,13 @@ export class LevelScene extends Phaser.Scene {
         this.isNearGlossary = false;
         this.isDead = false;
         this.pushDurationTimer = 0;
+        this.gamepadMoveX = 0;
+        this.gamepadMoveY = 0;
+        this.gamepadInteractDown = false;
+        this.gamepadInteractJustPressed = false;
+        this.gamepadDashJustPressed = false;
+        this.previousGamepadInteractDown = false;
+        this.previousGamepadDashDown = false;
         this.hasPlayerPositionCache = false;
         this.persistSaveTimer = 0;
         this.bossEyeVisible = false;
@@ -162,133 +189,10 @@ export class LevelScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('Abandoned-Floor.png', 'assets/Models/exports/tileset/Abandoned-Floor.png');
-        this.load.image('Desert-Floor.png', 'assets/Models/exports/tileset/Desert-Floor.png');
-        this.load.image('Mechanic-Floor.png', 'assets/Models/exports/tileset/Mechanic-Floor.png');
-        this.load.image('Objects.png', 'assets/Models/exports/tileset/Objects.png');
-        this.load.image('Summit-Floor.png', 'assets/Models/exports/tileset/Summit-Floor.png');
-
-        this.load.tilemapTiledJSON('central-hub', 'assets/Models/exports/Maps/central-hub.json');
-        this.load.tilemapTiledJSON('boss-floor-abandoned', 'assets/Models/exports/Maps/boss-floor-abandoned.json');
-        this.load.tilemapTiledJSON('boss-floor-desert', 'assets/Models/exports/Maps/boss-floor-desert.json');
-        this.load.tilemapTiledJSON('boss-floor-mechanic', 'assets/Models/exports/Maps/boss-floor-mechanic.json');
-        this.load.tilemapTiledJSON('summit-settlement', 'assets/Models/exports/Maps/summit-settlement.json');
-
-        this.load.tilemapTiledJSON('abandoned-settlement', 'assets/Models/exports/Maps/abandoned-settlement.json');
-        this.load.tilemapTiledJSON('desert-settlement', 'assets/Models/exports/Maps/desert-settlement.json');
-        this.load.tilemapTiledJSON('mechanic-settlement', 'assets/Models/exports/Maps/mechanic-settlement.json');
-
-        this.load.tilemapTiledJSON('summit-trade', 'assets/Models/exports/Maps/summit-trade.json');
-        this.load.tilemapTiledJSON('merchant', 'assets/Models/exports/Maps/merchant.json');
-
-        this.load.spritesheet('door-sheet-mechanic', 'assets/Models/exports/Animations/Door-Sheet-Mechanic-Sheet.png', {
-            frameWidth: 32,
-            frameHeight: 64
-        });
-        this.load.spritesheet('door-sheet', 'assets/Models/exports/Animations/Door-Sheet.png', {
-            frameWidth: 64,
-            frameHeight: 96
-        });
-        this.load.spritesheet('door-symbol', 'assets/Models/exports/Animations/Door-Symbol.png', {
-            frameWidth: 64,
-            frameHeight: 96
-        });
-
-        this.load.spritesheet('protagonist-idle', `assets/Models/Protagonist/Idle-${this.registry.get('playerData').covenant}.png`, {
-            frameWidth: 48,
-            frameHeight: 48
-        });
-        this.load.spritesheet('protagonist-run', `assets/Models/Protagonist/Run-${this.registry.get('playerData').covenant}.png`, {
-            frameWidth: 48,
-            frameHeight: 48
-        });
-        this.load.spritesheet('protagonist-dash', `assets/Models/Protagonist/Dash-${this.registry.get('playerData').covenant}.png`, {
-            frameWidth: 48,
-            frameHeight: 48
-        });
-        this.load.spritesheet('protagonist-death', `assets/Models/Protagonist/Death-${this.registry.get('playerData').covenant}.png`, {
-            frameWidth: 48,
-            frameHeight: 48
-        });
-        this.load.image('protagonist-shadow', `assets/Models/Protagonist/Shadow.png`);
-
-        this.load.spritesheet('btn-boss-abandoned', 'assets/Models/exports/Animations/Btn-Boss-Abandoned.png', {
-            frameWidth: 64,
-            frameHeight: 64
-        });
-        this.load.spritesheet('btn-boss-desert', 'assets/Models/exports/Animations/Btn-Boss-Desert.png', {
-            frameWidth: 64,
-            frameHeight: 64
-        });
-        this.load.spritesheet('btn-boss-mechanic', 'assets/Models/exports/Animations/Btn-Boss-Mechanic.png', {
-            frameWidth: 64,
-            frameHeight: 64
-        });
-        this.load.spritesheet('btn-boss-summit', 'assets/Models/exports/Animations/Btn-Boss-Summit.png', {
-            frameWidth: 64,
-            frameHeight: 64
-        });
-        this.load.spritesheet('btn-boss-symbol', 'assets/Models/exports/Animations/Btn-Boss-Symbol.png', {
-            frameWidth: 64,
-            frameHeight: 64
-        });
-
-        this.load.spritesheet('chests', 'assets/Models/exports/Animations/Chests.png', {
-            frameWidth: 32,
-            frameHeight: 48
-        });
-        this.load.spritesheet('items', 'assets/Models/exports/Objects/Items.png', {frameWidth: 64, frameHeight: 64});
-        this.load.image('interact-btn', 'assets/Models/exports/UI/Interact-Btn.png');
-        this.load.image('achievement-ui', 'assets/Models/exports/UI/Achievement-UI.png');
-        this.load.image('settings-btn', 'assets/Models/exports/UI/Settings-Btn.png');
-        this.load.spritesheet('currency', 'assets/Models/exports/Objects/Currency.png', {
-            frameWidth: 16,
-            frameHeight: 16
-        });
-        this.load.spritesheet('trade', 'assets/Models/exports/Animations/Trade.png', {
-            frameWidth: 160,
-            frameHeight: 190
-        });
-        this.load.spritesheet('combat-symbol-ui', 'assets/Models/exports/UI/Combat-Symbol-UI.png', {
-            frameWidth: 32,
-            frameHeight: 32
-        });
-
-        this.load.spritesheet('pillar', 'assets/Models/Boss/boss-big-pillar-attack.png', {
-            frameWidth: 32,
-            frameHeight: 128
-        });
-        this.load.spritesheet('small_pillar', 'assets/Models/Boss/boss-small-pillar-attack.png', {
-            frameWidth: 32,
-            frameHeight: 96
-        });
-        this.load.spritesheet('inline_pillar', 'assets/Models/Boss/boss-inline-pillar-attack.png', {
-            frameWidth: 64,
-            frameHeight: 64
-        });
-        this.load.spritesheet('spikes', 'assets/Models/Boss/boss-spikes-attack.png', {frameWidth: 32, frameHeight: 64});
-        this.load.image('small_pillar_indicator', 'assets/Models/Boss/boss-small-pillar-attack-indicator.png');
-        this.load.image('spikes_indicator', 'assets/Models/Boss/boss-spikes-attack-indicator.png');
-        this.load.image('inline_pillar_indicator', 'assets/Models/Boss/boss-inline-pillar-attack-indicator.png');
-        this.load.image('big_pillar_indicator', 'assets/Models/Boss/boss-big-pillar-attack-indicator.png');
-        this.load.image('Rune-Indicator-Top', 'assets/Models/Boss/Rune-Indicator-Top.png');
-        this.load.image('Rune-Indicator-Bottom', 'assets/Models/Boss/Rune-Indicator-Bottom.png');
-        this.load.spritesheet('tentacles', 'assets/Models/Boss/boss-tentacles.png', {frameWidth: 128, frameHeight: 96});
-        this.load.spritesheet('tentacles-v2', 'assets/Models/Boss/boss-tentacles-v2.png', {
-            frameWidth: 64,
-            frameHeight: 96
-        });
-        this.load.image('boss-eye', 'assets/Models/Boss/boss-eye.png');
-        this.load.spritesheet('boss-eye-bg', 'assets/Models/Boss/boss-eye-bg.png', {frameWidth: 64, frameHeight: 64});
-
         this.audioManager = new AudioManager(this);
-        this.audioManager.loadAudio();
-
         this.dashSystem = new DashSystem();
-        this.dashSystem.setAudioManager(this.audioManager);
-        this.dashSystem.preloadAudio(this);
-
-        ScreenShake.preload(this);
+        const covenant = this.registry.get('playerData')?.covenant || 'phoenix';
+        preloadLevelSceneAssets(this, covenant, this.audioManager, this.dashSystem);
     }
 
     create() {
@@ -337,20 +241,8 @@ export class LevelScene extends Phaser.Scene {
             });
         }
 
-        let locId: string | null = null;
-        if (this.mapKey === 'hub' || this.mapKey === 'central-hub') locId = 'central_hub';
-        else if (this.mapKey === 'abandoned-settlement') locId = 'settlement_abandoned';
-        else if (this.mapKey === 'desert-settlement') locId = 'settlement_desert';
-        else if (this.mapKey === 'mechanic-settlement') locId = 'settlement_mechanic';
-        else if (this.mapKey === 'boss-floor-abandoned') locId = 'boss_abandoned';
-        else if (this.mapKey === 'boss-floor-desert') locId = 'boss_desert';
-        else if (this.mapKey === 'boss-floor-mechanic') locId = 'boss_mechanic';
-        else if (this.mapKey === 'summit-settlement') locId = 'summit';
-        else if (this.mapKey === 'summit-trade') locId = 'summit_trade';
-        else if (this.mapKey === 'merchant') locId = 'merchant';
-
+        const locId = discoverLocationForMap(this.mapKey);
         if (locId) {
-            LocationData.getInstance().discoverLocation(locId);
             if (!LocationData.getInstance().isViewed(locId)) {
                 const locationDisplay = LocationDisplayScene.ensureRunning(this);
                 locationDisplay.showLocation(locId);
@@ -358,44 +250,7 @@ export class LevelScene extends Phaser.Scene {
             }
         }
 
-        if (!this.anims.exists('idle')) {
-            this.anims.create({
-                key: 'idle',
-                frames: this.anims.generateFrameNumbers('protagonist-idle', {start: 0, end: 6}),
-                frameRate: 8,
-                repeat: -1
-            });
-            this.anims.create({
-                key: 'run-start',
-                frames: this.anims.generateFrameNumbers('protagonist-run', {start: 0, end: 7}),
-                frameRate: 12,
-                repeat: 0
-            });
-            this.anims.create({
-                key: 'run-loop',
-                frames: this.anims.generateFrameNumbers('protagonist-run', {start: 0, end: 7}),
-                frameRate: 12,
-                repeat: -1
-            });
-            this.anims.create({
-                key: 'stop',
-                frames: this.anims.generateFrameNumbers('protagonist-idle', {start: 0, end: 0}),
-                frameRate: 12,
-                repeat: 0
-            });
-            this.anims.create({
-                key: 'dash',
-                frames: this.anims.generateFrameNumbers('protagonist-dash', {start: 0, end: 11}),
-                frameRate: 80,
-                repeat: 0
-            });
-            this.anims.create({
-                key: 'death',
-                frames: this.anims.generateFrameNumbers('protagonist-death', {start: 0, end: 16}),
-                frameRate: 12,
-                repeat: 0
-            });
-        }
+        ensureLevelPlayerAnimations(this);
 
         this.cursors = this.input.keyboard!.createCursorKeys();
         this.keys = this.input.keyboard!.addKeys('W,A,S,D') as any;
@@ -417,20 +272,17 @@ export class LevelScene extends Phaser.Scene {
             });
         });
 
-        if (!this.anims.exists('door-open')) {
-            const frames = [];
-            for (let i = 0; i <= 13; i++) {
-                const t = i / 13;
-                frames.push({key: 'door-sheet', frame: i, duration: 60 + t * t * 200});
-            }
-            this.anims.create({key: 'door-open', frames, repeat: 0});
-        }
+        ensureLevelDoorAnimations(this);
 
         this.input.keyboard!.on(InputKeys.HELP, () => {
             if (!this.scene.isPaused()) {
                 this.scene.pause();
                 this.scene.launch('Help', {previousScene: 'LevelScene'});
             }
+        });
+        EventBus.on(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
+        this.events.once('shutdown', () => {
+            EventBus.off(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
         });
 
         const w = this.scale.width, h = this.scale.height, camZoom = 2;
@@ -624,8 +476,9 @@ export class LevelScene extends Phaser.Scene {
                     this.tentaclesAnimation.play('tentaclesLoop');
                 }
                 this.activateBarrier();
-                if (this.runeIndicatorSystem) {
-                    this.runeIndicatorSystem.setTentaclesAnimation(this.tentaclesAnimation);
+                const tentaclesAnimation = this.tentaclesAnimation;
+                if (this.runeIndicatorSystem && tentaclesAnimation) {
+                    this.runeIndicatorSystem.setTentaclesAnimation(tentaclesAnimation);
                 }
             });
         }
@@ -794,6 +647,13 @@ export class LevelScene extends Phaser.Scene {
         randomMove();
     }
 
+    private holdBossEyeStill(): void {
+        if (!this.bossEyeIdle) return;
+
+        this.tweens.killTweensOf(this.bossEyeIdle);
+        this.bossEyeIdle.setPosition(this.glossaryTentaclesX, this.glossaryTentaclesY - 10);
+    }
+
     private hideBossEye(): void {
         if (!this.bossEyeVisible) return;
 
@@ -812,7 +672,9 @@ export class LevelScene extends Phaser.Scene {
     }
 
     private onBossPillarDamaged(pillarsDefeated: number): void {
-        this.summitBossHUD?.onPillarDefeated(pillarsDefeated);
+        if (pillarsDefeated < 4) {
+            this.summitBossHUD?.onPillarDefeated(pillarsDefeated);
+        }
         if (pillarsDefeated >= 1) {
             this.playTentaclesV2Animation(false);
         }
@@ -828,79 +690,241 @@ export class LevelScene extends Phaser.Scene {
         if (this.isBossDefeatedSequence) return;
         this.isBossDefeatedSequence = true;
         this.isCinematic = true;
+        this.waitingForBossChoice = false;
+        this.isGlossaryInteractable = false;
         this.bossAttackSystem?.stopAttacks();
         this.runeIndicatorSystem?.stopBattle();
+        this.ensureSummitBossHUD();
+        this.summitBossHUD?.setBattleVisible(true);
+        this.summitBossHUD?.syncPillarsDefeated(4);
 
         const glossaryCenterX = this.glossaryTentaclesX;
         const glossaryCenterY = this.glossaryTentaclesY;
 
+        this.cameras.main.stopFollow();
         this.cameras.main.pan(glossaryCenterX, glossaryCenterY, 1200, 'Quad.easeInOut');
+        this.cameras.main.zoomTo(2.08, 1200, 'Quad.easeInOut');
 
         this.time.delayedCall(1200, () => {
-            if (this.levelHpHudIcon) {
-                this.tweens.add({
-                    targets: [this.levelHpHudIcon, this.levelHpHudText],
-                    alpha: 0,
-                    duration: 3000,
-                    ease: 'Sine.easeOut'
-                });
-            }
+            this.playRedBossFlash();
+            ScreenShake.trigger(this, 500, 0.012);
+            this.holdBossEyeStill();
 
-            if (this.summitBossHUD) {
-                this.tweens.add({
-                    targets: this.summitBossHUD,
-                    alpha: 0,
-                    duration: 3000,
-                    ease: 'Sine.easeOut',
-                    onComplete: () => {
-                    }
-                });
-            }
-
-            this.time.delayedCall(1000, () => {
-                this.cameras.main.flash(200, 255, 0, 0);
-                ScreenShake.trigger(this, 500);
-
-                if (this.tentaclesAnimation?.anims) {
-                    this.tentaclesAnimation.stop();
-                    this.tentaclesAnimation.setFrame(0);
-                    this.tentaclesAnimation.play('tentaclesLoop');
-                }
-
-                if (this.tentaclesV2Animation?.anims) {
-                    this.tentaclesV2Animation.stop();
-                    this.tentaclesV2Animation.setFrame(0);
-                    this.tentaclesV2Animation.play('tentaclesV2Loop');
-                }
-
-                if (this.bossEyeIdle) {
-                    this.bossEyeIdle.setTexture('boss-eye');
-                }
-
-                this.time.delayedCall(1000, () => {
-                    this.cameras.main.pan(this.player.x, this.player.y, 800, 'Quad.easeInOut');
-
-                    this.time.delayedCall(800, () => {
-                        this.isCinematic = false;
-                        this.waitingForBossChoice = true;
-                    });
+            this.time.delayedCall(420, () => {
+                this.fadeOutDefeatedBossVisuals(() => {
+                    this.restoreControlAfterBossDefeat();
                 });
             });
         });
     }
 
+    private playRedBossFlash(): void {
+        const flash = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0xff0000, 0.5)
+            .setOrigin(0)
+            .setScrollFactor(0)
+            .setDepth(99998);
+
+        this.tweens.add({
+            targets: flash,
+            alpha: 0,
+            duration: 420,
+            ease: 'Sine.easeOut',
+            onComplete: () => {
+                flash.destroy();
+            }
+        });
+    }
+
+    private fadeOutDefeatedBossVisuals(onComplete: () => void): void {
+        let pending = 0;
+        let completed = false;
+        const waitFor = (start: (done: () => void) => void) => {
+            pending++;
+            start(() => {
+                pending--;
+                if (pending === 0 && !completed) {
+                    completed = true;
+                    onComplete();
+                }
+            });
+        };
+
+        waitFor(done => this.retractTentacles(done));
+        waitFor(done => this.retractTentaclesV2(done));
+        waitFor(done => this.fadeOutBossEye(done));
+
+        if (this.summitBossHUD?.isAlive()) {
+            waitFor(done => this.summitBossHUD?.fadeOut(900, done));
+        }
+
+        const playerHudTargets = [this.levelHpHudIcon, this.levelHpHudText].filter((target): target is Phaser.GameObjects.Sprite | Phaser.GameObjects.Text => (
+            !!target && target.active
+        ));
+        if (playerHudTargets.length > 0) {
+            waitFor(done => {
+                this.tweens.add({
+                    targets: playerHudTargets,
+                    alpha: 0,
+                    duration: 900,
+                    ease: 'Sine.easeInOut',
+                    onComplete: () => {
+                        this.setPlayerHpHudVisible(false);
+                        done();
+                    }
+                });
+            });
+        }
+
+        if (pending === 0 && !completed) {
+            completed = true;
+            onComplete();
+        }
+    }
+
+    private retractTentacles(onComplete?: () => void): void {
+        if (!this.tentaclesAnimation?.active) {
+            onComplete?.();
+            return;
+        }
+
+        const sprite = this.tentaclesAnimation;
+        this.tweens.killTweensOf(sprite);
+
+        const fadeAndDestroy = () => {
+            sprite.setFrame(0);
+            this.tweens.add({
+                targets: sprite,
+                alpha: 0,
+                duration: 250,
+                ease: 'Sine.easeIn',
+                onComplete: () => {
+                    sprite.destroy();
+                    if (this.tentaclesAnimation === sprite) {
+                        this.tentaclesAnimation = undefined;
+                    }
+                    onComplete?.();
+                }
+            });
+        };
+
+        if (this.anims.exists('tentaclesRetract')) {
+            sprite.play('tentaclesRetract');
+            sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, fadeAndDestroy);
+        } else {
+            fadeAndDestroy();
+        }
+    }
+
+    private fadeOutBossEye(onComplete?: () => void): void {
+        const eye = this.bossEyeIdle;
+        const bg = this.bossEyeBg;
+        let pending = 0;
+        let completeCalled = false;
+        const done = () => {
+            pending--;
+            if (pending <= 0 && !completeCalled) {
+                completeCalled = true;
+                this.bossEyeVisible = false;
+                onComplete?.();
+            }
+        };
+
+        if (eye?.active) {
+            pending++;
+            this.tweens.killTweensOf(eye);
+            this.tweens.add({
+                targets: eye,
+                alpha: 0,
+                scale: 0.7,
+                duration: 650,
+                ease: 'Sine.easeIn',
+                onComplete: () => {
+                    eye.destroy();
+                    if (this.bossEyeIdle === eye) {
+                        this.bossEyeIdle = undefined;
+                    }
+                    done();
+                }
+            });
+        }
+
+        if (bg?.active) {
+            pending++;
+            this.tweens.killTweensOf(bg);
+            if (this.anims.exists('bossEyeBgAnim')) {
+                bg.playReverse('bossEyeBgAnim');
+            } else {
+                bg.setFrame(0);
+            }
+            this.tweens.add({
+                targets: bg,
+                alpha: 0,
+                duration: 650,
+                ease: 'Sine.easeIn',
+                onComplete: () => {
+                    bg.destroy();
+                    if (this.bossEyeBg === bg) {
+                        this.bossEyeBg = undefined;
+                    }
+                    done();
+                }
+            });
+        }
+
+        if (pending === 0) {
+            this.bossEyeVisible = false;
+            onComplete?.();
+        }
+    }
+
+    private clearBarrierForBossChoice(): void {
+        this.barrierActive = false;
+
+        for (const layer of this.barrierLayers) {
+            layer.setVisible(false);
+        }
+
+        for (const body of this.barrierBodies) {
+            if (body && this.matter.world) {
+                this.matter.world.remove(body);
+            }
+        }
+        this.barrierBodies = [];
+
+        this.glossaryInteractZone?.setInteractive();
+        this.setPlayerHpHudVisible(false);
+    }
+
+    private restoreControlAfterBossDefeat(): void {
+        this.clearBarrierForBossChoice();
+        this.hideReplaceGlossaryPrompt();
+
+        this.cameras.main.pan(this.player.x, this.player.y, 900, 'Quad.easeInOut');
+        this.cameras.main.zoomTo(2, 900, 'Quad.easeInOut');
+
+        this.time.delayedCall(900, () => {
+            this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
+            this.isBossDefeatedSequence = false;
+            this.isCinematic = false;
+            this.waitingForBossChoice = true;
+        });
+    }
+
     private showReplaceGlossaryPrompt(): void {
+        if (this.replaceGlossaryText?.active) return;
+
         const centerX = this.glossaryTentaclesX;
         const centerY = this.glossaryTentaclesY - 60;
 
-        this.replaceGlossaryText = this.add.text(centerX, centerY, 'Press X to replace glossary', {
+        this.replaceGlossaryText = this.add.text(centerX, centerY, 'Replace the Glossary?', {
             fontFamily: FONT_FAMILY,
-            fontSize: '20px',
+            fontSize: '8px',
             color: '#e4dacf',
             stroke: '#000000',
-            strokeThickness: 3,
+            resolution: 4,
+            strokeThickness: 1,
             align: 'center'
-        }).setOrigin(0.5).setDepth(251).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(251);
     }
 
     private hideReplaceGlossaryPrompt(): void {
@@ -910,29 +934,46 @@ export class LevelScene extends Phaser.Scene {
         }
     }
 
+    private bindGlossaryBossChoiceInput(): void {
+        if (!this.glossaryInteractZone) return;
+
+        this.glossaryInteractZone.on('pointerdown', () => {
+            if (!this.waitingForBossChoice || this.isCinematic || this.replaceGlossaryText) return;
+
+            this.showReplaceGlossaryPrompt();
+        });
+    }
+
     private completeBossDefeatedSequence(): void {
         this.isCinematic = true;
         this.waitingForBossChoice = false;
         this.hideReplaceGlossaryPrompt();
 
-        const darkVignette = createVignette(this, 99, true);
-        darkVignette.setAlpha(0);
+        const fadeToBlack = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 1)
+            .setOrigin(0)
+            .setScrollFactor(0)
+            .setDepth(99999)
+            .setAlpha(0);
 
-        fadeIn(this, darkVignette, 3000, () => {
-            PlayerData.getInstance().replaceGlossary();
-            PlayerData.getInstance().save();
-            localStorage.removeItem('glossary_boss_fight_active');
-            localStorage.removeItem('glossary_boss_pillars_defeated');
-            localStorage.removeItem('glossary_boss_current_combat_pillar');
+        this.tweens.add({
+            targets: fadeToBlack,
+            alpha: 1,
+            duration: 4500,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+                UserData.getInstance().addWin();
+                PlayerData.getInstance().replaceGlossary();
+                PlayerData.getInstance().save();
+                localStorage.removeItem('glossary_boss_fight_active');
+                localStorage.removeItem('glossary_boss_pillars_defeated');
+                localStorage.removeItem('glossary_boss_remaining_pillars');
+                localStorage.removeItem('glossary_boss_current_combat_pillar');
+                localStorage.removeItem('glossary_boss_combat_victory');
 
-            fadeOutAndDestroy(this, darkVignette, 500, () => {
-                this.scene.launch('TransitionScene', {
-                    targetScene: 'LevelScene',
-                    currentScene: 'LevelScene',
-                    targetData: { mapKey: 'hub' }
-                });
-                this.scene.launch('GameOver');
-            });
+                this.bossAttackSystem?.stopAttacks();
+                this.runeIndicatorSystem?.stopBattle();
+                this.scene.start('GameOver');
+            }
         });
     }
 
@@ -1003,6 +1044,10 @@ export class LevelScene extends Phaser.Scene {
             this.glossaryInteractZone.setInteractive();
         }
 
+        if (this.isBossDefeatedSequence) {
+            return;
+        }
+
         this.summitBossHUD?.setBattleVisible(false);
         this.setPlayerHpHudVisible(false);
         this.tentaclesAnimation = undefined;
@@ -1014,7 +1059,7 @@ export class LevelScene extends Phaser.Scene {
         if (!this.isHoldingGlossary) return;
 
         const isGlossaryKeyDown = this.glossaryKey.isDown;
-        const isInteractKeyDown = this.interactKey.isDown;
+        const isInteractKeyDown = this.interactKey.isDown || this.gamepadInteractDown;
 
         if (!isGlossaryKeyDown && !isInteractKeyDown) {
             this.cancelGlossaryHold();
@@ -1035,209 +1080,62 @@ export class LevelScene extends Phaser.Scene {
     }
 
     private createMap(mapKey: string) {
-        this.doors = [];
-        this.settlementDoors = [];
-        this.mechanicDoors = [];
-        this.bossButtons = [];
-        this.chests = [];
-        this.trades = [];
-        this.slates = [];
-        this.merchants = [];
-        this.barrierCollisionObjects = [];
-        this.barrierLayers = [];
-        this.barrierBodies = [];
+        const builtMap = createLevelMap(this, {
+            mapKey,
+            previousMap: this.previousMap,
+            portalSystem: this.portalSystem,
+            stairZones: this.stairZones,
+            overrideSpawnX: this.overrideSpawnX,
+            overrideSpawnY: this.overrideSpawnY,
+            isTeleportingFromRune: this.isTeleportingFromRune,
+            entryDirX: this.entryDirX,
+            entryDirY: this.entryDirY,
+            onEnteringChange: (value) => {
+                this.isEntering = value;
+            },
+            onBossPillarDamaged: (count) => {
+                this.onBossPillarDamaged(count);
+            }
+        });
+
+        this.player = builtMap.player;
+        this.playerShadow = builtMap.playerShadow;
+        this.doors = builtMap.doors;
+        this.settlementDoors = builtMap.settlementDoors;
+        this.mechanicDoors = builtMap.mechanicDoors;
+        this.bossButtons = builtMap.bossButtons;
+        this.chests = builtMap.chests;
+        this.trades = builtMap.trades;
+        this.slates = builtMap.slates;
+        this.merchants = builtMap.merchants;
+        this.merchantItems = builtMap.merchantItems;
+        this.barrierLayers = builtMap.barrierLayers;
+        this.barrierCollisionObjects = builtMap.barrierCollisionObjects;
+        this.barrierBodies = builtMap.barrierBodies;
         this.barrierActive = false;
-
-        const map = this.make.tilemap({key: mapKey});
-        const tilesets: Phaser.Tilemaps.Tileset[] = [];
-        map.tilesets.forEach(ts => {
-            const boundTileset = map.addTilesetImage(ts.name, ts.name + '.png');
-            if (boundTileset) tilesets.push(boundTileset);
-        });
-        map.layers.forEach((layerData, i) => {
-            const layer = map.createLayer(layerData.name, tilesets);
-            if (layer) {
-                let depthVal = i;
-                const props = layerData.properties;
-                if (props) {
-                    if (Array.isArray(props)) {
-                        const depthProp = props.find((p: any) => p && p.name === 'depth');
-                        if (depthProp && depthProp.value !== undefined) depthVal = Number(depthProp.value);
-                    } else if (typeof props === 'object') {
-                        const depthProp = (props as any)['depth'];
-                        if (depthProp !== undefined) depthVal = Number(typeof depthProp === 'object' ? depthProp.value : depthProp);
-                    }
-                }
-                if (layerData.name.toLowerCase().includes('slate')) depthVal = this.getPlayerDepth(mapKey) - 1;
-                if (layerData.name === 'Barrier' || layerData.name === 'Barrier+') {
-                    this.barrierLayers.push(layer);
-                    layer.setVisible(false);
-                }
-                if (layerData.name === 'Barrier') {
-                    layer.setDepth(depthVal + 1);
-                } else {
-                    layer.setDepth(depthVal);
-                }
-                if (mapKey === 'central-hub' && isPipeLayer(layerData.name)) fillPipeLayer(layer);
-            }
-        });
-
-        this.cameras.main.setZoom(2);
-        this.matter.world.setBounds(-2000, -2000, 4000, 4000);
-        parseCollisionObjects(this, map.objects);
-
-        const barrierCollisionLayers = map.objects.filter(layer => layer.name.toLowerCase().includes('barrier'));
-
-        for (const barrierLayer of barrierCollisionLayers) {
-            if (barrierLayer.objects) {
-                for (const obj of barrierLayer.objects) {
-                    this.barrierCollisionObjects.push({
-                        x: obj.x + (obj.width / 2),
-                        y: obj.y + (obj.height / 2),
-                        width: obj.width,
-                        height: obj.height
-                    });
-                }
-            }
-        }
-
-        const stairsLayer = map.objects.find(layer => layer.name.toLowerCase() === 'stairs');
-        if (stairsLayer) parseStairObjects(this, stairsLayer, this.stairZones);
-
-        const portalsLayer = map.objects.find(layer => layer.name.toLowerCase() === 'portals');
-        if (portalsLayer) this.portalSystem.parsePortals(portalsLayer, this.mapKey, this.previousMap);
-
-        const merchantEntranceLayer = map.objects.find(layer => layer.name === 'merchant_entrance');
-        if (merchantEntranceLayer) this.portalSystem.parseMerchantEntrances(merchantEntranceLayer);
-
-        const doorLayer = map.objects.find(layer => layer.name.toLowerCase() === 'door');
-        if (doorLayer) {
-            if (mapKey === 'mechanic-settlement' || mapKey === 'abandoned-settlement') this.mechanicDoors = createMechanicDoors(this, doorLayer, mapKey);
-            else this.doors = createDoors(this, doorLayer);
-        }
-
-        this.settlementDoors = createSettlementDoors(this, map, mapKey);
-
-        const buttonLayer = map.objects.find(layer => layer.name.toLowerCase() === 'button');
-        if (buttonLayer) this.bossButtons = createBossButtons(this, buttonLayer, mapKey);
-
-        const chestLayer = map.objects.find(layer => layer.name.toLowerCase() === 'chests');
-        if (chestLayer) this.chests = createChests(this, chestLayer, mapKey, this.getPlayerDepth(mapKey) - 1);
-
-        const tradeLayer = map.objects.find(layer => layer.name.toLowerCase() === 'trades');
-        if (tradeLayer) this.trades = createTrades(this, tradeLayer, mapKey);
-
-        const slateLayer = map.objects.find(layer => layer.name.toLowerCase() === 'slates');
-        if (slateLayer) this.slates = createSlates(this, slateLayer, mapKey);
-        else this.slates = [];
-
-        const fillersLayer = map.objects.find(layer => layer.name.toLowerCase() === 'fillers');
-        if (fillersLayer) {
-            const fillerSlates = createSlates(this, fillersLayer, mapKey);
-            const fillerIds = ['slate_ancestry', 'slate_void', 'slate_whispers'];
-            fillerSlates.forEach((slate, index) => {
-                slate.slateId = fillerIds[index % fillerIds.length];
-            });
-            this.slates.push(...fillerSlates);
-        }
-
-        const merchantLayer = map.objects.find(layer => layer.name.toLowerCase() === 'merchant');
-        if (merchantLayer) {
-            this.merchants = createMerchants(this, merchantLayer);
-            this.generateMerchantItems();
-        } else {
-            this.merchants = [];
-            this.merchantItems = [];
-        }
-
-        const glossaryLayer = map.objects.find(layer => layer.name.toLowerCase() === 'glossary');
-        if (glossaryLayer && glossaryLayer.objects && glossaryLayer.objects[0]) {
-            const glossaryObj = glossaryLayer.objects[0];
-            const glossaryWorldX = glossaryObj.x + (glossaryObj.width / 2);
-            const glossaryWorldY = glossaryObj.y + (glossaryObj.height / 2);
-            this.glossaryTentaclesX = glossaryWorldX;
-            this.glossaryTentaclesY = glossaryWorldY;
-
-            this.glossaryInteractZone = this.add.zone(glossaryWorldX, glossaryWorldY, glossaryObj.width, glossaryObj.height);
-            this.glossaryInteractZone.setInteractive();
-        } else {
-            this.glossaryInteractZone = null;
-            this.glossaryTentaclesX = 0;
-            this.glossaryTentaclesY = 0;
-        }
-
-        const spawn = map.objects.find(layer => layer.name.toLowerCase() === 'spawn')?.objects?.[0];
-        const OFFSET = 54;
-        const spawnPos = this.portalSystem.calculateSpawn(portalsLayer, merchantEntranceLayer, mapKey, this.previousMap, OFFSET);
-        let spawnX = spawnPos.x, spawnY = spawnPos.y;
-
-        if (spawn) {
-            spawnX = spawn.x + (spawn.width / 2);
-            spawnY = spawn.y + (spawn.height / 2);
-        }
-
-        this.spawnPlayer(this.overrideSpawnX ?? spawnX, this.overrideSpawnY ?? spawnY);
+        this.glossaryInteractZone = builtMap.glossaryInteractZone;
+        this.glossaryTentaclesX = builtMap.glossaryTentaclesX;
+        this.glossaryTentaclesY = builtMap.glossaryTentaclesY;
+        this.bindGlossaryBossChoiceInput();
+        this.bossAttackSystem = builtMap.bossAttackSystem;
+        this.runeIndicatorSystem = builtMap.runeIndicatorSystem;
         this.overrideSpawnX = null;
         this.overrideSpawnY = null;
-        const playerDepth = this.getPlayerDepth(mapKey);
-        this.player.setDepth(playerDepth);
-        this.playerShadow.setDepth(playerDepth);
 
-        if (mapKey === 'summit-settlement') {
-            this.bossAttackSystem = new BossAttackSystem(this, this.player);
-            if (this.barrierCollisionObjects.length > 0) {
-                const pillarsLayer = map.objects.find(layer => layer.name.toLowerCase() === 'pillars');
-                const customPillarPositions: { x: number; y: number }[] = [];
-                if (pillarsLayer && pillarsLayer.objects) {
-                    for (const obj of pillarsLayer.objects) {
-                        if (obj.x !== undefined && obj.y !== undefined && obj.width !== undefined && obj.height !== undefined) {
-                            customPillarPositions.push({
-                                x: obj.x + (obj.width / 2),
-                                y: obj.y + (obj.height / 2)
-                            });
-                        }
-                    }
-                    customPillarPositions.sort((a, b) => a.y - b.y || a.x - b.x);
-                }
-
-                this.runeIndicatorSystem = new RuneIndicatorSystem(this, this.player, this.barrierCollisionObjects, customPillarPositions);
-                this.runeIndicatorSystem.setBossAttackSystem(this.bossAttackSystem);
-                this.runeIndicatorSystem.setOnPillarDamaged((count) => {
-                    this.onBossPillarDamaged(count);
-                });
-                if (this.tentaclesAnimation) {
-                    this.runeIndicatorSystem.setTentaclesAnimation(this.tentaclesAnimation);
-                }
+        if (mapKey === 'summit-settlement' && builtMap.summitResumePillarsDefeated !== undefined) {
+            const pillarsDefeated = builtMap.summitResumePillarsDefeated;
+            this.playTentaclesAnimation(true);
+            if (pillarsDefeated >= 1) {
+                this.playTentaclesV2Animation(true);
             }
-
-            if (localStorage.getItem('glossary_boss_fight_active') === 'true') {
-                const pillarsDefeated = parseInt(localStorage.getItem('glossary_boss_pillars_defeated') || '0', 10);
-                this.playTentaclesAnimation(true);
-                if (pillarsDefeated >= 1) {
-                    this.playTentaclesV2Animation(true);
-                }
-                if (pillarsDefeated >= 3) {
-                    this.showBossEye();
-                }
-                if (pillarsDefeated >= 4) {
-                    this.onBossDefeated();
-                } else {
-                    this.activateBarrier();
-                }
+            if (pillarsDefeated >= 3) {
+                this.showBossEye();
             }
-        }
-
-        if (this.isTeleportingFromRune) this.cameras.main.fadeIn(1200, 255, 255, 255);
-        else this.cameras.main.fadeIn(800, 0, 0, 0);
-
-        if (this.entryDirX !== 0 || this.entryDirY !== 0) {
-            this.isEntering = true;
-            if (this.entryDirX < 0) this.player.setFlipX(true);
-            else if (this.entryDirX > 0) this.player.setFlipX(false);
-            const duration = this.previousMap === 'merchant' ? 200 : 400;
-            this.time.delayedCall(duration, () => {
-                this.isEntering = false;
-            });
+            if (pillarsDefeated >= 4) {
+                this.onBossDefeated();
+            } else {
+                this.activateBarrier();
+            }
         }
 
         this.updatePlayerPositionCache();
@@ -1264,29 +1162,10 @@ export class LevelScene extends Phaser.Scene {
         }
     }
 
-    private spawnPlayer(x: number, y: number) {
-        this.player = this.matter.add.sprite(x, y, 'protagonist-idle');
-        this.player.setDepth(15);
-        this.player.setRectangle(20, 6, {chamfer: {radius: 2}});
-        this.player.setOrigin(0.5, 0.67);
-        this.player.setFixedRotation();
-        this.player.setFriction(1);
-        this.player.setFrictionAir(0.05);
-        this.player.setFrictionStatic(1);
-        this.player.setBounce(0);
-        this.player.setMass(10);
-
-        this.playerShadow = this.add.image(x, y + 16, 'protagonist-shadow');
-        this.playerShadow.setOrigin(0.5, 1.06);
-        this.playerShadow.setDepth(14);
-        this.playerShadow.setAlpha(0.6);
-        this.playerShadow.setScale(0.8);
-
-        this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
-        this.player.play('idle');
-    }
-
     update(_time: number, delta: number) {
+        this.updateGamepadInput();
+        const interactDown = this.interactKey.isDown || this.gamepadInteractDown;
+        const interactJustPressed = Phaser.Input.Keyboard.JustDown(this.interactKey) || this.gamepadInteractJustPressed;
         const playerData = PlayerData.getInstance();
         if (this.levelHpHudText && !this.isBossDefeatedSequence) {
             this.levelHpHudText.setText(`${playerData.hp} / ${playerData.maxHp}`);
@@ -1304,35 +1183,27 @@ export class LevelScene extends Phaser.Scene {
 
         if (this.isBossDefeatedSequence) {
             this.player.setVelocity(0, 0);
-            if (this.player.anims.currentAnim?.key !== 'idle') {
-                this.player.play('idle');
-            }
-            if (this.playerShadow && this.player.active) {
-                this.playerShadow.setPosition(this.player.x, this.player.y + 16);
-            }
+            stopPlayerIntoIdle(this.player);
+            syncPlayerShadow(this.player, this.playerShadow);
             return;
         }
 
         if (this.waitingForBossChoice) {
-            if (this.glossaryInteractZone && this.glossaryInteractZone.getBounds().contains(this.player.x, this.player.y)) {
-                if (!this.replaceGlossaryText) {
-                    this.showReplaceGlossaryPrompt();
-                }
-                if (this.interactKey.isDown && !this.isCinematic) {
-                    this.completeBossDefeatedSequence();
+            const nearGlossary = !!this.glossaryInteractZone && this.glossaryInteractZone.getBounds().contains(this.player.x, this.player.y);
+
+            if (nearGlossary && this.glossaryInteractZone) {
+                this.interactSystem.show(this.glossaryInteractZone.x, this.glossaryInteractZone.y - 30, 0);
+
+                if (interactJustPressed) {
+                    if (this.replaceGlossaryText) {
+                        this.completeBossDefeatedSequence();
+                    } else {
+                        this.showReplaceGlossaryPrompt();
+                    }
                 }
             } else {
                 this.hideReplaceGlossaryPrompt();
             }
-
-            this.player.setVelocity(0, 0);
-            if (this.player.anims.currentAnim?.key !== 'idle') {
-                this.player.play('idle');
-            }
-            if (this.playerShadow && this.player.active) {
-                this.playerShadow.setPosition(this.player.x, this.player.y + 16);
-            }
-            return;
         }
 
         this.updatePlayerPositionCache();
@@ -1349,7 +1220,7 @@ export class LevelScene extends Phaser.Scene {
         if (this.isNearGlossary && this.isGlossaryInteractable && !this.barrierActive && !this.isHoldingGlossary && !this.isBossDefeatedSequence && !this.waitingForBossChoice) {
             this.interactSystem.show(this.glossaryInteractZone!.x, this.glossaryInteractZone!.y - 30, 0);
 
-            if ((this.interactKey.isDown || this.glossaryKey.isDown) && !this.isHoldingGlossary) {
+            if ((interactDown || this.glossaryKey.isDown) && !this.isHoldingGlossary) {
                 this.startGlossaryHold();
             }
         }
@@ -1362,154 +1233,74 @@ export class LevelScene extends Phaser.Scene {
         }
 
         if (this.bossAttackSystem) this.bossAttackSystem.update();
-        if (this.runeIndicatorSystem) this.runeIndicatorSystem.update(delta, this.interactKey.isDown);
+        if (this.runeIndicatorSystem) this.runeIndicatorSystem.update(delta, interactDown);
         this.dashIndicatorHUD?.update(this.dashSystem);
         if (this.damageOverlay) this.damageOverlay.update(_time);
 
         if (this.pushDurationTimer > 0) {
             this.pushDurationTimer -= delta;
             this.player.setVelocity(this.pushVelocity.x, this.pushVelocity.y);
-            if (this.playerShadow && this.player.active) {
-                this.playerShadow.setPosition(this.player.x, this.player.y + 16);
-                this.playerShadow.setFlipX(this.player.flipX);
-            }
+            syncPlayerShadow(this.player, this.playerShadow);
             return;
         }
 
         if (this.dashSystem.updateTimers(delta, this.player, this.playerShadow)) return;
 
-        handleDoorInteraction(this, this.doors, this.player, this.interactKey.isDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => {
+        handleDoorInteraction(this, this.doors, this.player, interactDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => {
             this.isCinematic = val;
         });
-        handleSettlementDoorInteraction(this, this.settlementDoors, this.player, this.interactKey.isDown, this.wasInteractPressed);
-        handleMechanicDoorInteraction(this, this.mechanicDoors, this.player, this.interactKey.isDown, this.wasInteractPressed);
-        handleBossButtonInteraction(this, this.bossButtons, this.player, this.interactKey.isDown, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => {
+        handleSettlementDoorInteraction(this, this.settlementDoors, this.player, interactDown, this.wasInteractPressed);
+        handleMechanicDoorInteraction(this, this.mechanicDoors, this.player, interactDown, this.wasInteractPressed);
+        handleBossButtonInteraction(this, this.bossButtons, this.player, interactDown, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => {
             this.isCinematic = val;
         }, this.mapKey, delta);
-        handleChestInteraction(this, this.chests, this.player, this.interactKey.isDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering);
-        if (this.mapKey === 'summit-trade') handleTradeInteraction(this, this.trades, this.player, this.interactKey.isDown, this.wasInteractPressed, (val) => {
+        handleChestInteraction(this, this.chests, this.player, interactDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering);
+        if (this.mapKey === 'summit-trade') handleTradeInteraction(this, this.trades, this.player, interactDown, this.wasInteractPressed, (val) => {
             this.isCinematic = val;
         });
-        handleSlateInteraction(this, this.slates, this.player, this.interactKey.isDown, this.wasInteractPressed, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, this.mapKey);
-        if (this.raidhoRuneSystem) this.raidhoRuneSystem.update(this.player, this.interactKey.isDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => {
+        handleSlateInteraction(this, this.slates, this.player, interactDown, this.wasInteractPressed, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, this.mapKey);
+        if (this.raidhoRuneSystem) this.raidhoRuneSystem.update(this.player, interactDown, delta, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering, (val) => {
             this.isCinematic = val;
         });
-        if (this.mapKey === 'merchant') handleMerchantInteraction(this, this.merchants, this.player, this.interactKey.isDown, this.wasInteractPressed, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering);
+        if (this.mapKey === 'merchant') handleMerchantInteraction(this, this.merchants, this.player, interactDown, this.wasInteractPressed, this.isCinematic, this.portalSystem.getIsTeleporting(), this.isEntering);
 
-        this.currentSlowFactor = Phaser.Math.Linear(this.currentSlowFactor, this.targetSlowFactor, 0.05);
-        const runSpeed = 3 * this.currentSlowFactor;
-        const body = this.player.body as MatterJS.BodyType;
-
-        let moveX = 0, moveY = 0, moving = false;
-
-        if (this.portalSystem.getIsTeleporting()) {
-            const dir = this.portalSystem.getTeleportDirection();
-            moveX = dir.x;
-            moveY = dir.y;
-            if (moveX < 0) this.player.setFlipX(true);
-            else if (moveX > 0) this.player.setFlipX(false);
-            const modifier = this.portalSystem.getTeleportSpeedModifier();
-            const currentSpeed = runSpeed * modifier;
-            const isTeleportStopped = modifier === 0;
-            if (isTeleportStopped) {
-                this.player.setVelocity(body.velocity.x * 0.85, body.velocity.y * 0.85);
-                this.player.anims.timeScale = 1;
-                if (this.player.anims.currentAnim?.key === 'run-start' || this.player.anims.currentAnim?.key === 'run-loop') this.player.play('stop').chain('idle');
-                else if (this.player.anims.currentAnim?.key !== 'stop' && this.player.anims.currentAnim?.key !== 'idle') this.player.play('idle');
-            } else {
-                const inputVelocity = new Phaser.Math.Vector2(moveX, moveY).normalize().scale(currentSpeed);
-                this.player.setVelocity(inputVelocity.x, inputVelocity.y);
-                this.player.anims.timeScale = this.currentSlowFactor * modifier;
-                if (this.player.anims.currentAnim?.key !== 'run-start' && this.player.anims.currentAnim?.key !== 'run-loop') this.player.play('run-start').chain('run-loop');
-            }
-        } else if (this.isEntering) {
-            const inputVelocity = new Phaser.Math.Vector2(this.entryDirX, this.entryDirY).normalize().scale(runSpeed);
-            this.player.setVelocity(inputVelocity.x, inputVelocity.y);
-            this.player.anims.timeScale = this.currentSlowFactor;
-            if (this.player.anims.currentAnim?.key !== 'run-start' && this.player.anims.currentAnim?.key !== 'run-loop') this.player.play('run-start').chain('run-loop');
-        } else if (this.isCinematic) {
-        } else if (this.isHoldingGlossary) {
-            this.player.setVelocity(body.velocity.x * 0.85, body.velocity.y * 0.85);
-            this.player.anims.timeScale = 1;
-            if (this.player.anims.currentAnim?.key === 'run-start' || this.player.anims.currentAnim?.key === 'run-loop') this.player.play('stop').chain('idle');
-            else if (this.player.anims.currentAnim?.key !== 'stop' && this.player.anims.currentAnim?.key !== 'idle') this.player.play('idle');
-        } else {
-            const left = this.cursors.left.isDown || this.keys.A.isDown;
-            const right = this.cursors.right.isDown || this.keys.D.isDown;
-            const up = this.cursors.up.isDown || this.keys.W.isDown;
-            const down = this.cursors.down.isDown || this.keys.S.isDown;
-
-            moveX = (right ? 1 : 0) - (left ? 1 : 0);
-            moveY = (down ? 1 : 0) - (up ? 1 : 0);
-            moving = (moveX !== 0 || moveY !== 0);
-
-            if (moving) {
-                if (moveX < 0) this.player.setFlipX(true);
-                else if (moveX > 0) this.player.setFlipX(false);
-                const inputVelocity = new Phaser.Math.Vector2(moveX, moveY).normalize().scale(runSpeed);
-                this.player.setVelocity(inputVelocity.x, inputVelocity.y);
-                this.player.anims.timeScale = this.currentSlowFactor;
-                if (this.player.anims.currentAnim?.key !== 'run-start' && this.player.anims.currentAnim?.key !== 'run-loop') this.player.play('run-start').chain('run-loop');
-            } else {
-                this.player.setVelocity(body.velocity.x * 0.85, body.velocity.y * 0.85);
-                this.player.anims.timeScale = 1;
-                if (this.player.anims.currentAnim?.key === 'run-start' || this.player.anims.currentAnim?.key === 'run-loop') this.player.play('stop').chain('idle');
-                else if (this.player.anims.currentAnim?.key !== 'stop' && this.player.anims.currentAnim?.key !== 'idle') this.player.play('idle');
-            }
-        }
-
-        const dashJustPressed = Phaser.Input.Keyboard.JustDown(this.dashKey);
-        const canDash = !this.portalSystem.getIsTeleporting() && !this.isEntering && !this.isCinematic && !this.isHoldingGlossary;
-        this.dashSystem.tryTrigger(dashJustPressed, moveX, moveY, this.player, canDash);
-
-        if (this.playerShadow && this.player.active) {
-            this.playerShadow.setPosition(this.player.x, this.player.y + 16);
-            this.playerShadow.setFlipX(this.player.flipX);
-        }
+        this.currentSlowFactor = updateLevelPlayerMovement({
+            player: this.player,
+            playerShadow: this.playerShadow,
+            cursors: this.cursors,
+            keys: this.keys,
+            dashKey: this.dashKey,
+            dashSystem: this.dashSystem,
+            portalSystem: this.portalSystem,
+            entryDirX: this.entryDirX,
+            entryDirY: this.entryDirY,
+            currentSlowFactor: this.currentSlowFactor,
+            targetSlowFactor: this.targetSlowFactor,
+            gamepadMoveX: this.gamepadMoveX,
+            gamepadMoveY: this.gamepadMoveY,
+            gamepadDashJustPressed: this.gamepadDashJustPressed,
+            isEntering: this.isEntering,
+            isCinematic: this.isCinematic,
+            isHoldingGlossary: this.isHoldingGlossary
+        });
     }
 
-    private getPlayerDepth(mapKey: string): number {
-        switch (mapKey) {
-            case 'boss-floor-abandoned':
-                return 9;
-            case 'boss-floor-desert':
-                return 12;
-            case 'boss-floor-mechanic':
-                return 10;
-            case 'summit-settlement':
-                return 9;
-            case 'abandoned-settlement':
-                return 13;
-            case 'desert-settlement':
-                return 14;
-            case 'mechanic-settlement':
-                return 13;
-            case 'summit-trade':
-                return 4;
-            case 'merchant':
-                return 9;
-            default:
-                return 14;
-        }
-    }
+    private updateGamepadInput(): void {
+        const gamepad = navigator.getGamepads?.().find(pad => pad?.connected);
+        const axisX = gamepad?.axes[0] ?? 0;
+        const axisY = gamepad?.axes[1] ?? 0;
+        const dpadX = (gamepad?.buttons[15]?.pressed ? 1 : 0) - (gamepad?.buttons[14]?.pressed ? 1 : 0);
+        const dpadY = (gamepad?.buttons[13]?.pressed ? 1 : 0) - (gamepad?.buttons[12]?.pressed ? 1 : 0);
+        const interactDown = !!gamepad?.buttons[0]?.pressed;
+        const dashDown = !!(gamepad?.buttons[1]?.pressed || gamepad?.buttons[5]?.pressed);
 
-    private generateMerchantItems(): void {
-        const allItems = ItemData.getAllItems();
-        const pd = PlayerData.getInstance();
-        const undiscovered = allItems.filter(item => !ItemData.getInstance().isDiscovered(item.id) && pd.getItemQuantity(item.id.toString()) === 0);
-        const pool = [...undiscovered];
-        if (pool.length < 3) {
-            const others = allItems.filter(item => !pool.includes(item));
-            pool.push(...others);
-        }
-        const selected: ItemDefinition[] = [];
-        const tempPool = [...pool];
-        while (selected.length < 3 && tempPool.length > 0) {
-            const randIdx = Math.floor(Math.random() * tempPool.length);
-            selected.push(tempPool.splice(randIdx, 1)[0]);
-        }
-        while (selected.length < 3) selected.push(allItems[0]);
-        this.merchantItems = selected;
+        this.gamepadMoveX = Math.abs(axisX) > 0.2 ? axisX : dpadX;
+        this.gamepadMoveY = Math.abs(axisY) > 0.2 ? axisY : dpadY;
+        this.gamepadInteractDown = interactDown;
+        this.gamepadInteractJustPressed = interactDown && !this.previousGamepadInteractDown;
+        this.gamepadDashJustPressed = dashDown && !this.previousGamepadDashDown;
+        this.previousGamepadInteractDown = interactDown;
+        this.previousGamepadDashDown = dashDown;
     }
 
     private createPlayerHpLevelHUD(): void {
@@ -1547,6 +1338,7 @@ export class LevelScene extends Phaser.Scene {
     private triggerPlayerDeath(): void {
         this.isDead = true;
         this.isCinematic = true;
+        UserData.getInstance().addDeath();
         this.player.setVelocity(0, 0);
         this.player.setFixedRotation();
 
@@ -1598,6 +1390,39 @@ export class LevelScene extends Phaser.Scene {
                     });
                 });
             });
+        });
+    }
+
+    private onNetworkData(payload: any): void {
+        const data = payload.data;
+        if (!data || data.type !== 'MAP_CHANGE') return;
+
+        const nm = NetworkManager.getInstance();
+        if (data.originPeerId === nm.myPeerId) return;
+
+        if (nm.role === 'host') {
+            nm.broadcast(data);
+        }
+
+        const playerData = PlayerData.getInstance();
+        if (typeof data.currentFloor === 'number') {
+            playerData.currentFloor = data.currentFloor;
+        }
+        if (typeof data.hubDoorOpened === 'boolean') {
+            playerData.hubDoorOpened = data.hubDoorOpened;
+        }
+        playerData.save();
+
+        this.scene.launch('TransitionScene', {
+            targetScene: 'LevelScene',
+            currentScene: 'LevelScene',
+            targetData: {
+                mapKey: data.targetMap,
+                previousMap: data.previousMap,
+                entryDirX: data.entryDirX ?? 0,
+                entryDirY: data.entryDirY ?? 0,
+                teleportFromRune: !!data.teleportFromRune
+            }
         });
     }
 

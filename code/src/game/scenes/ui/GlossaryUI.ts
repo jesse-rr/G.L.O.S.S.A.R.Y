@@ -61,12 +61,6 @@ export class GlossaryUI extends Scene implements ScrambleContext {
         this.load.spritesheet('glossary', 'assets/Models/exports/Objects/Glossary.png', {
             frameWidth: 64, frameHeight: 64
         });
-        this.load.spritesheet('cultist', 'assets/Models/exports/characters/Cultist-Sheet.png', { frameWidth: 57, frameHeight: 67 });
-        this.load.spritesheet('golem', 'assets/Models/exports/characters/Golem-Sheet.png', { frameWidth: 57, frameHeight: 56 });
-        this.load.spritesheet('rationalist', 'assets/Models/exports/characters/Rationalist-Sheet.png', { frameWidth: 59, frameHeight: 73 });
-        this.load.spritesheet('scavenger', 'assets/Models/exports/characters/Scavenger-Sheet.png', { frameWidth: 59, frameHeight: 61 });
-        this.load.spritesheet('slime', 'assets/Models/exports/characters/Slime-Sheet.png', { frameWidth: 32, frameHeight: 27 });
-        this.load.spritesheet('wisp', 'assets/Models/exports/characters/Wisp-Sheet.png', { frameWidth: 27, frameHeight: 51 });
         this.load.spritesheet('pillar-1', 'assets/Models/exports/characters/Pillar-1.png', { frameWidth: 48, frameHeight: 80 });
         this.load.spritesheet('pillar-2', 'assets/Models/exports/characters/Pillar-2.png', { frameWidth: 48, frameHeight: 80 });
         this.load.spritesheet('pillar-3', 'assets/Models/exports/characters/Pillar-3.png', { frameWidth: 48, frameHeight: 80 });

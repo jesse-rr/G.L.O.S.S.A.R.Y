@@ -1,3 +1,6 @@
+import * as Phaser from 'phaser';
+import { UserData } from '../data/UserData';
+
 export class AudioManager {
     private scene: Phaser.Scene;
     private sounds: Map<string, Phaser.Sound.BaseSound> = new Map();
@@ -7,6 +10,12 @@ export class AudioManager {
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
+        AudioManager.applyGlobalVolume(scene);
+    }
+
+    static applyGlobalVolume(scene: Phaser.Scene): void {
+        const volume = Phaser.Math.Clamp(UserData.getInstance().settings.volume, 0, 100) / 100;
+        (scene.sound as any).volume = volume;
     }
 
     loadAudio() {
@@ -18,6 +27,7 @@ export class AudioManager {
 
     play(soundKey: string, config: { volume?: number; pitchVariation?: number; throttle?: boolean; rate?: number; seek?: number; loop?: boolean; stopDelay?: number } = {}) {
         const { volume = 0.12, pitchVariation = 0.08, throttle = true, rate = 1, seek = 0, loop = false, stopDelay = null } = config;
+        AudioManager.applyGlobalVolume(this.scene);
 
         if (throttle) {
             const now = Date.now();
@@ -107,4 +117,5 @@ export class AudioManager {
     setThrottleDelay(ms: number) {
         this.throttleMs = ms;
     }
+
 }

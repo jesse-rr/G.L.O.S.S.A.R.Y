@@ -90,6 +90,8 @@ export const HUBS: LocationDefinition[] = [
     }
 ];
 
+const LOCATION_IDS = new Set([...SETTLEMENTS, ...BOSSES, ...HUBS].map(location => location.id));
+
 export class LocationData {
     private static instance: LocationData;
     private discoveredLocations: Set<string> = new Set();
@@ -111,6 +113,7 @@ export class LocationData {
     }
 
     public discoverLocation(id: string): void {
+        if (!LOCATION_IDS.has(id)) return;
         if (this.discoveredLocations.has(id)) return;
         this.discoveredLocations.add(id);
         this.save();
@@ -121,6 +124,7 @@ export class LocationData {
     }
 
     public markViewed(id: string): void {
+        if (!LOCATION_IDS.has(id)) return;
         if (this.viewedLocations.has(id)) return;
         this.viewedLocations.add(id);
         this.save();
@@ -140,7 +144,7 @@ export class LocationData {
         if (discoveredData) {
             try {
                 const arr = JSON.parse(discoveredData) as string[];
-                this.discoveredLocations = new Set(arr);
+                this.discoveredLocations = new Set(arr.filter(id => typeof id === 'string' && LOCATION_IDS.has(id)));
             } catch {
                 this.discoveredLocations = new Set();
             }
@@ -150,7 +154,7 @@ export class LocationData {
         if (viewedData) {
             try {
                 const arr = JSON.parse(viewedData) as string[];
-                this.viewedLocations = new Set(arr);
+                this.viewedLocations = new Set(arr.filter(id => typeof id === 'string' && LOCATION_IDS.has(id)));
             } catch {
                 this.viewedLocations = new Set();
             }

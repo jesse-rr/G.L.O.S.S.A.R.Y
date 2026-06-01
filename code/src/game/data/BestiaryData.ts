@@ -195,6 +195,8 @@ Effect: Reflects 50% of received damage back to the attacker.`,
     }
 ];
 
+const BESTIARY_IDS = new Set(BESTIARY.map(def => def.id));
+
 export class BestiaryData {
     private static instance: BestiaryData;
     private discoveredEntities: Set<string> = new Set();
@@ -216,6 +218,7 @@ export class BestiaryData {
     }
 
     public discoverEntity(id: string): void {
+        if (!BESTIARY_IDS.has(id)) return;
         if (this.discoveredEntities.has(id)) return;
         this.discoveredEntities.add(id);
         this.save();
@@ -226,6 +229,7 @@ export class BestiaryData {
     }
 
     public markViewed(id: string): void {
+        if (!BESTIARY_IDS.has(id)) return;
         if (this.viewedEntities.has(id)) return;
         this.viewedEntities.add(id);
         this.save();
@@ -249,7 +253,7 @@ export class BestiaryData {
         if (discoveredData) {
             try {
                 const arr = JSON.parse(discoveredData) as string[];
-                this.discoveredEntities = new Set(arr);
+                this.discoveredEntities = new Set(arr.filter(id => typeof id === 'string' && BESTIARY_IDS.has(id)));
             } catch (e) {
                 this.discoveredEntities = new Set();
             }
@@ -259,7 +263,7 @@ export class BestiaryData {
         if (viewedData) {
             try {
                 const arr = JSON.parse(viewedData) as string[];
-                this.viewedEntities = new Set(arr);
+                this.viewedEntities = new Set(arr.filter(id => typeof id === 'string' && BESTIARY_IDS.has(id)));
             } catch (e) {
                 this.viewedEntities = new Set();
             }

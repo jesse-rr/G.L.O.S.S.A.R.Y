@@ -32,6 +32,8 @@ export class RunePickerSystem {
     private hoveredRuneLetter: string | null = null;
     private isShiftDown: boolean = false;
     private lastPointer: Phaser.Input.Pointer | null = null;
+    private isResolvingCombo = false;
+    private isPickerCollapsed = false;
 
     constructor(
         scene: Phaser.Scene,
@@ -163,6 +165,7 @@ export class RunePickerSystem {
             itemContainer.setData('restY', restY);
 
             cardBg.on('pointerover', () => {
+                if (this.isPickerInputLocked()) return;
                 this.hoveredRuneLetter = runeDef.letter;
                 this.updateTooltipDisplay();
                 restY = itemContainer.getData('restY') as number;
@@ -175,6 +178,7 @@ export class RunePickerSystem {
             });
 
             cardBg.on('pointerout', () => {
+                if (this.isPickerInputLocked()) return;
                 this.hoveredRuneLetter = null;
                 this.updateTooltipDisplay();
                 restY = itemContainer.getData('restY') as number;
@@ -187,6 +191,7 @@ export class RunePickerSystem {
             });
 
             cardBg.on('pointerdown', () => {
+                if (this.isPickerInputLocked()) return;
                 this.hoveredRuneLetter = null;
                 this.updateTooltipDisplay();
                 this.addRuneToChain(runeDef.letter);
@@ -236,6 +241,7 @@ export class RunePickerSystem {
     }
 
     private addRuneToChain(letter: string): void {
+        if (this.isPickerInputLocked()) return;
         if (this.selectedChain.length >= MAX_CHAIN_RUNES) return;
         if (this.selectedChain.includes(letter)) return;
 
@@ -252,6 +258,7 @@ export class RunePickerSystem {
     }
 
     private removeRuneFromChain(index: number): void {
+        if (this.isPickerInputLocked()) return;
         const letter = this.selectedChain[index];
         this.selectedChain.splice(index, 1);
 
@@ -377,12 +384,14 @@ export class RunePickerSystem {
             this.chainCards.push(card);
 
             bg.on('pointerdown', () => {
+                if (this.isPickerInputLocked()) return;
                 this.hoveredRuneLetter = null;
                 this.updateTooltipDisplay();
                 this.removeRuneFromChain(slotIndex);
             });
 
             bg.on('pointerover', () => {
+                if (this.isPickerInputLocked()) return;
                 this.hoveredRuneLetter = letter;
                 this.updateTooltipDisplay();
                 bg.setTint(0xdddddd);
@@ -391,6 +400,7 @@ export class RunePickerSystem {
             });
 
             bg.on('pointerout', () => {
+                if (this.isPickerInputLocked()) return;
                 this.hoveredRuneLetter = null;
                 this.updateTooltipDisplay();
                 bg.clearTint();
@@ -492,14 +502,23 @@ export class RunePickerSystem {
             this.chainCards.push(comboContainer);
 
             comboLabel.on('pointerover', () => {
+                if (this.isPickerInputLocked()) return;
                 comboLabel.setTint(0xdddddd);
             });
 
             comboLabel.on('pointerout', () => {
+                if (this.isPickerInputLocked()) return;
                 comboLabel.clearTint();
             });
 
             comboLabel.on('pointerdown', () => {
+                if (this.isPickerInputLocked()) return;
+                const confirmedChain = [...this.selectedChain];
+                this.beginComboResolution(confirmedChain);
+                if (this.onComboConfirmed) {
+                    this.onComboConfirmed(confirmedChain);
+                }
+
                 comboLabel.disableInteractive();
 
                 this.scene.tweens.add({
@@ -527,17 +546,8 @@ export class RunePickerSystem {
                                     duration: 300,
                                     ease: 'Quad.easeIn',
                                     onComplete: () => {
-                                        const confirmedChain = [...this.selectedChain];
-                                        for (const letter of this.selectedChain) {
-                                            const pickerCard = this.pickerItems.get(letter);
-                                            if (pickerCard) pickerCard.setVisible(true);
-                                        }
                                         this.selectedChain = [];
                                         this.rebuildChainDisplay(false);
-                                        this.repositionPicker();
-                                        if (this.onComboConfirmed) {
-                                            this.onComboConfirmed(confirmedChain);
-                                        }
                                     }
                                 });
                             }
@@ -549,6 +559,7 @@ export class RunePickerSystem {
     }
 
     public clearChain(): void {
+        if (this.isPickerInputLocked()) return;
         if (this.selectedChain.length === 0) return;
 
         for (const letter of this.selectedChain) {
@@ -565,10 +576,48 @@ export class RunePickerSystem {
     }
 
     public refreshPreview(): void {
+        if (this.isPickerInputLocked()) return;
         this.rebuildChainDisplay(false);
     }
 
+    public restoreForPlayerTurn(): void {
+        if (!this.runePickerContainer) return;
+
+        this.isResolvingCombo = false;
+        this.isPickerCollapsed = false;
+        this.hoveredRuneLetter = null;
+        this.updateTooltipDisplay();
+        this.clearComboGlows();
+        this.selectedChain = [];
+        this.rebuildChainDisplay(false);
+
+        const { x, y } = this.getPickerCollapsePoint();
+        const items = Array.from(this.pickerItems.values());
+        items.forEach((item) => {
+            this.scene.tweens.killTweensOf(item);
+            item.setVisible(true);
+            item.setAlpha(0);
+            item.setScale(0.55);
+            item.setPosition(x, y);
+        });
+
+        this.repositionPicker();
+
+        items.forEach((item, index) => {
+            this.scene.tweens.add({
+                targets: item,
+                alpha: 1,
+                scale: 1,
+                duration: 360,
+                delay: index * 18,
+                ease: 'Back.easeOut'
+            });
+        });
+    }
+
     reset(): void {
+        this.isResolvingCombo = false;
+        this.isPickerCollapsed = false;
         this.selectedChain = [];
         this.chainCards = [];
         this.chainLinks = [];
@@ -578,6 +627,8 @@ export class RunePickerSystem {
     }
 
     private getComboHintLetters(): Set<string> {
+        if (this.isPickerInputLocked()) return new Set();
+
         const chain = this.selectedChain;
         if (chain.length === 0 || chain.length >= MAX_CHAIN_RUNES) return new Set();
 
@@ -641,5 +692,58 @@ export class RunePickerSystem {
 
             this.comboGlows.set(letter, glow);
         });
+    }
+
+    private beginComboResolution(confirmedChain: string[]): void {
+        this.isResolvingCombo = true;
+        this.isPickerCollapsed = true;
+        this.hoveredRuneLetter = null;
+        this.updateTooltipDisplay();
+        this.clearComboGlows();
+        this.animateUnselectedPickerCollapse(confirmedChain);
+    }
+
+    private animateUnselectedPickerCollapse(confirmedChain: string[]): void {
+        const selected = new Set(confirmedChain.map(letter => letter.toUpperCase()));
+        const { x, y } = this.getPickerCollapsePoint();
+        let index = 0;
+
+        this.pickerItems.forEach((item, letter) => {
+            this.scene.tweens.killTweensOf(item);
+
+            if (selected.has(letter.toUpperCase())) {
+                item.setVisible(false);
+                return;
+            }
+
+            if (!item.visible) return;
+
+            item.setAlpha(1);
+            this.scene.tweens.add({
+                targets: item,
+                x,
+                y,
+                alpha: 0,
+                scale: 0.45,
+                duration: 360,
+                delay: index * 18,
+                ease: 'Quad.easeIn',
+                onComplete: () => {
+                    item.setVisible(false);
+                }
+            });
+            index++;
+        });
+    }
+
+    private getPickerCollapsePoint(): { x: number; y: number } {
+        return {
+            x: this.scene.scale.width / 2,
+            y: this.scene.scale.height - 90
+        };
+    }
+
+    private isPickerInputLocked(): boolean {
+        return this.isResolvingCombo || this.isPickerCollapsed;
     }
 }

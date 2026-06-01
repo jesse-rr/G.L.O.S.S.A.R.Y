@@ -194,7 +194,7 @@ export class GlossarySlatesPage {
         const RUNE_NAMES = new Set([
             'Aether', 'Basalt', 'Cipher', 'Dusk', 'Echo', 'Fyre', 'Glyph', 'Hallow',
             'Ignis', 'Jinx', 'Kael', 'Lux', 'Morth', 'Nyx', 'Orin', 'Prism', 'Quell',
-            'Rime', 'Sigil', 'Thorn', 'Umbra', 'Vox', 'Wyrd', 'Xael', 'Ymir', 'Zeph'
+            'Rime', 'Sigil', 'Thorn', 'Umbra', 'Vox', 'Wyrd', 'Xael', 'Ymir'
         ]);
 
         const tempNormal = this.scene.add.text(0, 0, '', {

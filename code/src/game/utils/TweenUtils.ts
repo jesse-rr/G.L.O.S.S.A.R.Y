@@ -36,15 +36,3 @@ export function fadeOutAndDestroy(scene: Phaser.Scene, targets: any, duration: n
         }
     });
 }
-
-export function pulse(scene: Phaser.Scene, targets: any, scaleMult: number = 1.1, duration: number = 500) {
-    const originalScale = Array.isArray(targets) ? targets[0].scale : targets.scale;
-    return scene.tweens.add({
-        targets,
-        scale: originalScale * scaleMult,
-        duration,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-    });
-}

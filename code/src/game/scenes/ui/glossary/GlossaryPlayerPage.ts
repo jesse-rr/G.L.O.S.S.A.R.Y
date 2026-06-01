@@ -38,7 +38,7 @@ export class GlossaryPlayerPage {
         const itemData = ItemData.getInstance();
         const locationData = LocationData.getInstance();
 
-        const totalRunes = 26;
+        const totalRunes = RuneData.getAllDefinitions().length;
         const discoveredRunes = runeData.getDiscoveredRunes().length;
 
         const totalBeasts = BESTIARY.length;

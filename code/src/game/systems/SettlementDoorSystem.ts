@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { InteractSystem } from './InteractSystem';
-import { MatterScene, DOOR_INTERACT_DISTANCE } from '../types';
+import { MatterScene, DOOR_INTERACT_DISTANCE } from '../constants';
 
 export interface SettlementDoorTile {
     layer: Phaser.Tilemaps.TilemapLayer;

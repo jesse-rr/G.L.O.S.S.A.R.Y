@@ -1,5 +1,9 @@
 import * as Phaser from 'phaser';
-import { EventBus } from '../../EventBus';
+import { EventBus, GameEvents } from '../../EventBus';
+import { ItemData } from '../../data/ItemData';
+import { PlayerData } from '../../data/PlayerData';
+import { UserData } from '../../data/UserData';
+import { NetworkManager } from '../../NetworkManager';
 import { FONT_FAMILY } from '../../constants';
 import { fadeIn, fadeOutAndDestroy } from '../../utils/TweenUtils';
 
@@ -15,26 +19,58 @@ export class NotificationOverlay extends Phaser.Scene {
     }
 
     create() {
-        EventBus.on('show-notification', this.handleShowNotification, this);
-        EventBus.on('network-data-received', this.onNetworkData, this);
+        EventBus.on(GameEvents.SHOW_NOTIFICATION, this.handleShowNotification, this);
+        EventBus.on(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
+        this.input.once('pointerdown', this.requestBrowserNotifications, this);
+        this.input.keyboard?.once('keydown', this.requestBrowserNotifications, this);
 
         this.events.on('shutdown', () => {
-            EventBus.off('show-notification', this.handleShowNotification, this);
-            EventBus.off('network-data-received', this.onNetworkData, this);
+            EventBus.off(GameEvents.SHOW_NOTIFICATION, this.handleShowNotification, this);
+            EventBus.off(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
         });
     }
 
     private onNetworkData(payload: any) {
         const data = payload.data;
         if (data && data.type === 'ITEM_FOUND') {
+            if (data.originPeerId === NetworkManager.getInstance().myPeerId) return;
+            this.receiveSharedItem(data);
             this.handleShowNotification(`Ally found: ${data.itemName}`);
         }
     }
 
+    private receiveSharedItem(data: any): void {
+        const nm = NetworkManager.getInstance();
+        if (nm.role === 'host' && data.originPeerId !== nm.myPeerId) {
+            nm.broadcast(data);
+        }
+        if (typeof data.itemId !== 'number') return;
+
+        const item = ItemData.getItem(data.itemId);
+        if (!item) return;
+
+        PlayerData.getInstance().addItem(item.id.toString());
+        ItemData.getInstance().discoverItem(item.id);
+        UserData.getInstance().discoverItem(item.name);
+    }
+
     private handleShowNotification(text: string) {
+        this.showBrowserNotification(text);
         this.messageQueue.push(text);
         if (!this.isShowingNotification) {
             this.showNextNotification();
+        }
+    }
+
+    private requestBrowserNotifications(): void {
+        if ('Notification' in window && Notification.permission === 'default') {
+            void Notification.requestPermission();
+        }
+    }
+
+    private showBrowserNotification(text: string): void {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('G.L.O.S.S.A.R.Y', { body: text });
         }
     }
 

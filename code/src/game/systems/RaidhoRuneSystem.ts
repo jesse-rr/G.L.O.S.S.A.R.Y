@@ -12,6 +12,7 @@ import {
     MAX_FLOORS
 } from '../constants';
 import { PlayerData } from '../data/PlayerData';
+import { NetworkManager } from '../NetworkManager';
 import { InteractSystem } from './InteractSystem';
 import { getTotalCompletedCombats } from './PipeSystem';
 
@@ -258,14 +259,33 @@ export class RaidhoRuneSystem {
             localStorage.removeItem('glossary_completed_combats');
             playerData.hubDoorOpened = false;
             playerData.save();
+            this.broadcastMapChange('summit-settlement', playerData);
             this.scene.scene.restart({ mapKey: 'summit-settlement', teleportFromRune: true });
         } else {
             playerData.currentFloor = nextFloor > MAX_FLOORS ? 1 : nextFloor;
             localStorage.removeItem('glossary_completed_combats');
             playerData.hubDoorOpened = false;
             playerData.save();
+            this.broadcastMapChange('hub', playerData);
             this.scene.scene.restart({ mapKey: 'hub', teleportFromRune: true });
         }
+    }
+
+    private broadcastMapChange(targetMap: string, playerData: PlayerData): void {
+        const nm = NetworkManager.getInstance();
+        if (nm.role === 'offline') return;
+
+        nm.broadcast({
+            type: 'MAP_CHANGE',
+            targetMap,
+            previousMap: 'hub',
+            entryDirX: 0,
+            entryDirY: 0,
+            teleportFromRune: true,
+            currentFloor: playerData.currentFloor,
+            hubDoorOpened: playerData.hubDoorOpened,
+            originPeerId: nm.myPeerId
+        });
     }
 
     destroy(): void {
@@ -285,4 +305,3 @@ export class RaidhoRuneSystem {
         this.scene.events.off('destroy', this.destroy, this);
     }
 }
-

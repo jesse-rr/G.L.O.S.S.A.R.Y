@@ -1,17 +1,23 @@
 import * as Phaser from 'phaser';
 import { PlayerData } from '../../data/PlayerData';
-import { FONT_FAMILY, COVENANT_COLORS, COVENANT_TINTS, RUNE_FONT, InputKeys } from '../../constants';
+import { FONT_FAMILY, COVENANT_COLORS, COVENANT_TINTS } from '../../constants';
 import { createVignette } from '../../utils/Vignette';
-import { CombatSystem, CombatPlayer, CombatEnemy } from '../../combat/CombatSystem';
+import { CombatSystem } from '../../combat/CombatSystem';
 import { CombatHUD } from '../../combat/CombatHUD';
 import { StatusEffectUI } from '../../combat/StatusEffectUI';
 import { RunePickerSystem } from '../../systems/RunePickerSystem';
 import { CombatInventoryUI } from '../../combat/CombatInventoryUI';
 import { getSelectedItems } from '../ui/glossary/GlossaryItemsPage';
 import { PlayerPanelSystem } from '../../systems/PlayerPanelSystem';
-import { BESTIARY, BestiaryData } from '../../data/BestiaryData';
+import { BESTIARY } from '../../data/BestiaryData';
 import { RuneData } from '../../data/RuneData';
 import { EnemyAnimator } from '../../combat/EnemyAnimator';
+import { preloadCombatSceneAssets, ensureCombatSceneAnimations } from '../../combat/CombatSceneAssets';
+import { createCombatEncounter } from '../../combat/CombatEncounter';
+import { CombatTurnController } from '../../combat/CombatTurnController';
+import { CombatEndController } from '../../combat/CombatEndController';
+import { createCombatSceneControls } from '../../combat/CombatSceneControls';
+import { getRuneFrame, getSpecialCurrencyFrame } from '../../combat/CombatFrameUtils';
 
 export class CombatScene extends Phaser.Scene {
     private playerData: PlayerData | null = null;
@@ -32,20 +38,17 @@ export class CombatScene extends Phaser.Scene {
     private abilityBtnSprite: Phaser.GameObjects.Sprite | null = null;
     private abilityBtnText: Phaser.GameObjects.Text | null = null;
     private abilityWobbleTween: Phaser.Tweens.Tween | null = null;
-    private isAnimating: boolean = false;
-    private overlayContainer: Phaser.GameObjects.Container | null = null;
     private enemyStatusContainer: Phaser.GameObjects.Container | null = null;
     private playerStatusContainer: Phaser.GameObjects.Container | null = null;
     private combatTimer: number = 0;
     private enemyTooltip: Phaser.GameObjects.Container | null = null;
     private enemyTooltipTitle: Phaser.GameObjects.Text | null = null;
     private enemyTooltipDesc: Phaser.GameObjects.Text | null = null;
-    private transitionStarted: boolean = false;
-    private combatEnded: boolean = false;
     private pillarWhiteout?: Phaser.GameObjects.Rectangle;
     private enemyAnimator: EnemyAnimator | null = null;
     private enemyShadow: Phaser.GameObjects.Image | null = null;
-    private _animationStartTime: number | null = null;
+    private turnController: CombatTurnController | null = null;
+    private endController: CombatEndController | null = null;
     private static readonly PILLAR_WHITE_HOLD_MS = 850;
     private static readonly PILLAR_WHITE_FADE_OUT_MS = 1400;
 
@@ -54,74 +57,7 @@ export class CombatScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('combat-bg-desert', 'assets/Models/exports/backgrounds/Desert-Floor.png');
-        this.load.image('combat-bg-abandoned', 'assets/Models/exports/backgrounds/Abandoned-Floor.png');
-        this.load.image('combat-bg-mechanic', 'assets/Models/exports/backgrounds/Mechanic-Floor.png');
-        this.load.font(FONT_FAMILY, 'assets/Models/exports/VCRosdNEUE.ttf');
-        this.load.font(RUNE_FONT, 'assets/Models/exports/RUNE.TTF');
-        this.load.image('battle-ui', 'assets/Models/exports/UI/Battle-UI.png');
-        this.load.image('book-ui', 'assets/Models/exports/UI/Book-UI.png');
-        this.load.image('book-layout', 'assets/Models/exports/UI/Book-Layout-1.png');
-        this.load.image('book-layout-2', 'assets/Models/exports/UI/Book-Layout-2.png');
-        this.load.image('book-layout-3', 'assets/Models/exports/UI/Book-Layout-3.png');
-        this.load.image('book-layout-4', 'assets/Models/exports/UI/Book-Layout-4.png');
-        this.load.image('player-ui', 'assets/Models/exports/UI/Player-UI.png');
-        this.load.spritesheet('rune-overlay', 'assets/Models/exports/UI/Combat-Overlay-Rune.png', {
-            frameWidth: 48, frameHeight: 64
-        });
-        this.load.image('achievement-ui', 'assets/Models/exports/UI/Achievement-UI.png');
-        this.load.image('settings-btn', 'assets/Models/exports/UI/Settings-Btn.png');
-        this.load.image('inventory-btn', 'assets/Models/exports/UI/Inventory-Btn.png');
-        this.load.spritesheet('chain-link', 'assets/Models/exports/UI/Combat-Overlay-Chains.png', {
-            frameWidth: 64, frameHeight: 64
-        });
-        this.load.spritesheet('bookmarks-ui', 'assets/Models/exports/UI/Bookmarks-UI.png', {
-            frameWidth: 17, frameHeight: 22
-        });
-        this.load.spritesheet('attack-selector', 'assets/Models/exports/UI/Combat-Attack-Selector.png', {
-            frameWidth: 64, frameHeight: 64
-        });
-        this.load.spritesheet('items', 'assets/Models/exports/Objects/Items.png', {
-            frameWidth: 64, frameHeight: 64
-        });
-        this.load.spritesheet('glossary', 'assets/Models/exports/Objects/Glossary.png', {
-            frameWidth: 64, frameHeight: 64
-        });
-        this.load.spritesheet('cultist', 'assets/Models/exports/characters/Cultist-Sheet.png', { frameWidth: 57, frameHeight: 67 });
-        this.load.spritesheet('golem', 'assets/Models/exports/characters/Golem-Sheet.png', { frameWidth: 57, frameHeight: 56 });
-        this.load.spritesheet('rationalist', 'assets/Models/exports/characters/Rationalist-Sheet.png', { frameWidth: 59, frameHeight: 73 });
-        this.load.spritesheet('scavenger', 'assets/Models/exports/characters/Scavenger-Sheet.png', { frameWidth: 59, frameHeight: 61 });
-        this.load.spritesheet('slime', 'assets/Models/exports/characters/Slime-Sheet.png', { frameWidth: 32, frameHeight: 27 });
-        this.load.spritesheet('wisp', 'assets/Models/exports/characters/Wisp-Sheet.png', { frameWidth: 27, frameHeight: 51 });
-
-        this.load.spritesheet('pillar-1', 'assets/Models/exports/characters/Pillar-1.png', { frameWidth: 48, frameHeight: 80 });
-        this.load.spritesheet('pillar-2', 'assets/Models/exports/characters/Pillar-2.png', { frameWidth: 48, frameHeight: 80 });
-        this.load.spritesheet('pillar-3', 'assets/Models/exports/characters/Pillar-3.png', { frameWidth: 48, frameHeight: 80 });
-        this.load.spritesheet('pillar-4', 'assets/Models/exports/characters/Pillar-4.png', { frameWidth: 48, frameHeight: 80 });
-
-
-        this.load.spritesheet('map-outlines', 'assets/Models/exports/Objects/map-outlines.png', {
-            frameWidth: 192, frameHeight: 128
-        });
-        this.load.spritesheet('map-boss-outlines', 'assets/Models/exports/Objects/map-boss-outlines.png', {
-            frameWidth: 64, frameHeight: 128
-        });
-        this.load.spritesheet('currency', 'assets/Models/exports/Objects/Currency.png', {
-            frameWidth: 16, frameHeight: 16
-        });
-        this.load.spritesheet('special-attack-btn', 'assets/Models/exports/UI/Special-Attack-Btn.png', {
-            frameWidth: 64, frameHeight: 64
-        });
-        this.load.spritesheet('status-btn', 'assets/Models/exports/UI/Status-Btn.png', {
-            frameWidth: 32, frameHeight: 32
-        });
-        const covenant = this.registry.get('playerData')?.covenant || 'snake';
-        this.load.spritesheet('protagonist-idle', `assets/Models/Protagonist/Idle-${covenant}.png`, { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('protagonist-hurt', `assets/Models/Protagonist/Hurt-${covenant}.png`, { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('protagonist-death', `assets/Models/Protagonist/Death-${covenant}.png`, { frameWidth: 48, frameHeight: 48 });
-        this.load.image('protagonist-shadow', 'assets/Models/Protagonist/Shadow.png');
-
-        EnemyAnimator.preloadAll(this);
+        preloadCombatSceneAssets(this);
     }
 
     create(data?: any) {
@@ -155,11 +91,17 @@ export class CombatScene extends Phaser.Scene {
 
         this.add.image(this.scale.width / 2, this.scale.height / 2, bgKey).setOrigin(0.5, 0.5).setDisplaySize(this.scale.width, this.scale.height).setScrollFactor(0);
         this.combatTimer = 0;
-        this.isAnimating = false;
-        this.transitionStarted = false;
-        this.combatEnded = false;
+        this.turnController = null;
+        this.endController = null;
 
-        this.initCombatSystem();
+        const encounter = createCombatEncounter({
+            playerData: this.playerData,
+            encounterTier: this.encounterTier,
+            encounterMapKey: this.encounterMapKey,
+            targetEnemyId: this.targetEnemyId
+        });
+        this.combatSystem = encounter.combatSystem;
+        this.targetEnemyId = encounter.targetEnemyId;
 
         this.equippedItemStatus.clear();
         const equippedIds = getSelectedItems();
@@ -209,30 +151,7 @@ export class CombatScene extends Phaser.Scene {
         this.playerData.combatEnemyId = this.targetEnemyId;
         this.playerData.save();
 
-        if (!this.anims.exists('chain-anim')) {
-            this.anims.create({
-                key: 'chain-anim',
-                frames: this.anims.generateFrameNumbers('chain-link', { start: 0, end: 5 }),
-                frameRate: 8, repeat: -1
-            });
-        }
-
-        if (!this.anims.exists('attack-selector-anim')) {
-            this.anims.create({
-                key: 'attack-selector-anim',
-                frames: this.anims.generateFrameNumbers('attack-selector', { start: 0, end: 3 }),
-                frameRate: 8, repeat: -1, yoyo: true
-            });
-        }
-
-        if (!this.anims.exists('combat-player-death')) {
-            this.anims.create({
-                key: 'combat-player-death',
-                frames: this.anims.generateFrameNumbers('protagonist-death', { start: 0, end: 16 }),
-                frameRate: 12,
-                repeat: 0
-            });
-        }
+        ensureCombatSceneAnimations(this);
 
         const centerX = this.scale.width / 2;
 
@@ -240,7 +159,7 @@ export class CombatScene extends Phaser.Scene {
             .setOrigin(0.5, 0).setScale(2).setScrollFactor(0);
 
         this.combatHUD = new CombatHUD(this);
-        this.combatHUD.create(centerX, this.playerData.hp, this.playerData.maxHp, this.playerData.gemstones, this.playerData.specialCurrency, this.getSpecialCurrencyFrame(this.playerData.covenant));
+        this.combatHUD.create(centerX, this.playerData.hp, this.playerData.maxHp, this.playerData.gemstones, this.playerData.specialCurrency, getSpecialCurrencyFrame(this.playerData.covenant));
         this.statusEffectUI = new StatusEffectUI(this);
         this.statusEffectUI.createTooltip();
         this.createPlayerVisual();
@@ -251,7 +170,7 @@ export class CombatScene extends Phaser.Scene {
         this.runePickerSystem = new RunePickerSystem(
             this,
             this.playerData.covenant,
-            this.getRuneFrame.bind(this),
+            getRuneFrame,
             (cov) => COVENANT_COLORS[cov] ?? COVENANT_COLORS['default'],
             (chain) => this.onComboConfirmed(chain),
             (chain) => this.combatSystem!.previewAttack('local', chain)
@@ -260,72 +179,14 @@ export class CombatScene extends Phaser.Scene {
         this.runePickerSystem.createChainSlots();
         this.runePickerSystem.createRunePicker();
 
+        this.createTurnController();
+        this.createEndController();
         this.setupCombatEvents();
-
-        const glossaryX = 30;
-        const glossaryY = this.scale.height - 100;
-        const glossaryBtn = this.add.sprite(glossaryX, glossaryY, 'glossary', 0)
-            .setOrigin(0, 0.5).setScrollFactor(0).setScale(2)
-            .setInteractive({ useHandCursor: true });
-        glossaryBtn.on('pointerdown', () => {
-            if (!this.scene.isActive('GlossaryUI')) {
-                this.scene.pause();
-                this.scene.launch('GlossaryUI', { previousScene: 'CombatScene', isPaused: true });
-            }
-        });
-
-        const settingsX = this.scale.width - 24;
-        const settingsY = this.scale.height - 10;
-        const settingsBtn = this.add.sprite(settingsX, settingsY, 'settings-btn')
-            .setOrigin(1, 1).setScrollFactor(0).setScale(1)
-            .setInteractive({ useHandCursor: true });
-        settingsBtn.on('pointerover', () => settingsBtn.setTint(0xaaaaaa));
-        settingsBtn.on('pointerout', () => settingsBtn.clearTint());
-        settingsBtn.on('pointerdown', () => {
-            if (!this.scene.isActive('Help')) {
-                this.scene.pause();
-                this.scene.launch('Help', { previousScene: 'CombatScene' });
-            }
-        });
-
-        const inventoryX = 24;
-        const inventoryY = settingsY;
-        const inventoryBtn = this.add.image(inventoryX, inventoryY, 'inventory-btn')
-            .setOrigin(0, 1).setScrollFactor(0).setScale(1)
-            .setInteractive({ useHandCursor: true });
-        inventoryBtn.on('pointerover', () => inventoryBtn.setTint(0xaaaaaa));
-        inventoryBtn.on('pointerout', () => inventoryBtn.clearTint());
-        inventoryBtn.on('pointerdown', () => {
-            this.openInventoryPanel();
-        });
-
-        this.input.keyboard!.on(InputKeys.HELP, () => {
-            if (!this.scene.isPaused()) {
-                this.scene.pause();
-                this.scene.launch('Help', { previousScene: 'CombatScene' });
-            }
-        });
-        this.input.keyboard!.on(InputKeys.BACK, () => {
-            if (this.inventoryUI && this.inventoryUI.isOpen()) {
-                this.inventoryUI.hide();
-                return;
-            }
-            if (!this.scene.isPaused() && this.runePickerSystem) {
-                this.runePickerSystem.clearChain();
-            }
-        });
-        this.input.keyboard!.on(InputKeys.GLOSSARY, () => {
-            if (!this.scene.isActive('GlossaryUI')) {
-                this.scene.pause();
-                this.scene.launch('GlossaryUI', { previousScene: 'CombatScene', isPaused: true });
-            }
-        });
-        this.input.keyboard!.on(InputKeys.INVENTORY, () => {
-            if (this.inventoryUI && this.inventoryUI.isOpen()) {
-                this.inventoryUI.hide();
-            } else {
-                this.openInventoryPanel();
-            }
+        createCombatSceneControls(this, {
+            clearRuneChain: () => this.runePickerSystem?.clearChain(),
+            hideInventory: () => this.inventoryUI?.hide(),
+            isInventoryOpen: () => !!this.inventoryUI?.isOpen(),
+            openInventory: () => this.openInventoryPanel()
         });
 
         this.time.addEvent({ delay: 1000, callback: this.updateTimer, callbackScope: this, loop: true });
@@ -345,20 +206,7 @@ export class CombatScene extends Phaser.Scene {
     }
 
     update(time: number, _delta: number): void {
-        if (this.isAnimating) {
-            if (!this._animationStartTime) {
-                this._animationStartTime = time;
-            } else if (time - this._animationStartTime > 10000) {
-                this.isAnimating = false;
-                this._animationStartTime = null;
-                if (this.abilityBtnSprite) {
-                    this.abilityBtnSprite.setInteractive({ useHandCursor: true });
-                }
-                this.startNextRound();
-            }
-        } else {
-            this._animationStartTime = null;
-        }
+        this.turnController?.update(time);
     }
 
     private ensurePillarWhiteout(): void {
@@ -391,90 +239,39 @@ export class CombatScene extends Phaser.Scene {
         });
     }
 
-    private pickEnemyFromBestiary(): { id: string, name: string; hp: number; attack: number; defense: number; texture: string; frame: number } {
-        let lookupId = this.targetEnemyId;
-        if (lookupId === 'pillar_core_syntax') lookupId = 'pillar_1';
-        else if (lookupId === 'pillar_core_semantics') lookupId = 'pillar_2';
-        else if (lookupId === 'pillar_core_lexicon') lookupId = 'pillar_3';
-        else if (lookupId === 'pillar_core_etymology') lookupId = 'pillar_4';
+    private createTurnController(): void {
+        if (!this.combatSystem) return;
 
-        let pick = BESTIARY.find(e => e.id === lookupId);
-
-        if (!pick) {
-            let targetTier = this.encounterTier;
-            if (this.encounterMapKey === 'summit-settlement') {
-                targetTier = 4;
-            }
-
-            const tierEnemies = BESTIARY.filter(e => e.tier === targetTier);
-            const pool = tierEnemies.length > 0 ? tierEnemies : BESTIARY.filter(e => e.tier === 1);
-
-            const battledNames = new Set<string>();
-            try {
-                const raw = localStorage.getItem('glossary_completed_combats');
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    for (const mapKey of Object.keys(parsed)) {
-                        if (Array.isArray(parsed[mapKey])) {
-                            parsed[mapKey].forEach((c: any) => {
-                                if (c && c.enemyName) battledNames.add(c.enemyName.toLowerCase());
-                            });
-                        }
-                    }
-                }
-            } catch { }
-
-            let unbattled = pool.filter(e => !battledNames.has(e.name.toLowerCase()));
-            if (unbattled.length === 0) {
-                unbattled = pool;
-            }
-            pick = unbattled[Math.floor(Math.random() * unbattled.length)];
-        }
-
-        BestiaryData.getInstance().discoverEntity(pick.id);
-        this.targetEnemyId = pick.id;
-
-        return {
-            id: pick.id,
-            name: pick.name,
-            hp: pick.hp,
-            attack: pick.baseDamage,
-            defense: Math.floor(pick.baseDamage * 0.2),
-            texture: pick.texture,
-            frame: pick.frame
-        };
+        this.turnController = new CombatTurnController(this, this.combatSystem, this.equippedItemStatus, {
+            refreshAbility: () => this.updateAbilityButton(),
+            restoreRunePickerForTurn: () => this.runePickerSystem?.restoreForPlayerTurn(),
+            setAbilityInteractive: (enabled) => this.setAbilityButtonInteractive(enabled),
+            showFloatingText: (x, y, text, color) => this.showFloatingText(x, y, text, color),
+            updateEnemyHp: () => this.updateEnemyHp(),
+            updateHUD: () => this.updateHUD(),
+            updateStatusEffects: () => this.updateStatusEffects(),
+            updateTurnIndicator: (text) => this.updateTurnIndicator(text),
+            getEnemyAnimator: () => this.enemyAnimator,
+            getEnemyHpText: () => this.enemyHpText,
+            getEnemyShadow: () => this.enemyShadow,
+            getEnemySprite: () => this.enemySprite,
+            getEnemyTooltip: () => this.enemyTooltip,
+            getPlayerShadow: () => this.playerShadow,
+            getPlayerSprite: () => this.playerSprite
+        });
     }
-    private initCombatSystem(): void {
-        this.combatSystem = new CombatSystem();
 
-        const localPlayer: CombatPlayer = {
-            id: 'local',
-            name: 'You',
-            covenant: this.playerData!.covenant,
-            stats: { hp: this.playerData!.hp, maxHp: this.playerData!.maxHp, attack: 0, defense: 3 },
-            gemstones: this.playerData!.gemstones,
-            specialCurrency: this.playerData!.specialCurrency,
-            currentChain: null,
-            isLocal: true,
-            statusEffects: [],
-            roundDefense: 0
-        };
+    private createEndController(): void {
+        if (!this.combatSystem || !this.playerData) return;
 
-        const enemyDef = this.pickEnemyFromBestiary();
-        const enemies: CombatEnemy[] = [{
-            id: enemyDef.id,
-            name: enemyDef.name,
-            stats: { hp: enemyDef.hp, maxHp: enemyDef.hp, attack: enemyDef.attack, defense: enemyDef.defense },
-            targetPlayerId: 'local',
-            texture: enemyDef.texture,
-            frame: enemyDef.frame,
-            damageModifier: 1.0,
-            statusEffects: [],
-            slowSkipNext: false
-        }];
-
-        this.combatSystem.initCombat([localPlayer], enemies);
-        this.combatSystem.startRound();
+        this.endController = new CombatEndController(this, {
+            combatSystem: this.combatSystem,
+            encounterMapKey: this.encounterMapKey,
+            encounterTier: this.encounterTier,
+            playerData: this.playerData,
+            getPlayerShadow: () => this.playerShadow,
+            getPlayerSprite: () => this.playerSprite
+        });
     }
 
     private setupCombatEvents(): void {
@@ -535,11 +332,11 @@ export class CombatScene extends Phaser.Scene {
         });
 
         this.combatSystem.on('combat_victory', () => {
-            this.showCombatEnd('VICTORY');
+            this.endController?.show('VICTORY');
         });
 
         this.combatSystem.on('combat_defeat', () => {
-            this.showCombatEnd('DEFEAT');
+            this.endController?.show('DEFEAT');
         });
 
         this.combatSystem.on('ability_used', (e) => {
@@ -549,7 +346,7 @@ export class CombatScene extends Phaser.Scene {
                 : e.data.ability === 'burn' ? `Burned ${e.data.burnedRune}! +50% DMG`
                     : `Intimidate! Enemies -25% DMG`;
             this.showFloatingText(this.scale.width / 2, 150, msg, '#FFD700');
-            if (e.data.ability = 'rewind') {
+            if (e.data.ability === 'rewind') {
                 this.updatePlayerHp();
             }
         });
@@ -585,23 +382,6 @@ export class CombatScene extends Phaser.Scene {
     private createPlayerVisual(): void {
         const x = 200;
         const y = 500;
-
-        if (!this.anims.exists('combat-player-idle')) {
-            this.anims.create({
-                key: 'combat-player-idle',
-                frames: this.anims.generateFrameNumbers('protagonist-idle', { start: 0, end: 6 }),
-                frameRate: 8,
-                repeat: -1
-            });
-        }
-        if (!this.anims.exists('combat-player-hurt')) {
-            this.anims.create({
-                key: 'combat-player-hurt',
-                frames: this.anims.generateFrameNumbers('protagonist-hurt', { start: 0, end: 2 }),
-                frameRate: 8,
-                repeat: 0
-            });
-        }
 
         this.playerShadow = this.add.image(x, y + 30, 'protagonist-shadow')
             .setOrigin(0.5, 0.95)
@@ -709,15 +489,6 @@ export class CombatScene extends Phaser.Scene {
         const btnX = this.scale.width - 50;
         const btnY = this.scale.height - 90;
 
-        if (!this.anims.exists('ability-btn-loop')) {
-            this.anims.create({
-                key: 'ability-btn-loop',
-                frames: this.anims.generateFrameNumbers('special-attack-btn', { start: 0, end: 5 }),
-                frameRate: 8,
-                repeat: -1
-            });
-        }
-
         this.abilityBtnSprite = this.add.sprite(btnX, btnY, 'special-attack-btn', 0)
             .setOrigin(1, 0.5).setScrollFactor(0).setScale(2).setDepth(100)
             .setInteractive({ useHandCursor: true });
@@ -796,7 +567,7 @@ export class CombatScene extends Phaser.Scene {
     }
 
     private onAbilityClick(): void {
-        if (!this.combatSystem || this.isAnimating || !this.canUseAbility()) return;
+        if (!this.combatSystem || this.turnController?.isBusy() || !this.canUseAbility()) return;
         const covenant = this.playerData!.covenant;
 
         let success = false;
@@ -820,6 +591,16 @@ export class CombatScene extends Phaser.Scene {
 
     private updateAbilityButton(): void {
         this.refreshAbilityVisual();
+    }
+
+    private setAbilityButtonInteractive(enabled: boolean): void {
+        if (!this.abilityBtnSprite) return;
+
+        if (enabled) {
+            this.abilityBtnSprite.setInteractive({ useHandCursor: true });
+        } else {
+            this.abilityBtnSprite.disableInteractive();
+        }
     }
 
     private updateHUD(): void {
@@ -853,188 +634,7 @@ export class CombatScene extends Phaser.Scene {
     }
 
     public onComboConfirmed(chain: string[]): void {
-        if (!this.combatSystem || this.isAnimating) return;
-
-        const resolvedValue = RuneData.resolveChainPower(chain);
-        this.combatSystem.setPlayerChain('local', { runes: chain, resolvedValue });
-
-        this.isAnimating = true;
-        this.updateTurnIndicator('ATTACKING...');
-
-        if (this.abilityBtnSprite) {
-            this.abilityBtnSprite.disableInteractive();
-        }
-
-        this.time.delayedCall(400, () => {
-            const enemy = this.combatSystem!.getAllEnemies()[0];
-            if (!enemy || enemy.stats.hp <= 0) {
-                this.checkEnemyDeathAndAnimate();
-                return;
-            }
-
-            const damage = this.combatSystem!.executePlayerAttack('local');
-
-            if (enemy.stats.hp <= 0) {
-                if (damage > 0 && this.enemySprite) {
-                    this.enemySprite.setTint(0xff0000);
-                    this.tweens.add({
-                        targets: this.enemySprite,
-                        x: this.enemySprite.x + 10,
-                        duration: 50,
-                        yoyo: true,
-                        repeat: 3,
-                        onComplete: () => {
-                            this.time.delayedCall(150, () => {
-                                this.enemySprite?.clearTint();
-                                this.checkEnemyDeathAndAnimate();
-                            });
-                        }
-                    });
-                } else {
-                    this.checkEnemyDeathAndAnimate();
-                }
-                return;
-            }
-
-            if (damage > 0 && this.enemySprite) {
-                this.enemySprite.setTint(0xff0000);
-                this.tweens.add({
-                    targets: this.enemySprite,
-                    x: this.enemySprite.x + 10,
-                    duration: 50,
-                    yoyo: true,
-                    repeat: 3,
-                    onComplete: () => {
-                        this.time.delayedCall(150, () => {
-                            this.enemySprite?.clearTint();
-                        });
-                    }
-                });
-            }
-
-            if (this.equippedItemStatus.has(1) && Math.random() < 0.5) {
-                const currentEnemy = this.combatSystem!.getAllEnemies()[0];
-                if (currentEnemy && currentEnemy.stats.hp > 0) {
-                    const extraDmg = 9;
-                    currentEnemy.stats.hp = Math.max(0, currentEnemy.stats.hp - extraDmg);
-                    this.time.delayedCall(300, () => {
-                        this.showFloatingText(this.scale.width - 200, 400, `Runefall: +${extraDmg} Lightning!`, "#50bfe6");
-                        this.updateEnemyHp();
-                        this.cameras.main.flash(200, 80, 191, 230);
-
-                        if (currentEnemy.stats.hp <= 0) {
-                            this.checkEnemyDeathAndAnimate();
-                            return;
-                        }
-                    });
-                }
-            }
-
-            this.time.delayedCall(600, () => {
-                const currentEnemy = this.combatSystem!.getAllEnemies()[0];
-                if (!currentEnemy || currentEnemy.stats.hp <= 0) {
-                    this.checkEnemyDeathAndAnimate();
-                    return;
-                }
-
-                if (this.combatSystem!.checkCombatEnd()) {
-                    this.isAnimating = false;
-                    return;
-                }
-                this.executeEnemyTurn();
-            });
-        });
-    }
-
-    private executeEnemyTurn(): void {
-        const enemy = this.combatSystem!.getAllEnemies()[0];
-        if (!enemy || enemy.stats.hp <= 0 || this.combatSystem!.checkCombatEnd()) {
-            this.startNextRound();
-            return;
-        }
-
-        this.updateTurnIndicator('ENEMY TURN');
-        this.combatSystem!.setPhase('enemy_attack');
-
-        this.time.delayedCall(800, () => {
-            const currentEnemy = this.combatSystem!.getAllEnemies()[0];
-            if (!currentEnemy || currentEnemy.stats.hp <= 0) {
-                this.startNextRound();
-                return;
-            }
-
-            const executeAttack = () => {
-                if (!currentEnemy || currentEnemy.stats.hp <= 0) {
-                    this.startNextRound();
-                    return;
-                }
-
-                const damage = this.combatSystem!.executeEnemyAttack(currentEnemy.id);
-                if (damage > 0 && this.playerSprite) {
-                    this.tweens.add({
-                        targets: [this.playerSprite, this.playerShadow].filter(Boolean),
-                        x: '-=8',
-                        duration: 50,
-                        yoyo: true,
-                        repeat: 3
-                    });
-                }
-
-                this.time.delayedCall(600, () => {
-                    const player = this.combatSystem!.getLocalPlayer();
-                    if (player && player.stats.hp <= 0) {
-                        this.combatSystem!.checkCombatEnd();
-                        this.isAnimating = false;
-                        return;
-                    }
-
-                    if (this.combatSystem!.checkCombatEnd()) {
-                        this.isAnimating = false;
-                        return;
-                    }
-                    this.startNextRound();
-                });
-            };
-
-            if (this.enemyAnimator && this.enemyAnimator.hasAnim('attack')) {
-                this.enemyAnimator.playAttackWithFx({
-                    onComplete: executeAttack
-                });
-            } else {
-                executeAttack();
-            }
-        });
-    }
-
-    private startNextRound(): void {
-        this.isAnimating = false;
-
-        if (this.abilityBtnSprite && !this.combatSystem?.checkCombatEnd()) {
-            this.abilityBtnSprite.setInteractive({ useHandCursor: true });
-        }
-
-        if (this.combatSystem!.checkCombatEnd()) {
-            return;
-        }
-
-        this.combatSystem!.startRound();
-
-        const enemy = this.combatSystem!.getAllEnemies()[0];
-        if (!enemy || enemy.stats.hp <= 0) {
-            this.combatSystem!.checkCombatEnd();
-            return;
-        }
-
-        this.combatSystem!.getCurrentRound();
-        this.updateHUD();
-        this.updateStatusEffects();
-        this.updateTurnIndicator('YOUR TURN - Select Runes');
-        this.updateAbilityButton();
-
-        if (this.runePickerSystem) {
-            this.runePickerSystem.clearChain();
-            this.runePickerSystem.refreshPreview();
-        }
+        this.turnController?.submitPlayerChain(chain);
     }
 
     private updateStatusEffects(): void {
@@ -1047,221 +647,6 @@ export class CombatScene extends Phaser.Scene {
         const player = this.combatSystem.getLocalPlayer();
         const playerEffects = player ? player.statusEffects : [];
         this.statusEffectUI.syncIcons(playerEffects, this.playerStatusContainer);
-    }
-
-    private syncPlayerDataFromCombat(result?: string): void {
-        if (!this.combatSystem || !this.playerData) return;
-        const combatPlayer = this.combatSystem.getLocalPlayer();
-        if (!combatPlayer) return;
-        if (this.encounterMapKey === 'summit-settlement') {
-            const isDefeat = result === 'DEFEAT' || combatPlayer.stats.hp <= 0;
-            this.playerData.hp = isDefeat ? 100 : combatPlayer.stats.hp;
-        } else {
-            this.playerData.hp = this.playerData.maxHp;
-        }
-        this.playerData.specialCurrency = combatPlayer.specialCurrency;
-        this.playerData.save();
-        this.registry.set('playerData', this.playerData);
-    }
-
-    private showCombatEnd(result: string): void {
-        if (this.combatEnded) return;
-        this.combatEnded = true;
-
-        this.syncPlayerDataFromCombat(result);
-
-        let earnedGems = 0;
-        let earnedSpecial = 0;
-        let earnedTokens = 0;
-        let defeatedEnemyName = 'Unknown Enemy';
-
-        if (result === 'DEFEAT') {
-            if (this.playerSprite) {
-                this.playerSprite.play('combat-player-death');
-                this.playerSprite.setDepth(100);
-            }
-            if (this.playerShadow) {
-                this.tweens.add({
-                    targets: this.playerShadow,
-                    alpha: 0,
-                    duration: 800,
-                    ease: 'Quad.easeIn'
-                });
-            }
-        }
-
-        if (result === 'VICTORY' && this.playerData) {
-            if (this.encounterMapKey === 'summit-settlement') {
-                localStorage.setItem('glossary_boss_combat_victory', 'true');
-            }
-
-            const enemy = this.combatSystem ? this.combatSystem.getAllEnemies()[0] : null;
-            defeatedEnemyName = enemy ? enemy.name : 'Unknown Enemy';
-
-            earnedGems = this.encounterTier * 15 + Phaser.Math.Between(5, 15);
-            earnedSpecial = this.encounterTier;
-            earnedTokens = 50;
-
-            this.playerData.gemstones += earnedGems;
-            this.playerData.specialCurrency += earnedSpecial;
-
-            try {
-                const echoRaw = localStorage.getItem('glossary_echojar_completed_combats');
-                const echoCount = (parseInt(echoRaw || '0', 10) || 0) + 1;
-                localStorage.setItem('glossary_echojar_completed_combats', echoCount.toString());
-            } catch { }
-
-            const key = 'glossary_completed_combats';
-            let allCompleted: Record<string, any[]> = {};
-            try {
-                const existing = localStorage.getItem(key);
-                if (existing) allCompleted = JSON.parse(existing);
-            } catch { }
-
-            const mapList = allCompleted[this.encounterMapKey] || [];
-            let globalTotal = 0;
-            for (const k of Object.keys(allCompleted)) {
-                if (Array.isArray(allCompleted[k])) globalTotal += allCompleted[k].length;
-            }
-            if (mapList.length < 3 && globalTotal < 3) {
-                mapList.push({
-                    enemyName: defeatedEnemyName,
-                    gems: earnedGems,
-                    specialCur: earnedSpecial,
-                    tokens: earnedTokens
-                });
-                allCompleted[this.encounterMapKey] = mapList;
-                localStorage.setItem(key, JSON.stringify(allCompleted));
-            }
-        }
-
-        if (this.playerData) {
-            this.playerData.inCombat = false;
-            this.playerData.combatEnemyId = null;
-            this.playerData.save();
-        }
-
-        const centerX = this.scale.width / 2;
-        const centerY = this.scale.height / 2;
-
-        this.overlayContainer = this.add.container(0, 0).setDepth(500).setScrollFactor(0);
-
-        const bg = this.add.rectangle(centerX, centerY, this.scale.width, this.scale.height, 0x000000, 0);
-        this.tweens.add({ targets: bg, fillAlpha: 0.85, duration: 800, ease: 'Sine.easeOut' });
-
-        const isVictory = result === 'VICTORY';
-        const color = isVictory ? '#FFD700' : '#cc0000';
-
-        const resultText = this.add.text(centerX, centerY - 60, result, {
-            fontFamily: FONT_FAMILY, fontSize: '80px', color: color, stroke: '#000000', strokeThickness: 4
-        }).setOrigin(0.5).setAlpha(0);
-
-        const delayBeforeText = result === 'DEFEAT' ? 1000 : 300;
-
-        this.tweens.add({
-            targets: resultText,
-            alpha: 1,
-            duration: 800,
-            ease: 'Sine.easeOut',
-            delay: delayBeforeText
-        });
-
-        const elements: Phaser.GameObjects.GameObject[] = [bg, resultText];
-        let delayTime = result === 'DEFEAT' ? 1800 : 800;
-
-        if (isVictory && this.playerData) {
-            const subText = this.add.text(centerX, centerY + 10, `${defeatedEnemyName} Defeated!`, {
-                fontFamily: FONT_FAMILY, fontSize: '24px', color: '#ffffff', stroke: '#000000', strokeThickness: 2
-            }).setOrigin(0.5).setAlpha(0);
-
-            const lootText = this.add.text(centerX, centerY + 45, `+${earnedGems} Gemstones  |  +${earnedSpecial} Special Currency  |  +${earnedTokens} Tokens`, {
-                fontFamily: FONT_FAMILY, fontSize: '18px', color: '#50bfe6', stroke: '#000000', strokeThickness: 2
-            }).setOrigin(0.5).setAlpha(0);
-
-            elements.push(subText, lootText);
-
-            this.tweens.add({
-                targets: subText, y: centerY, alpha: 1, duration: 600, ease: 'Quad.easeOut', delay: delayTime
-            });
-            delayTime += 400;
-            this.tweens.add({
-                targets: lootText, y: centerY + 35, alpha: 1, duration: 600, ease: 'Quad.easeOut', delay: delayTime
-            });
-            delayTime += 600;
-        }
-
-        const continueText = this.add.text(centerX, centerY + 100, '- Click anywhere to continue -', {
-            fontFamily: FONT_FAMILY, fontSize: '18px', color: '#aaaaaa'
-        }).setOrigin(0.5).setAlpha(0);
-        elements.push(continueText);
-
-        this.tweens.add({
-            targets: continueText, alpha: 1, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: delayTime
-        });
-
-        this.overlayContainer.add(elements);
-
-        bg.setInteractive();
-        bg.on('pointerdown', () => {
-            if (this.transitionStarted) return;
-            this.transitionStarted = true;
-
-            if (result === 'DEFEAT') {
-                if (this.encounterMapKey === 'summit-settlement') {
-                    localStorage.removeItem('glossary_boss_fight_active');
-                    localStorage.removeItem('glossary_boss_pillars_defeated');
-                    localStorage.removeItem('glossary_boss_remaining_pillars');
-                    localStorage.removeItem('glossary_boss_current_combat_pillar');
-                    localStorage.removeItem('glossary_boss_combat_victory');
-
-                    if (this.playerData) {
-                        this.playerData.hp = this.playerData.maxHp;
-                        this.playerData.save();
-                    }
-
-                    this.scene.launch('TransitionScene', {
-                        targetScene: 'LevelScene',
-                        targetData: { mapKey: 'summit-settlement' },
-                        currentScene: 'CombatScene'
-                    });
-                } else {
-                    localStorage.removeItem('glossary_boss_fight_active');
-                    localStorage.removeItem('glossary_boss_pillars_defeated');
-                    localStorage.removeItem('glossary_boss_remaining_pillars');
-                    localStorage.removeItem('glossary_boss_current_combat_pillar');
-                    localStorage.removeItem('glossary_boss_combat_victory');
-
-                    if (this.playerData) {
-                        this.playerData.hp = this.playerData.maxHp;
-                        this.playerData.save();
-                    }
-
-                    this.scene.launch('TransitionScene', {
-                        targetScene: 'LevelScene',
-                        targetData: { mapKey: 'hub' },
-                        currentScene: 'CombatScene'
-                    });
-                }
-                return;
-            }
-
-            const returnMap = this.encounterMapKey || localStorage.getItem('glossary_combat_return_map') || 'hub';
-            const savedX = localStorage.getItem('glossary_combat_player_x');
-            const savedY = localStorage.getItem('glossary_combat_player_y');
-            localStorage.removeItem('glossary_combat_return_map');
-            localStorage.removeItem('glossary_combat_player_x');
-            localStorage.removeItem('glossary_combat_player_y');
-            const spawnData: any = { mapKey: returnMap };
-            if (savedX !== null && savedY !== null) {
-                spawnData.spawnX = parseFloat(savedX);
-                spawnData.spawnY = parseFloat(savedY);
-            }
-            this.scene.launch('TransitionScene', {
-                targetScene: 'LevelScene',
-                targetData: spawnData,
-                currentScene: 'CombatScene'
-            });
-        });
     }
 
     private createPlayerPanel(): void {
@@ -1278,77 +663,8 @@ export class CombatScene extends Phaser.Scene {
         this.updateHUD();
     }
 
-    private getSpecialCurrencyFrame(covenant: string): number {
-        switch (covenant) {
-            case 'snake': return 1;
-            case 'phoenix': return 2;
-            case 'dragon': return 3;
-            default: return 1;
-        }
-    }
-
-    private getRuneFrame(cardType: string): number {
-        switch (cardType) {
-            case 'boost': return 0;
-            case 'unique': return 1;
-            case 'base': return 2;
-            default: return 2;
-        }
-    }
-
-    private checkEnemyDeathAndAnimate(): boolean {
-        const enemy = this.combatSystem ? this.combatSystem.getAllEnemies()[0] : null;
-        if (enemy && enemy.stats.hp <= 0) {
-            this.isAnimating = true;
-
-            if (this.abilityBtnSprite) {
-                this.abilityBtnSprite.disableInteractive();
-            }
-
-            if (this.enemySprite) {
-                this.enemySprite.clearTint();
-                this.tweens.killTweensOf(this.enemySprite);
-            }
-
-            const cleanupAndEnd = () => {
-                if (this.enemyHpText) this.enemyHpText.setAlpha(0);
-                if (this.enemyShadow) this.enemyShadow.setAlpha(0);
-                if (this.enemyTooltip) this.enemyTooltip.setAlpha(0);
-
-                this.time.delayedCall(100, () => {
-                    this.combatSystem!.checkCombatEnd();
-                    this.isAnimating = false;
-                });
-            };
-
-            if (this.enemySprite && this.enemySprite.active) {
-                if (this.enemyAnimator && this.enemyAnimator.hasAnim('death')) {
-                    this.enemyAnimator.play('death', {
-                        onComplete: cleanupAndEnd
-                    });
-                    if (this.enemyAnimator.hasFx('death_fx')) {
-                        this.enemyAnimator.playFx('death_fx');
-                    }
-                } else {
-                    this.tweens.add({
-                        targets: this.enemySprite,
-                        alpha: 0,
-                        scale: 0.5,
-                        duration: 500,
-                        ease: 'Back.easeIn',
-                        onComplete: cleanupAndEnd
-                    });
-                }
-            } else {
-                cleanupAndEnd();
-            }
-            return true;
-        }
-        return false;
-    }
-
     private openInventoryPanel(): void {
-        if (this.isAnimating) return;
+        if (this.turnController?.isBusy()) return;
         this.inventoryUI = new CombatInventoryUI(this, this.equippedItemStatus);
         this.inventoryUI.show();
     }

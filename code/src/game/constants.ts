@@ -2,6 +2,15 @@ export const FONT_FAMILY = 'VCRosdNEUE';
 export const RUNE_FONT = 'RuneFont';
 export const TITLE_FONT = 'OldeEnglish';
 
+export interface MatterScene extends Phaser.Scene {
+    matter: Phaser.Physics.Matter.MatterPhysics;
+}
+
+export interface ScrollableScene extends Phaser.Scene {
+    scrollY: number;
+    maxScroll: number;
+}
+
 export enum InputKeys {
     INTERACT = 'keydown-X',
     HELP = 'keydown-Q',
@@ -61,6 +70,7 @@ export const RAIDHO_HOLD_DURATION = 1500;
 export const RAIDHO_INTERACT_RANGE = 50;
 export const RAIDHO_MOUNT_OFFSET_Y = -3;
 export const MAX_FLOORS = 3;
+export const DOOR_INTERACT_DISTANCE = 80;
 
 export const SETTLEMENT_ROTATION: string[] = [
     'abandoned-settlement',

@@ -1,7 +1,9 @@
 import * as Phaser from 'phaser';
 import { PlayerData } from '../../data/PlayerData';
+import { UserData } from '../../data/UserData';
 import { ItemData, ItemDefinition } from '../../data/ItemData';
 import { RuneData, RuneDefinition } from '../../data/RuneData';
+import { NetworkManager } from '../../NetworkManager';
 import { FONT_FAMILY, InputKeys, RUNE_FONT } from '../../constants';
 
 export class MerchantShop extends Phaser.Scene {
@@ -527,6 +529,16 @@ export class MerchantShop extends Phaser.Scene {
         pd.save();
 
         ItemData.getInstance().discoverItem(item.id);
+        UserData.getInstance().discoverItem(item.name);
+        const nm = NetworkManager.getInstance();
+        if (nm.role !== 'offline') {
+            nm.broadcast({
+                type: 'ITEM_FOUND',
+                itemId: item.id,
+                itemName: item.name,
+                originPeerId: nm.myPeerId
+            });
+        }
 
         this.playerGemstonesText.setText(pd.gemstones.toString());
 
@@ -561,6 +573,7 @@ export class MerchantShop extends Phaser.Scene {
         pd.save();
 
         RuneData.getInstance().discoverRune(rune.letter);
+        UserData.getInstance().discoverRune(rune.letter);
 
         this.playerGemstonesText.setText(pd.gemstones.toString());
 

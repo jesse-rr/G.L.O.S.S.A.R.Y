@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { SLATE_DEFINITIONS, SlateProgress } from '../data/SlateData';
 import { InteractSystem } from './InteractSystem';
-import { MatterScene } from '../types';
+import { MatterScene } from '../constants';
 
 const INTERACT_DISTANCE = 90;
 

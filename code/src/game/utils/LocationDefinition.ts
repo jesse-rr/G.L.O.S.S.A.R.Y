@@ -47,7 +47,7 @@ export class LocationDisplayScene extends Phaser.Scene {
         }
 
         if (!this.scene.isActive()) {
-            this.scene.run();
+            this.scene.wake();
         }
 
         this.scene.bringToTop();

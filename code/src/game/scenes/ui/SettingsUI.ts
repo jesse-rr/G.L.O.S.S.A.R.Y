@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { UserData } from '../../data/UserData';
 import { FONT_FAMILY, InputKeys } from '../../constants';
-import { ScrollableScene } from '../../types';
+import { ScrollableScene } from '../../constants';
 import { AudioManager } from '../../utils/AudioManager';
 
 export class SettingsUI extends Phaser.Scene {
@@ -155,6 +155,7 @@ export class SettingsUI extends Phaser.Scene {
                     txt.setText(`${Math.round(el.value)}`);
                     const userData = this.registry.get('userData') as UserData;
                     userData.settings.volume = Math.round(el.value);
+                    AudioManager.applyGlobalVolume(this);
                 };
 
                 update(el.value);

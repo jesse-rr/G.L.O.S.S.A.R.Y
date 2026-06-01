@@ -1,12 +1,12 @@
 import * as Phaser from 'phaser';
 import { UserData } from '../data/UserData';
-import {AudioManager} from "./AudioManager";
+import { AudioManager } from './AudioManager';
 
 export class ScreenShake {
     static audioManager: AudioManager;
     static scene: Phaser.Scene | null = null;
 
-    static init(scene: Phaser.Scene, audioManager: any) {
+    static init(scene: Phaser.Scene, audioManager: AudioManager) {
         ScreenShake.scene = scene;
         ScreenShake.audioManager = audioManager;
     }

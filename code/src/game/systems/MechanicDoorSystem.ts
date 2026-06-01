@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { InteractSystem } from './InteractSystem';
-import { MatterScene } from '../types';
+import { MatterScene } from '../constants';
 
 export interface MechanicDoor {
     doorId: string;

@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { createPolygonSensorBody } from '../utils/GeometryUtils';
-import { MatterScene } from '../types';
+import { MatterScene } from '../constants';
 
 export function parseCollisionObjects(scene: Phaser.Scene, layers: Phaser.Tilemaps.ObjectLayer[]): void {
     layers.forEach(layer => {

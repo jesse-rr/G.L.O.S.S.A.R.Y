@@ -34,7 +34,12 @@ export class ItemModal extends Phaser.Scene {
 
                 const nm = NetworkManager.getInstance();
                 if (nm.role !== 'offline') {
-                    nm.broadcast({ type: 'ITEM_FOUND', itemName: data.itemName });
+                    nm.broadcast({
+                        type: 'ITEM_FOUND',
+                        itemId: data.itemFrame,
+                        itemName: data.itemName,
+                        originPeerId: nm.myPeerId
+                    });
                 }
 
                 this.time.delayedCall(1000, () => this.closeModal());

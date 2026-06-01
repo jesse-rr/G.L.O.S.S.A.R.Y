@@ -47,15 +47,7 @@ const RUNE_DEFINITIONS: RuneDefinition[] = [
     { letter: 'Y', name: 'Ymir', translation: 'Endure', effectType: 'defense', cardType: 'unique', basePower: 10, description: "The rune of the lone survivor. Ymir demands that life persists against all odds. It grants an unnatural resilience, allowing one to stand firm long after they should have fallen. Applies Fortify: +50% defense for 2 turns.", statusEffect: 'fortify' }
 ];
 
-export const SUMMIT_RUNE: RuneDefinition = {
-    letter: 'Z',
-    name: 'Zeph',
-    translation: 'Hidden by God',
-    effectType: 'utility',
-    cardType: 'unique',
-    basePower: 0,
-    description: "The forbidden coordinate. Zeph was stricken from the grand archives. It is said to mark the exact location of the Summit, a place entirely hidden from the eyes of the divine."
-};
+const RUNE_LETTERS = new Set(RUNE_DEFINITIONS.map(rune => rune.letter));
 
 const COMBO_NAMES_2: Record<string, string[]> = {
     'base+boost': ['Enhanced', 'Empowered', 'Infused', 'Charged', 'Awakened'],
@@ -241,6 +233,7 @@ export class RuneData {
 
     discoverRune(letter: string): boolean {
         const upper = letter.toUpperCase();
+        if (!RUNE_LETTERS.has(upper)) return false;
         if (this.discoveredRunes.has(upper)) return false;
         this.discoveredRunes.add(upper);
         this.save();
@@ -277,7 +270,10 @@ export class RuneData {
         if (data) {
             try {
                 const arr = JSON.parse(data) as string[];
-                this.discoveredRunes = new Set(arr);
+                this.discoveredRunes = new Set(arr
+                    .filter((letter): letter is string => typeof letter === 'string')
+                    .map(letter => letter.toUpperCase())
+                    .filter(letter => RUNE_LETTERS.has(letter)));
             } catch {
                 this.discoveredRunes = new Set();
             }
@@ -287,7 +283,10 @@ export class RuneData {
         if (viewedData) {
             try {
                 const arr = JSON.parse(viewedData) as string[];
-                this.viewedRunes = new Set(arr);
+                this.viewedRunes = new Set(arr
+                    .filter((letter): letter is string => typeof letter === 'string')
+                    .map(letter => letter.toUpperCase())
+                    .filter(letter => RUNE_LETTERS.has(letter)));
             } catch {
                 this.viewedRunes = new Set();
             }

@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { PlayerData } from '../data/PlayerData';
+import { NetworkManager } from '../NetworkManager';
 import {
     SETTLEMENT_ROTATION,
     BOSS_FLOOR_ROTATION,
@@ -53,7 +54,8 @@ export class PortalSystem {
 
             if (mapKey === 'central-hub' || mapKey === 'hub') {
                 const playerData = PlayerData.getInstance();
-                const baseIdx = COVENANT_BASE_INDEX[playerData.covenant] ?? 0;
+                const isMultiplayer = NetworkManager.getInstance().role !== 'offline';
+                const baseIdx = isMultiplayer ? 0 : COVENANT_BASE_INDEX[playerData.covenant] ?? 0;
                 const floorOffset = playerData.currentFloor - 1;
                 const rotatedIdx = (baseIdx + floorOffset) % 3;
 
@@ -209,6 +211,7 @@ export class PortalSystem {
 
             const { x: dirX, y: dirY } = this.getFixedDirection(mapKey, targetMap, isMerchant);
             this.teleportDirection = { x: dirX, y: dirY };
+            this.broadcastMapChange(targetMap, mapKey, dirX, dirY, false);
 
             if (isMerchant) {
                 this.teleportSpeedModifier = 1;
@@ -266,6 +269,24 @@ export class PortalSystem {
 
     getTeleportDirection(): { x: number, y: number } {
         return this.teleportDirection;
+    }
+
+    private broadcastMapChange(targetMap: string, previousMap: string, entryDirX: number, entryDirY: number, teleportFromRune: boolean): void {
+        const nm = NetworkManager.getInstance();
+        if (nm.role === 'offline') return;
+
+        const playerData = PlayerData.getInstance();
+        nm.broadcast({
+            type: 'MAP_CHANGE',
+            targetMap,
+            previousMap,
+            entryDirX,
+            entryDirY,
+            teleportFromRune,
+            currentFloor: playerData.currentFloor,
+            hubDoorOpened: playerData.hubDoorOpened,
+            originPeerId: nm.myPeerId
+        });
     }
 
     getTeleportSpeedModifier(): number {

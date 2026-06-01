@@ -3,7 +3,7 @@ import { UserData } from '../../data/UserData';
 
 const CUBE_SIZE = 50.5;
 import { FONT_FAMILY } from '../../constants';
-import { ScrollableScene } from '../../types';
+import { ScrollableScene } from '../../constants';
 import { AudioManager } from '../../utils/AudioManager';
 
 const CUBE_POSITIONS = [

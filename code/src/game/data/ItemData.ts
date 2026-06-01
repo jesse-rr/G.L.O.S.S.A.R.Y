@@ -121,6 +121,8 @@ const ITEMS: ItemDefinition[] = [
     }
 ];
 
+const ITEM_IDS = new Set(ITEMS.map(item => item.id));
+
 export class ItemData {
     private static instance: ItemData;
     private discoveredItems: Set<number> = new Set();
@@ -150,6 +152,7 @@ export class ItemData {
     }
 
     public discoverItem(id: number): void {
+        if (!ITEM_IDS.has(id)) return;
         if (this.discoveredItems.has(id)) return;
         this.discoveredItems.add(id);
         this.save();
@@ -160,6 +163,7 @@ export class ItemData {
     }
 
     public markViewed(id: number): void {
+        if (!ITEM_IDS.has(id)) return;
         if (this.viewedItems.has(id)) return;
         this.viewedItems.add(id);
         this.save();
@@ -184,7 +188,7 @@ export class ItemData {
         if (discoveredData) {
             try {
                 const arr = JSON.parse(discoveredData) as number[];
-                this.discoveredItems = new Set(arr);
+                this.discoveredItems = new Set(arr.filter(id => typeof id === 'number' && ITEM_IDS.has(id)));
             } catch {
                 this.discoveredItems = new Set();
             }
@@ -195,7 +199,7 @@ export class ItemData {
         if (viewedData) {
             try {
                 const arr = JSON.parse(viewedData) as number[];
-                this.viewedItems = new Set(arr);
+                this.viewedItems = new Set(arr.filter(id => typeof id === 'number' && ITEM_IDS.has(id)));
             } catch {
                 this.viewedItems = new Set();
             }

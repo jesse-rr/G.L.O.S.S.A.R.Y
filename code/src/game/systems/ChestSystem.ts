@@ -4,7 +4,7 @@ import { UserData } from '../data/UserData';
 import { PlayerData } from '../data/PlayerData';
 import { InteractSystem } from './InteractSystem';
 import { COVENANT_COLORS, FONT_FAMILY } from '../constants';
-import { MatterScene } from '../types';
+import { MatterScene } from '../constants';
 
 const INTERACT_DISTANCE = 40;
 const STORAGE_KEY = 'glossary_opened_chests';

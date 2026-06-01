@@ -31,7 +31,7 @@ export class MultiplayerData {
         this.sharedRunes = [];
         this.sharedRunes.push('A');
 
-        const pool = allDefinitions.filter(r => r.letter !== 'A' && r.letter !== 'I' && r.letter !== 'E' && r.letter !== 'P' && r.letter !== 'Z').map(r => r.letter);
+        const pool = allDefinitions.filter(r => r.letter !== 'A' && r.letter !== 'I' && r.letter !== 'E' && r.letter !== 'P').map(r => r.letter);
         const shuffled = [...pool];
 
         for (let i = shuffled.length - 1; i > 0; i--) {

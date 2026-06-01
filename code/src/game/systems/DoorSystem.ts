@@ -3,7 +3,7 @@ import { createVignette } from '../utils/Vignette';
 import { PlayerData } from '../data/PlayerData';
 import { COVENANT_BASE_INDEX } from '../constants';
 import { InteractSystem } from './InteractSystem';
-import { MatterScene } from '../types';
+import { MatterScene } from '../constants';
 import { fadeIn, fadeOutAndDestroy } from '../utils/TweenUtils';
 import { ScreenShake } from "../utils/ScreenShake";
 import { AudioManager } from '../utils/AudioManager';

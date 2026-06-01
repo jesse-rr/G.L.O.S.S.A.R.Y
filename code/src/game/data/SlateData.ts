@@ -171,7 +171,7 @@ export const SLATE_DEFINITIONS: SlateDefinition[] = [
     },
     {
         id: 'slate_merchant',
-        title: 'Slate X',
+        title: 'Slate IX',
         fragments: [
             { runic: 'Vox Umbra Kael', translated: 'A figure walks the ruins' },
             { runic: 'Jinx Prism Hallow', translated: 'appearing where hope fades' },
@@ -186,7 +186,7 @@ export const SLATE_DEFINITIONS: SlateDefinition[] = [
     },
     {
         id: 'slate_tentacles',
-        title: 'Slate XI',
+        title: 'Slate X',
         fragments: [
             { runic: 'Nyx Cipher Basalt', translated: 'It grips the tower' },
             { runic: 'Umbra Quell Prism', translated: 'tendrils wrapped around stone' },
@@ -231,6 +231,8 @@ export const SLATE_DEFINITIONS: SlateDefinition[] = [
     },
 ];
 
+const SLATE_IDS = new Set(SLATE_DEFINITIONS.map(slate => slate.id));
+
 export class SlateProgress {
     private static instance: SlateProgress;
     private completedSlates: Set<string> = new Set();
@@ -251,6 +253,7 @@ export class SlateProgress {
     }
 
     completeSlate(slateId: string): void {
+        if (!SLATE_IDS.has(slateId)) return;
         this.completedSlates.add(slateId);
         this.save();
     }
@@ -280,7 +283,8 @@ export class SlateProgress {
         const data = localStorage.getItem('glossary_slate_progress');
         if (data) {
             try {
-                this.completedSlates = new Set(JSON.parse(data));
+                const arr = JSON.parse(data) as string[];
+                this.completedSlates = new Set(arr.filter(id => typeof id === 'string' && SLATE_IDS.has(id)));
             } catch {
                 this.completedSlates = new Set();
             }
