@@ -1,7 +1,9 @@
 import * as Phaser from 'phaser';
 import { createVignette } from '../../utils/Vignette';
+import { AudioManager } from '../../utils/AudioManager';
 
 export class Achievements extends Phaser.Scene {
+    private audioManager!: AudioManager;
 
     constructor() {
         super('Achievements');
@@ -10,6 +12,8 @@ export class Achievements extends Phaser.Scene {
     preload() {
         this.load.image('achievements-ui', 'assets/Models/exports/UI/Achievements-UI.png');
         this.load.image('go-back-ui', 'assets/Models/exports/UI/Go-Back-UI.png');
+        this.audioManager = new AudioManager(this);
+        this.audioManager.loadAudio();
     }
 
     create() {
@@ -34,6 +38,7 @@ export class Achievements extends Phaser.Scene {
 
         goBack.on('pointerdown', (p: Phaser.Input.Pointer) => {
             if (p.button !== 0) return;
+            this.audioManager.uiClick();
             this.scene.stop();
             this.scene.resume('MainMenu');
         });

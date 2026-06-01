@@ -4,6 +4,7 @@ import { UserData } from '../../data/UserData';
 const CUBE_SIZE = 50.5;
 import { FONT_FAMILY } from '../../constants';
 import { ScrollableScene } from '../../types';
+import { AudioManager } from '../../utils/AudioManager';
 
 const CUBE_POSITIONS = [
     { x: 246, y: 107.5 },
@@ -24,23 +25,26 @@ const ACHIEVEMENT_TOOLTIPS = [
 ];
 
 export class AchievementsUI extends Phaser.Scene {
-
     private baseX = 0;
     private baseY = 0;
     private imgScale = 2;
     private parentScene!: Phaser.Scene;
-
     private hitZones: Phaser.GameObjects.Rectangle[] = [];
     private overlays: Phaser.GameObjects.Rectangle[] = [];
     private overlayToIndex: number[] = [];
-
     tooltipBg!: Phaser.GameObjects.Rectangle;
     tooltipText!: Phaser.GameObjects.Text;
     tooltipVisible: boolean = false;
     private currentHoveredIndex: number | null = null;
+    private audioManager!: AudioManager;
 
     constructor() {
         super('AchievementsUI');
+    }
+
+    preload() {
+        this.audioManager = new AudioManager(this);
+        this.audioManager.loadAudio();
     }
 
     create(data: any) {
@@ -83,6 +87,7 @@ export class AchievementsUI extends Phaser.Scene {
                 .setInteractive({ useHandCursor: true });
 
             hitZone.on('pointerover', () => {
+                this.audioManager.uiClick();
                 this.currentHoveredIndex = i;
                 const scrollY = this.parentScene.cameras.main.scrollY;
                 this.showTooltip(i, x, y - scrollY);

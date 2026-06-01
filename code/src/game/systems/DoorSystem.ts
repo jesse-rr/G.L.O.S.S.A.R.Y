@@ -5,7 +5,8 @@ import { COVENANT_BASE_INDEX } from '../constants';
 import { InteractSystem } from './InteractSystem';
 import { MatterScene } from '../types';
 import { fadeIn, fadeOutAndDestroy } from '../utils/TweenUtils';
-import {ScreenShake} from "../utils/ScreenShake";
+import { ScreenShake } from "../utils/ScreenShake";
+import { AudioManager } from '../utils/AudioManager';
 
 export interface DoorState {
     sprite: Phaser.GameObjects.Sprite;
@@ -18,6 +19,12 @@ export interface DoorState {
     y: number;
     opened: boolean;
     interactTimer: number;
+}
+
+let audioManager: AudioManager | null = null;
+
+export function initDoorAudio(manager: AudioManager) {
+    audioManager = manager;
 }
 
 export function createDoors(
@@ -129,10 +136,14 @@ export function handleDoorInteraction(
                     door.opened = true;
                     PlayerData.getInstance().hubDoorOpened = true;
 
+                    if (audioManager) {
+                        audioManager.playRocks();
+                    }
+
                     setCinematic(true);
 
                     const startDoorAnimation = () => {
-                        ScreenShake.trigger(scene, 1000, 0.001)
+                        ScreenShake.trigger(scene, 1000, 0.001);
                         door.sprite.play('door-open');
                         if (door.bodyBase) (scene as MatterScene).matter.world.remove(door.bodyBase);
 

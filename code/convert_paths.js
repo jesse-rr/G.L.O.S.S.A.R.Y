@@ -8,10 +8,7 @@ function cleanPaths(file) {
     if (data.tilesets) {
         data.tilesets.forEach(ts => {
             if (ts.image) {
-                // Get filename without directories
-                let baseName = path.parse(ts.image).name; // 'Desert-Floor'
-                
-                // Add '-Sheet.png' to exactly match the target files
+                let baseName = path.parse(ts.image).name;
                 let newImage = baseName + '-Sheet.png';
                 
                 if (ts.image !== newImage) {

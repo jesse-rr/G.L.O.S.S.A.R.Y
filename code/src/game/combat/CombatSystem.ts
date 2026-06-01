@@ -180,7 +180,6 @@ export class CombatSystem {
         for (const player of this.players) {
             if (player.stats.hp <= 0) continue;
 
-            // Process player poison DoT
             const poison = player.statusEffects.find(s => s.effect === 'poison');
             if (poison) {
                 const dmg = (poison.stacks || 1) * 2;
@@ -190,8 +189,6 @@ export class CombatSystem {
                     this.emit({ type: 'player_defeated', data: { playerId: player.id } });
                 }
             }
-
-            // Process player dazed (handled at attack time, just tick duration here)
 
             player.statusEffects.forEach(s => {
                 if (s.duration > 0) s.duration--;
@@ -305,7 +302,6 @@ export class CombatSystem {
             }
         }
 
-        // 4. Combo Bonus
         const combo = RuneData.findMatchingCombo(chain);
         let hasArchive = false;
         let hasEchojar = false;
@@ -341,7 +337,6 @@ export class CombatSystem {
             }
         }
 
-        // 5. Multipliers
         let rawDamage = damagePower;
         let multiplier = 1.0;
 
@@ -362,7 +357,6 @@ export class CombatSystem {
             rawDamage = Math.floor(rawDamage * multiplier);
         }
 
-        // 6. Defense subtraction
         let enemyDef = enemy.stats.defense;
         const shatter = enemy.statusEffects.find(s => s.effect === 'shatter');
         if (shatter) {
@@ -373,7 +367,6 @@ export class CombatSystem {
         result.heal = healPower;
         result.defense = defensePower;
 
-        // Build Damage Line
         if (damagePower > 0 || result.damage > 0) {
             let dmgExpr = damageParts.join(' + ');
             if (multiplier > 1.0 && damageParts.length > 1) {
@@ -389,12 +382,10 @@ export class CombatSystem {
             result.damageLine = `DMG: ${dmgExpr} = ${result.damage}`;
         }
 
-        // Build Heal Line
         if (healPower > 0) {
             result.healLine = `HEAL: ${healParts.join(' + ')} = +${healPower}`;
         }
 
-        // Build Defense Line
         if (defensePower > 0) {
             result.defenseLine = `DEF: ${defenseParts.join(' + ')} = +${defensePower}`;
         }
@@ -408,11 +399,9 @@ export class CombatSystem {
 
         if (!player || !enemy || !player.currentChain) return 0;
 
-        // Player dazed: 50% chance to miss attack (from skull attacks)
         const playerDazed = player.statusEffects.find(s => s.effect === 'dazed');
         if (playerDazed && Math.random() < 0.5) {
             this.emit({ type: 'status_applied', data: { targetId: player.id, effect: 'dazed_miss' } });
-            // Consume dazed on miss to prevent softlock
             player.statusEffects = player.statusEffects.filter(s => s.effect !== 'dazed');
             player.currentChain = null;
             return 0;
@@ -500,7 +489,6 @@ export class CombatSystem {
             enemyDef = 0;
         }
 
-        // Slime damage reduction: 25% less damage taken
         if (enemy.id.startsWith('slime')) {
             rawDamage = Math.max(1, Math.floor(rawDamage * 0.75));
         }
@@ -510,7 +498,6 @@ export class CombatSystem {
         enemy.stats.hp = Math.max(0, enemy.stats.hp - damage);
         this.emit({ type: 'enemy_damaged', data: { enemyId: enemy.id, damage, remainingHp: enemy.stats.hp } });
 
-        // Pebble: reflect 50% of received damage back to attacker
         if (enemy.id === 'pebble' && damage > 0) {
             const reflectDmg = Math.max(1, Math.floor(damage * 0.50));
             player.stats.hp = Math.max(0, player.stats.hp - reflectDmg);
@@ -655,7 +642,6 @@ export class CombatSystem {
         player.stats.hp = Math.max(0, player.stats.hp - damage);
         this.emit({ type: 'player_damaged', data: { playerId: player.id, damage, remainingHp: player.stats.hp } });
 
-        // Bat & Rat: apply poison to player on hit
         if (damage > 0 && (enemy.id === 'bat' || enemy.id === 'rat')) {
             const existingPoison = player.statusEffects.find(s => s.effect === 'poison');
             if (existingPoison) {
@@ -667,7 +653,6 @@ export class CombatSystem {
             this.emit({ type: 'status_applied', data: { targetId: player.id, effect: 'poison' } });
         }
 
-        // Skull: apply dazed to player on hit
         if (damage > 0 && enemy.id === 'skull') {
             const existingDazed = player.statusEffects.find(s => s.effect === 'dazed');
             if (existingDazed) {

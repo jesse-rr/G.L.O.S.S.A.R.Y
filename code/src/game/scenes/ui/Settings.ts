@@ -1,7 +1,9 @@
 import * as Phaser from 'phaser';
 import { InputKeys } from '../../constants';
+import { AudioManager } from '../../utils/AudioManager';
 
 export class Settings extends Phaser.Scene {
+    private audioManager!: AudioManager;
 
     constructor() {
         super('Settings');
@@ -10,6 +12,8 @@ export class Settings extends Phaser.Scene {
     preload() {
         this.load.image('settings-ui', 'assets/Models/exports/UI/Settings-UI.png');
         this.load.image('go-back-ui', 'assets/Models/exports/UI/Go-Back-UI.png');
+        this.audioManager = new AudioManager(this);
+        this.audioManager.loadAudio();
     }
 
     create() {
@@ -36,12 +40,14 @@ export class Settings extends Phaser.Scene {
 
         goBack.on('pointerdown', (p: Phaser.Input.Pointer) => {
             if (p.button !== 0) return;
+            this.audioManager.uiClick();
             this.scene.stop('SettingsUI');
             this.scene.stop();
             this.scene.resume('MainMenu');
         });
 
         this.input.keyboard!.on(InputKeys.BACK, () => {
+            this.audioManager.uiClick();
             this.scene.stop('SettingsUI');
             this.scene.stop();
             this.scene.resume('MainMenu');

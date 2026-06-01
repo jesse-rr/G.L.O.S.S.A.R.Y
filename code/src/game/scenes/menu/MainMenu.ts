@@ -6,6 +6,7 @@ import { RuneData } from '../../data/RuneData';
 import { LocationData } from '../../data/LocationData';
 import { BestiaryData } from '../../data/BestiaryData';
 import { SlateProgress } from '../../data/SlateData';
+import { AudioManager } from "../../utils/AudioManager";
 
 const BG_FRAME_RATE = 8;
 const SELECTOR_FRAME_RATE = 10;
@@ -45,9 +46,15 @@ export class MainMenu extends Phaser.Scene {
     private confirmSelectionIndex = 1;
     private confirmBtnRect?: Phaser.GameObjects.Rectangle;
     private cancelBtnRect?: Phaser.GameObjects.Rectangle;
+    private audioManager!: AudioManager;
 
     constructor() {
         super('MainMenu');
+    }
+
+    preload() {
+        this.audioManager = new AudioManager(this);
+        this.audioManager.loadAudio();
     }
 
     create() {
@@ -102,38 +109,57 @@ export class MainMenu extends Phaser.Scene {
             zone.on('pointerover', () => {
                 this.positionSelector(i);
                 this.input.setDefaultCursor('pointer');
+                this.audioManager.uiClick();
             });
             zone.on('pointerout', () => this.input.setDefaultCursor('default'));
             zone.on('pointerdown', (p: Phaser.Input.Pointer) => {
                 if (p.button !== 0) return;
+                this.audioManager.uiClick();
                 this.onButtonClick(btn.label);
             });
         }
 
         this.positionSelector(0);
 
-        this.input.keyboard!.on(InputKeys.UP, () => this.moveSelection(-1, false));
-        this.input.keyboard!.on(InputKeys.DOWN, () => this.moveSelection(1, false));
-        this.input.keyboard!.on(InputKeys.LEFT, () => this.moveSelection(-1, true));
-        this.input.keyboard!.on(InputKeys.RIGHT, () => this.moveSelection(1, true));
+        this.input.keyboard!.on(InputKeys.UP, () => {
+            this.audioManager.uiClick();
+            this.moveSelection(-1, false);
+        });
+        this.input.keyboard!.on(InputKeys.DOWN, () => {
+            this.audioManager.uiClick();
+            this.moveSelection(1, false);
+        });
+        this.input.keyboard!.on(InputKeys.LEFT, () => {
+            this.moveSelection(-1, true);
+        });
+        this.input.keyboard!.on(InputKeys.RIGHT, () => {
+            this.moveSelection(1, true);
+        });
         this.input.keyboard!.on(InputKeys.ENTER, () => {
             if (this.confirmContainer) {
                 if (this.confirmSelectionIndex === 0) {
+                    this.audioManager.uiClick();
                     this.confirmContainer.destroy();
                     this.confirmContainer = undefined;
                     this.startNewGame();
                 } else {
+                    this.audioManager.uiClick();
                     this.confirmContainer.destroy();
                     this.confirmContainer = undefined;
                     this.inputLocked = false;
                 }
             } else {
+                this.audioManager.uiClick();
                 this.onButtonClick(BUTTONS[this.selectedButton].label);
             }
         });
-        this.input.keyboard!.on(InputKeys.HELP, () => this.onButtonClick('HELP'));
+        this.input.keyboard!.on(InputKeys.HELP, () => {
+            this.audioManager.uiClick();
+            this.onButtonClick('HELP');
+        });
         this.input.keyboard!.on(InputKeys.BACK, () => {
             if (this.confirmContainer) {
+                this.audioManager.uiClick();
                 this.confirmContainer.destroy();
                 this.confirmContainer = undefined;
                 this.inputLocked = false;
@@ -221,22 +247,26 @@ export class MainMenu extends Phaser.Scene {
         this.updateConfirmSelection();
 
         this.confirmBtnRect.on('pointerover', () => {
+            this.audioManager.uiClick();
             this.confirmSelectionIndex = 0;
             this.updateConfirmSelection();
         });
-        
+
         this.cancelBtnRect.on('pointerover', () => {
+            this.audioManager.uiClick();
             this.confirmSelectionIndex = 1;
             this.updateConfirmSelection();
         });
 
         this.confirmBtnRect.on('pointerdown', () => {
+            this.audioManager.uiClick();
             this.confirmContainer!.destroy();
             this.confirmContainer = undefined;
             this.startNewGame();
         });
 
         this.cancelBtnRect.on('pointerdown', () => {
+            this.audioManager.uiClick();
             this.confirmContainer!.destroy();
             this.confirmContainer = undefined;
             this.inputLocked = false;
@@ -304,10 +334,10 @@ export class MainMenu extends Phaser.Scene {
                             targetData: { mapKey: 'summit-settlement' }
                         });
                     } else if (pData.inCombat) {
-                        this.scene.launch('TransitionScene', { 
-                            targetScene: 'CombatScene', 
-                            currentScene: 'MainMenu', 
-                            targetData: { encounterTier: pData.combatTier, mapKey: pData.lastMap, enemyId: pData.combatEnemyId } 
+                        this.scene.launch('TransitionScene', {
+                            targetScene: 'CombatScene',
+                            currentScene: 'MainMenu',
+                            targetData: { encounterTier: pData.combatTier, mapKey: pData.lastMap, enemyId: pData.combatEnemyId }
                         });
                     } else {
                         const targetData: { mapKey: string; spawnX?: number; spawnY?: number } = {

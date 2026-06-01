@@ -9,7 +9,7 @@ export interface AchievementData {
 class Settings {
     volume: number = 50;
     vsync: boolean = true;
-    particles: boolean = true;
+    lightSystem: boolean = true;
     screenShake: boolean = true;
 }
 

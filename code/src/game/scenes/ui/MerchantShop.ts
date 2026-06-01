@@ -459,15 +459,6 @@ export class MerchantShop extends Phaser.Scene {
         });
     }
 
-    private getRuneFrame(cardType: string): number {
-        switch (cardType) {
-            case 'boost': return 0;
-            case 'unique': return 1;
-            case 'base': return 2;
-            default: return 2;
-        }
-    }
-
     private getRuneCost(rune: RuneDefinition): number {
         switch (rune.cardType) {
             case 'unique': return 200;

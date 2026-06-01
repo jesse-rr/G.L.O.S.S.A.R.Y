@@ -96,7 +96,6 @@ export class SummitBossHUD {
         }
     }
 
-    /** Called when a pillar is cleared — plays heavy-hit damage on the bar. */
     onPillarDefeated(pillarsDefeated: number): void {
         const count = Phaser.Math.Clamp(pillarsDefeated, 0, SEGMENT_COUNT);
         if (count <= this.pillarsDefeated) {

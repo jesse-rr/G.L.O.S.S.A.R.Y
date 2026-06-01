@@ -1,5 +1,3 @@
-// RuneIndicatorSystem.ts
-
 import * as Phaser from 'phaser';
 import { createVignette } from '../utils/Vignette';
 import { fadeIn, fadeOutAndDestroy } from '../utils/TweenUtils';
@@ -25,7 +23,6 @@ export class RuneIndicatorSystem {
     private playArea: { x: number; y: number; width: number; height: number; minX: number; maxX: number; minY: number; maxY: number };
     private pillarPositions: { x: number; y: number; index: number; activated: boolean }[] = [];
     private remainingPillars: number[] = [];
-    private currentPillarIndex = 0;
     private bossAttackSystem: any;
     private onAllPillarsDefeated?: () => void;
     private onPillarDamaged?: (pillarsDefeated: number) => void;
@@ -35,9 +32,6 @@ export class RuneIndicatorSystem {
     private currentAttackSpeed = 1;
     private isBattleEnding = false;
     private tentaclesAnimation?: Phaser.GameObjects.Sprite;
-    private originalZoom = 2;
-    private originalScrollX = 0;
-    private originalScrollY = 0;
     private mapCenterX = -300;
     private mapCenterY = -200;
     private attackPhaseTimer?: Phaser.Time.TimerEvent;
@@ -50,7 +44,6 @@ export class RuneIndicatorSystem {
         this.player = player;
         this.playArea = this.calculatePlayArea(barrierObjects);
         this.initializePillarPositions(customPillarPositions);
-        this.originalZoom = this.scene.cameras.main.zoom;
     }
 
     private initializePillarPositions(customPillarPositions?: { x: number; y: number }[]): void {
@@ -227,7 +220,7 @@ export class RuneIndicatorSystem {
         localStorage.setItem('glossary_boss_remaining_pillars', JSON.stringify(this.remainingPillars));
     }
 
-    private setPauseReason(reason: string, active: boolean, durationMs?: number): void {
+    private setPauseReason(reason: string, active: boolean, _durationMs?: number): void {
         if (active) {
             this.pauseReasons.add(reason);
         } else {
@@ -318,8 +311,6 @@ export class RuneIndicatorSystem {
         if (!pillar) return;
 
         pillar.activated = true;
-        this.currentPillarIndex = pillarIdx;
-
         const indicator = new RuneIndicator(
             this.scene,
             pillar.x,
@@ -366,7 +357,7 @@ export class RuneIndicatorSystem {
     private playPillarActivationEffect(): void {
         const camera = this.scene.cameras.main;
         const originalZoom = camera.zoom;
-        const wasFollowing = camera._follow !== undefined;
+        const wasFollowing = (camera as any)._follow !== undefined;
 
         if (wasFollowing) {
             camera.stopFollow();
@@ -557,12 +548,10 @@ class RuneIndicator {
     private topSprite: Phaser.GameObjects.Sprite;
     private glowTween?: Phaser.Tweens.Tween;
     private alphaTween?: Phaser.Tweens.Tween;
-    private readonly timeWindowMs: number;
     private lifetimeRemainingMs: number;
     private exitAfterLeaveMs: number | null = null;
     private isPlayerInside = false;
     private scene: Phaser.Scene;
-    private onDefeated: () => void;
     private static readonly ALPHA_OUTSIDE = 0.55;
     private static readonly ALPHA_INSIDE = 1;
 
@@ -575,15 +564,14 @@ class RuneIndicator {
         );
     }
 
-    constructor(scene: Phaser.Scene, x: number, y: number, timeWindow: number, requiredStay: number, pillarIndex: number, onDefeated: () => void) {
+    constructor(scene: Phaser.Scene, x: number, y: number, timeWindow: number, requiredStay: number, pillarIndex: number, _onDefeated: () => void) {
         this.scene = scene;
         this.x = x;
         this.y = y;
-        this.timeWindowMs = timeWindow;
         this.requiredStayMs = requiredStay;
         this.lifetimeRemainingMs = timeWindow;
         this.pillarIndex = pillarIndex;
-        this.onDefeated = onDefeated;
+        _onDefeated;
 
         this.bottomSprite = scene.add.sprite(x, y + 54, 'Rune-Indicator-Bottom');
         this.bottomSprite.setOrigin(0.5, 0.5);

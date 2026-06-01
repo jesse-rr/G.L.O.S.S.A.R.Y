@@ -1,23 +1,20 @@
 import * as Phaser from 'phaser';
 import { UserData } from '../../data/UserData';
-
 import { FONT_FAMILY, InputKeys } from '../../constants';
 import { ScrollableScene } from '../../types';
+import { AudioManager } from '../../utils/AudioManager';
 
 export class SettingsUI extends Phaser.Scene {
-
     private elements: any[] = [];
     private selected = 0;
     private selL!: Phaser.GameObjects.Sprite;
     private selR!: Phaser.GameObjects.Sprite;
-
     private baseX = 0;
     private baseY = 0;
     private parentScene!: Phaser.Scene;
-
     private draggingSlider: any = null;
-
     private leftCount = 3;
+    private audioManager!: AudioManager;
 
     constructor() {
         super('SettingsUI');
@@ -29,6 +26,8 @@ export class SettingsUI extends Phaser.Scene {
             frameWidth: 32,
             frameHeight: 32
         });
+        this.audioManager = new AudioManager(this);
+        this.audioManager.loadAudio();
     }
 
     create(data: any) {
@@ -56,15 +55,14 @@ export class SettingsUI extends Phaser.Scene {
         const startY = 180;
         const gap = 60;
 
-        const leftLabels = ['VSync', 'Particles', 'Screen Shake'];
+        const leftLabels = ['VSync', 'Ligth System', 'Screen Shake'];
         const rightLabels = ['Volume', 'Cat Mode', 'User Data'];
         const userData = this.registry.get('userData') as UserData;
 
         this.elements = [
             { type: 'button', ox: leftTextX + uiOffset, oy: startY, toggle: true, enabled: userData.settings.vsync, label: leftLabels[0] },
-            { type: 'button', ox: leftTextX + uiOffset, oy: startY + gap, toggle: true, enabled: userData.settings.particles, label: leftLabels[1] },
+            { type: 'button', ox: leftTextX + uiOffset, oy: startY + gap, toggle: true, enabled: userData.settings.lightSystem, label: leftLabels[1] },
             { type: 'button', ox: leftTextX + uiOffset, oy: startY + gap * 2, toggle: true, enabled: userData.settings.screenShake, label: leftLabels[2] },
-
             { type: 'slider', ox: rightTextX + uiOffset, oy: startY, value: userData.settings.volume, label: rightLabels[0] },
             { type: 'button', ox: rightTextX + uiOffset, oy: startY + gap, toggle: false, label: rightLabels[1] },
             { type: 'download', ox: rightTextX + uiOffset, oy: startY + gap * 2, label: rightLabels[2] }
@@ -91,9 +89,13 @@ export class SettingsUI extends Phaser.Scene {
                 const hit = this.add.zone(-177, 0, 415, 40)
                     .setOrigin(0.5)
                     .setInteractive({ cursor: 'pointer' })
-                    .on('pointerover', () => this.select(i))
+                    .on('pointerover', () => {
+                        this.audioManager.uiClick();
+                        this.select(i);
+                    })
                     .on('pointerdown', (p: Phaser.Input.Pointer) => {
                         if (p.button !== 0) return;
+                        this.audioManager.uiClick();
                         this.activate(i);
                     });
 
@@ -112,7 +114,6 @@ export class SettingsUI extends Phaser.Scene {
             }
 
             if (el.type === 'slider') {
-
                 const trackWidth = 160;
                 const sliderY = 0;
                 const leftEdge = -trackWidth / 2;
@@ -147,14 +148,11 @@ export class SettingsUI extends Phaser.Scene {
 
                 const update = (v: number) => {
                     el.value = Phaser.Math.Clamp(v, 0, 100);
-
                     const t = el.value / 100;
                     const minX = leftEdge - 36;
                     const maxX = rightEdge - 68;
-
                     knob.x = Phaser.Math.Linear(minX, maxX, t);
                     txt.setText(`${Math.round(el.value)}`);
-
                     const userData = this.registry.get('userData') as UserData;
                     userData.settings.volume = Math.round(el.value);
                 };
@@ -164,17 +162,23 @@ export class SettingsUI extends Phaser.Scene {
                 const rowHit = this.add.zone(-177, sliderY, 415, 40)
                     .setOrigin(0.5)
                     .setInteractive({ cursor: 'pointer' })
-                    .on('pointerover', () => this.select(i));
+                    .on('pointerover', () => {
+                        this.audioManager.uiClick();
+                        this.select(i);
+                    });
 
                 const hit = this.add.zone(-50, sliderY, trackWidth, 40)
                     .setOrigin(0.5)
                     .setInteractive({ cursor: 'pointer' })
-                    .on('pointerover', () => this.select(i))
+                    .on('pointerover', () => {
+                        this.audioManager.uiClick();
+                        this.select(i);
+                    })
                     .on('pointerdown', (p: Phaser.Input.Pointer) => {
                         if (p.button !== 0) return;
+                        this.audioManager.uiClick();
                         const minX = leftEdge - 36;
                         const maxX = rightEdge - 68;
-
                         this.draggingSlider = { el, update, minX, maxX };
                         const local = el.obj.getWorldTransformMatrix().applyInverse(p.x, p.y);
                         const clamped = Phaser.Math.Clamp(local.x, minX, maxX);
@@ -188,14 +192,17 @@ export class SettingsUI extends Phaser.Scene {
                 const hit = this.add.zone(-177, 0, 415, 40)
                     .setOrigin(0.5)
                     .setInteractive({ cursor: 'pointer' })
-                    .on('pointerover', () => this.select(i))
+                    .on('pointerover', () => {
+                        this.audioManager.uiClick();
+                        this.select(i);
+                    })
                     .on('pointerdown', (p: Phaser.Input.Pointer) => {
                         if (p.button !== 0) return;
+                        this.audioManager.uiClick();
                         this.activate(i);
                     });
 
                 const dl = this.add.image(0, 0, 'ui-items', 3).setScale(scale);
-
                 el.obj.add([hit, dl]);
             }
         });
@@ -213,11 +220,26 @@ export class SettingsUI extends Phaser.Scene {
 
         this.select(0);
 
-        this.input.keyboard!.on(InputKeys.UP, () => this.move(-1));
-        this.input.keyboard!.on(InputKeys.DOWN, () => this.move(1));
-        this.input.keyboard!.on(InputKeys.LEFT, () => this.moveSide(-1));
-        this.input.keyboard!.on(InputKeys.RIGHT, () => this.moveSide(1));
-        this.input.keyboard!.on(InputKeys.ENTER, () => this.activate(this.selected));
+        this.input.keyboard!.on(InputKeys.UP, () => {
+            this.audioManager.uiClick();
+            this.move(-1);
+        });
+        this.input.keyboard!.on(InputKeys.DOWN, () => {
+            this.audioManager.uiClick();
+            this.move(1);
+        });
+        this.input.keyboard!.on(InputKeys.LEFT, () => {
+            this.audioManager.uiClick();
+            this.moveSide(-1);
+        });
+        this.input.keyboard!.on(InputKeys.RIGHT, () => {
+            this.audioManager.uiClick();
+            this.moveSide(1);
+        });
+        this.input.keyboard!.on(InputKeys.ENTER, () => {
+            this.audioManager.uiClick();
+            this.activate(this.selected);
+        });
 
         this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
             if (this.draggingSlider) {
@@ -251,7 +273,6 @@ export class SettingsUI extends Phaser.Scene {
 
     update() {
         const scrollY = this.parentScene.cameras.main.scrollY;
-
         this.elements.forEach((el: any) => {
             el.obj.setPosition(
                 this.baseX + el.ox,
@@ -261,15 +282,11 @@ export class SettingsUI extends Phaser.Scene {
 
         const el = this.elements[this.selected];
         const isLeft = el.ox < 0;
-
         const textX = isLeft ? -470 : 40;
         const btnX = el.ox;
-
         const worldTextX = this.baseX + textX;
         const worldBtnX = this.baseX + btnX;
-
         const y = this.baseY + el.oy - scrollY;
-
         const pad = 10;
 
         this.selL.setPosition(worldTextX + pad + 20, y);
@@ -282,7 +299,6 @@ export class SettingsUI extends Phaser.Scene {
 
     private moveSide(dir: number) {
         const isLeft = this.selected < this.leftCount;
-
         if (dir > 0 && isLeft) {
             const row = this.selected;
             const target = this.leftCount + row;
@@ -316,7 +332,7 @@ export class SettingsUI extends Phaser.Scene {
                 this.game.loop.stop();
                 this.game.loop.start((this.game.loop as any).callback);
             }
-            if (i === 1) userData.settings.particles = el.enabled;
+            if (i === 1) userData.settings.lightSystem = el.enabled;
             if (i === 2) userData.settings.screenShake = el.enabled;
         }
 
@@ -337,7 +353,6 @@ export class SettingsUI extends Phaser.Scene {
 
         if (el.type === 'download') {
             const data = this.registry.get('userData') || {};
-
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);

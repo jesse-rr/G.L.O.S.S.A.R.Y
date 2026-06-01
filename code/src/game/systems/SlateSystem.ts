@@ -25,7 +25,6 @@ export class SlateSystem {
     private scene: Phaser.Scene;
     private parentContainer: Phaser.GameObjects.Container;
     private slate: SlateDefinition;
-    private onComplete?: () => void;
 
     private fragmentSlots: FragmentSlot[] = [];
     private slotZones: SlotZone[] = [];
@@ -53,13 +52,13 @@ export class SlateSystem {
         scene: Phaser.Scene,
         parentContainer: Phaser.GameObjects.Container,
         slate: SlateDefinition,
-        onComplete?: () => void,
+        _onComplete?: () => void,
         colorScheme?: string
     ) {
         this.scene = scene;
         this.parentContainer = parentContainer;
         this.slate = slate;
-        this.onComplete = onComplete;
+        _onComplete;
         this.colors = colorScheme === 'light' ? SLATE_LIGHT_COLORS : SLATE_DARK_COLORS;
         this.alreadyCompleted = SlateProgress.getInstance().isCompleted(slate.id);
     }

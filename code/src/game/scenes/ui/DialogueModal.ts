@@ -12,7 +12,6 @@ export class DialogueModal extends Phaser.Scene {
         this.previousScene = data.previousScene || 'LevelScene';
         this.scene.bringToTop();
 
-        // 1. Dark full-screen overlay with transition
         const overlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0)
             .setOrigin(0)
             .setScrollFactor(0);
@@ -23,7 +22,6 @@ export class DialogueModal extends Phaser.Scene {
             duration: 300
         });
 
-        // 2. Centered dialogue box
         const boxWidth = 620;
         const boxHeight = 190;
         const centerX = this.scale.width / 2;
@@ -31,17 +29,14 @@ export class DialogueModal extends Phaser.Scene {
 
         const container = this.add.container(centerX, centerY);
 
-        // Elegant dark background with gold accent border
         const bg = this.add.rectangle(0, 0, boxWidth, boxHeight, 0x141417, 0.95)
             .setStrokeStyle(2, 0xd4a574, 0.8)
             .setOrigin(0.5);
 
-        // Inner border accent
         const innerBorder = this.add.rectangle(0, 0, boxWidth - 12, boxHeight - 12, 0x000000, 0)
             .setStrokeStyle(1, 0xffffff, 0.1)
             .setOrigin(0.5);
 
-        // Dialogue text
         const text = this.add.text(0, -15, data.text, {
             fontFamily: FONT_FAMILY,
             fontSize: '18px',
@@ -51,7 +46,6 @@ export class DialogueModal extends Phaser.Scene {
             lineSpacing: 8
         }).setOrigin(0.5);
 
-        // Close instruction hint
         const closeHint = this.add.text(0, boxHeight / 2 - 25, 'press X or ESC to continue', {
             fontFamily: FONT_FAMILY,
             fontSize: '12px',
@@ -59,7 +53,6 @@ export class DialogueModal extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5);
 
-        // Pulsing animation for the close hint
         this.tweens.add({
             targets: closeHint,
             alpha: 0.4,
@@ -71,7 +64,6 @@ export class DialogueModal extends Phaser.Scene {
 
         container.add([bg, innerBorder, text, closeHint]);
 
-        // Entrance scale animation
         container.setScale(0.85);
         container.setAlpha(0);
         this.tweens.add({
@@ -82,7 +74,6 @@ export class DialogueModal extends Phaser.Scene {
             ease: 'Back.easeOut'
         });
 
-        // Close logic with cleanup
         const close = () => {
             this.input.keyboard?.removeAllListeners();
             this.input.removeAllListeners();
@@ -106,13 +97,11 @@ export class DialogueModal extends Phaser.Scene {
             });
         };
 
-        // Clicking overlay/background closes the dialog
         overlay.setInteractive();
         overlay.on('pointerdown', close);
         bg.setInteractive();
         bg.on('pointerdown', close);
 
-        // Keyboard close listeners
         this.input.keyboard?.on(InputKeys.INTERACT, close);
         this.input.keyboard?.on(InputKeys.BACK, close);
     }

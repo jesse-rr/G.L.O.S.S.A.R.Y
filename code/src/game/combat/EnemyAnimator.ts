@@ -159,7 +159,7 @@ export class EnemyAnimator {
 
             this.scene.tweens.add({
                 targets: projectile,
-                x: startX - 500, // Travel to the left
+                x: startX - 500,
                 duration: 600,
                 ease: 'Linear',
                 onComplete: () => {

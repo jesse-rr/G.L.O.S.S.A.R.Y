@@ -1,15 +1,22 @@
 import * as Phaser from 'phaser';
 import { FONT_FAMILY } from '../../constants';
 import { ScrollableScene } from '../../types';
+import { AudioManager } from '../../utils/AudioManager';
 
 export class ControlsUI extends Phaser.Scene {
     private baseX = 0;
     private baseY = 0;
     private parentScene!: Phaser.Scene;
     private container!: Phaser.GameObjects.Container;
+    private audioManager!: AudioManager;
 
     constructor() {
         super('ControlsUI');
+    }
+
+    preload() {
+        this.audioManager = new AudioManager(this);
+        this.audioManager.loadAudio();
     }
 
     create(data: any) {

@@ -20,11 +20,13 @@
     "build-nolog": "vite build --config vite/config.prod.mjs"
   },
   "devDependencies": {
+    "@types/google.accounts": "^0.0.18",
     "@types/three": "^0.184.0",
     "typescript": "~5.7.2",
     "vite": "^6.3.1"
   },
   "dependencies": {
+    "axios": "^1.16.1",
     "peerjs": "^1.5.5",
     "phaser": "4.0.0",
     "terser": "^5.39.0",

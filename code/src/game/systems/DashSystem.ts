@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { ScreenShake } from '../utils/ScreenShake';
-
+import { AudioManager } from '../utils/AudioManager';
 
 export interface DashConfig {
     speed?: number;
@@ -23,12 +23,21 @@ export class DashSystem {
     private dashDurationTime: number;
     private dashDirection = new Phaser.Math.Vector2(0, 0);
     private dashAvailable = true;
+    private audioManager: AudioManager | null = null;
 
     constructor(config?: DashConfig) {
         const cfg = { ...DEFAULTS, ...config };
         this.dashSpeed = cfg.speed;
         this.dashCooldownTime = cfg.cooldownTime;
         this.dashDurationTime = cfg.durationTime;
+    }
+
+    setAudioManager(audioManager: AudioManager) {
+        this.audioManager = audioManager;
+    }
+
+    preloadAudio(scene: Phaser.Scene) {
+        scene.load.audio('whoosh', 'assets/sfx/whoosh/whoosh-2.mp3');
     }
 
     reset(): void {
@@ -132,7 +141,10 @@ export class DashSystem {
             );
             player.play('dash');
 
-            // Trigger a slight screen shake on dash
+            if (this.audioManager) {
+                this.audioManager.playWhoosh();
+            }
+
             ScreenShake.trigger(player.scene, 250, 0.0005);
         }
     }

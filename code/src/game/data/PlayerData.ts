@@ -15,7 +15,7 @@ export interface ActiveBuff {
     name: string;
     desc: string;
     frame: number;
-    duration: number; // -1 for permanent, otherwise number of turns
+    duration: number;
 }
 
 export class PlayerData {
@@ -180,7 +180,6 @@ export class PlayerData {
         this.save();
     }
 
-    /** Saved while in turn-based pillar CombatScene for summit boss. */
     static isSummitBossCombat(data: PlayerData): boolean {
         if (!data.inCombat) return false;
         if (data.lastMap === 'summit-settlement') return true;
@@ -192,7 +191,6 @@ export class PlayerData {
         }
     }
 
-    /** Environmental boss fight on LevelScene (attacks / runes), not CombatScene. */
     static isSummitBossFightInProgress(): boolean {
         try {
             return localStorage.getItem('glossary_boss_fight_active') === 'true';
@@ -217,10 +215,6 @@ export class PlayerData {
         localStorage.removeItem('glossary_combat_player_y');
     }
 
-    /**
-     * After F5 during summit boss content: LevelScene at spawn, no CombatScene,
-     * full reset of boss fight (barrier, pillars, runes, tentacles state).
-     */
     returnToSummitBossBattle(): void {
         this.hp = 100;
         this.inCombat = false;

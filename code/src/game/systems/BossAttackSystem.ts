@@ -198,7 +198,6 @@ export class BossAttackSystem {
         });
     }
 
-    /** Pauses the attack cycle (e.g. post-pillar boss pause). Active telegraphs fade out. */
     setAttacksPaused(paused: boolean): void {
         if (this.isStopped) return;
 
@@ -619,7 +618,6 @@ export class BossAttackSystem {
 
     private executeSmallPillarsSpam() {
         this.isSmallAttacking = true;
-        let groupIndex = 0;
         const maxGroups = Math.min(8, 5 + Math.floor(this.attackSpeedMultiplier) + (this.pillarsActivated <= 1 ? 2 : 0));
         const groupSizes = [3, 2, 3, 2, 3, 2, 3, 2];
         const interval = Math.max(280, 650 / this.attackSpeedMultiplier);

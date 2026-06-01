@@ -4,21 +4,23 @@ import { RuneData } from '../../data/RuneData';
 import { NetworkManager } from '../../NetworkManager';
 import { EventBus, GameEvents } from '../../EventBus';
 import { FONT_FAMILY, InputKeys } from '../../constants';
+import { AudioManager } from '../../utils/AudioManager';
 
 export class Multiplayer extends Phaser.Scene {
+    private audioManager!: AudioManager;
 
     constructor() {
         super('Multiplayer');
     }
 
     preload() {
-        
-
         this.load.image('multiplayer-bg', 'assets/Models/exports/UI/Multiplayer-UI.png');
         this.load.image('multiplayer-room-ui', 'assets/Models/exports/UI/Multiplayer-Room-UI.png');
         this.load.image('multiplayer-room-ui-2', 'assets/Models/exports/UI/Multiplayer-Room-UI-2.png');
         this.load.image('go-back-ui', 'assets/Models/exports/UI/Go-Back-UI.png');
         this.load.spritesheet('ui-items', 'assets/Models/exports/UI/UI-Items.png', { frameWidth: 32, frameHeight: 32 });
+        this.audioManager = new AudioManager(this);
+        this.audioManager.loadAudio();
     }
 
     create() {
@@ -43,11 +45,13 @@ export class Multiplayer extends Phaser.Scene {
 
         goBack.on('pointerdown', (p: Phaser.Input.Pointer) => {
             if (p.button !== 0) return;
+            this.audioManager.uiClick();
             this.scene.stop();
             this.scene.resume('MainMenu');
         });
 
         this.input.keyboard!.on(InputKeys.BACK, () => {
+            this.audioManager.uiClick();
             this.scene.stop();
             this.scene.resume('MainMenu');
         });
@@ -147,7 +151,7 @@ export class Multiplayer extends Phaser.Scene {
 
                 srvBg.on('pointerdown', () => {
                     if (room === md.myRoom || room === md.joinedRoom) return;
-
+                    this.audioManager.uiClick();
                     selectedRoom = room;
                     typedPasscode = '';
                     if (!room.isPrivate && room.passcode) {
@@ -176,6 +180,7 @@ export class Multiplayer extends Phaser.Scene {
         renderPage();
 
         prevBtn.on('pointerdown', () => {
+            this.audioManager.uiClick();
             if (currentPage > 0) {
                 currentPage--;
                 renderPage();
@@ -183,11 +188,13 @@ export class Multiplayer extends Phaser.Scene {
         });
 
         nextBtn.on('pointerdown', () => {
+            this.audioManager.uiClick();
             if (currentPage < totalPages - 1) {
                 currentPage++;
                 renderPage();
             }
         });
+
         const rightPanelX = centerX + 315;
         const createPanelY = centerY - 110;
 
@@ -208,6 +215,7 @@ export class Multiplayer extends Phaser.Scene {
         deleteBtn.on('pointerover', () => deleteBtn.setTint(0xff5555).setBlendMode(Phaser.BlendModes.ADD));
         deleteBtn.on('pointerout', () => deleteBtn.clearTint().setBlendMode(Phaser.BlendModes.NORMAL));
         deleteBtn.on('pointerdown', () => {
+            this.audioManager.uiClick();
             if (md.myRoom) {
                 NetworkManager.getInstance().unregisterRoom(md.myRoom.passcode);
                 NetworkManager.getInstance().disconnect();
@@ -254,6 +262,7 @@ export class Multiplayer extends Phaser.Scene {
         privateToggle.on('pointerout', () => privateToggle.setBlendMode(Phaser.BlendModes.NORMAL));
         privateToggle.on('pointerdown', () => {
             if (md.joinedRoom) return;
+            this.audioManager.uiClick();
             previewRoom.isPrivate = !previewRoom.isPrivate;
             updateRightPanel();
             if (md.myRoom) {
@@ -261,7 +270,6 @@ export class Multiplayer extends Phaser.Scene {
                 renderPage();
             }
         });
-
 
         createRoomBtnImg.on('pointerover', () => {
             if (!md.joinedRoom) {
@@ -272,6 +280,7 @@ export class Multiplayer extends Phaser.Scene {
             createRoomBtnImg.setBlendMode(Phaser.BlendModes.NORMAL);
         });
         createRoomBtnImg.on('pointerdown', () => {
+            this.audioManager.uiClick();
             if (md.joinedRoom) return;
 
             if (md.myRoom) {
@@ -361,6 +370,7 @@ export class Multiplayer extends Phaser.Scene {
         joinRoomBtnImg.on('pointerover', () => joinRoomBtnImg.setBlendMode(Phaser.BlendModes.ADD));
         joinRoomBtnImg.on('pointerout', () => joinRoomBtnImg.setBlendMode(Phaser.BlendModes.NORMAL));
         joinRoomBtnImg.on('pointerdown', () => {
+            this.audioManager.uiClick();
             if (md.joinedRoom) {
                 md.joinedRoom = null;
                 NetworkManager.getInstance().disconnect();

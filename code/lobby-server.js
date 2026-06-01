@@ -1,10 +1,9 @@
 const http = require('http');
 
 const PORT = 3000;
-let rooms = []; // Array of { id, title, isPrivate, currentPlayers, maxPlayers, passcode }
+let rooms = [];
 
 const server = http.createServer((req, res) => {
-    // Add CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -17,7 +16,6 @@ const server = http.createServer((req, res) => {
 
     if (req.method === 'GET' && req.url === '/rooms') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        // Don't send passcodes for private rooms
         const safeRooms = rooms.map(r => ({
             id: r.id,
             title: r.title,
@@ -67,7 +65,7 @@ server.listen(PORT, () => {
 setInterval(() => {
     const now = Date.now();
     const beforeCount = rooms.length;
-    rooms = rooms.filter(r => now - r.lastSeen < 10000); // Remove if no ping for 10s
+    rooms = rooms.filter(r => now - r.lastSeen < 10000);
     if (rooms.length < beforeCount) {
         console.log(`Cleaned up ${beforeCount - rooms.length} stale rooms.`);
     }

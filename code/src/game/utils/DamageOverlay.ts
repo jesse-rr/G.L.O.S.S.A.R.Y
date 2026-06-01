@@ -19,8 +19,6 @@ export class DamageOverlay {
             const canvas = scene.textures.createCanvas(textureKey, w, h);
             const ctx = canvas!.context;
 
-            // Define a beautiful radial gradient for screen edges
-            // Start transparent in center (35% radius) and blend to solid dark crimson at corners (75% radius)
             const cx = w / 2;
             const cy = h / 2;
             const r1 = Math.min(w, h) * 0.35;
@@ -43,7 +41,6 @@ export class DamageOverlay {
         this.overlayImage.setDepth(depth);
         this.overlayImage.setAlpha(0);
 
-        // Initialize lastHp to current player health
         const player = PlayerData.getInstance();
         this.lastHp = player.hp;
     }
@@ -67,30 +64,25 @@ export class DamageOverlay {
         const currentHp = player.hp;
         const maxHp = player.maxHp;
 
-        // Auto-detect taking damage to trigger a flash
         if (currentHp < this.lastHp) {
             this.flash(0.65);
         }
         this.lastHp = currentHp;
 
-        // If player is dead or HP is zero, fade overlay out so it doesn't block the death screen transition
         if (currentHp <= 0) {
             this.overlayImage.setAlpha(Math.max(0, this.overlayImage.alpha - 0.05));
             return;
         }
 
-        // Calculate persistent alpha based on missing HP
         const hpPercent = currentHp / maxHp;
         const missingHpPercent = 1 - hpPercent;
-        const baseAlpha = missingHpPercent * 0.35; // Cap base alpha at 0.35 for playability
+        const baseAlpha = missingHpPercent * 0.35;
 
-        // Add a gentle danger pulse at low health (< 35% HP)
         let pulse = 0;
         if (hpPercent <= 0.35) {
             pulse = Math.sin(time * 0.005) * 0.05;
         }
 
-        // Combine flash intensity and base danger overlay alpha
         const finalAlpha = Phaser.Math.Clamp(Math.max(this.flashAlpha, baseAlpha + pulse), 0, 0.8);
         this.overlayImage.setAlpha(finalAlpha);
     }

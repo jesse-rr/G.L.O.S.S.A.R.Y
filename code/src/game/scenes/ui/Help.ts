@@ -1,11 +1,12 @@
 import * as Phaser from 'phaser';
-
 import { FONT_FAMILY, InputKeys } from '../../constants';
+import { AudioManager } from '../../utils/AudioManager';
 
 export class Help extends Phaser.Scene {
     private scrollY = 0;
     private maxScroll = 0;
     private previousScene = 'MainMenu';
+    private audioManager!: AudioManager;
 
     constructor() {
         super('Help');
@@ -18,11 +19,12 @@ export class Help extends Phaser.Scene {
         this.load.image('achievements-ui', 'assets/Models/exports/UI/Achievements-UI.png');
         this.load.image('controls-ui', 'assets/Models/exports/UI/Controls-UI.png');
         this.load.image('go-back-ui', 'assets/Models/exports/UI/Go-Back-UI.png');
-
         this.load.spritesheet('ui-items', 'assets/Models/exports/UI/UI-Items.png', {
             frameWidth: 32,
             frameHeight: 32
         });
+        this.audioManager = new AudioManager(this);
+        this.audioManager.loadAudio();
     }
 
     create(data: any) {
@@ -88,6 +90,7 @@ export class Help extends Phaser.Scene {
         renderPage();
 
         prevBtn.on('pointerdown', () => {
+            this.audioManager.uiClick();
             if (currentPage > 0) {
                 currentPage--;
                 renderPage();
@@ -95,6 +98,7 @@ export class Help extends Phaser.Scene {
         });
 
         nextBtn.on('pointerdown', () => {
+            this.audioManager.uiClick();
             if (currentPage < totalPages - 1) {
                 currentPage++;
                 renderPage();
@@ -154,6 +158,7 @@ export class Help extends Phaser.Scene {
 
         goBack.on('pointerdown', (p: Phaser.Input.Pointer) => {
             if (p.button !== 0) return;
+            this.audioManager.uiClick();
             this.scene.stop('SettingsUI');
             this.scene.stop('AchievementsUI');
             this.scene.stop('ControlsUI');
@@ -162,6 +167,7 @@ export class Help extends Phaser.Scene {
         });
 
         this.input.keyboard!.on(InputKeys.BACK, () => {
+            this.audioManager.uiClick();
             this.scene.stop('SettingsUI');
             this.scene.stop('AchievementsUI');
             this.scene.stop('ControlsUI');
@@ -170,6 +176,7 @@ export class Help extends Phaser.Scene {
         });
 
         this.input.keyboard!.on(InputKeys.HELP, () => {
+            this.audioManager.uiClick();
             this.scene.stop('SettingsUI');
             this.scene.stop('AchievementsUI');
             this.scene.stop('ControlsUI');

@@ -182,7 +182,7 @@ export class PortalSystem {
         return { x: spawnX, y: spawnY };
     }
 
-    onPortalOverlap(portal: Phaser.GameObjects.GameObject, player: Phaser.Physics.Matter.Sprite, mapKey: string): void {
+    onPortalOverlap(portal: Phaser.GameObjects.GameObject, _player: Phaser.Physics.Matter.Sprite, mapKey: string): void {
         if (this.isTeleporting) return;
         const targetMap = portal.getData('target');
         if (targetMap) {

@@ -31,7 +31,6 @@ export class RaidhoRuneSystem {
     private glintOverlay!: Phaser.GameObjects.Text;
     private tweens: Phaser.Tweens.Tween[] = [];
     private holdTimer: number = 0;
-    private interactable: boolean = false;
     private completedCombats: number = 0;
     private mountX: number = 0;
     private mountY: number = 0;
@@ -46,7 +45,6 @@ export class RaidhoRuneSystem {
         this.mountX = mountX;
         this.mountY = mountY + RAIDHO_MOUNT_OFFSET_Y;
         this.completedCombats = getTotalCompletedCombats();
-        this.interactable = this.completedCombats >= MAX_COMBATS;
 
         this.createRune();
 

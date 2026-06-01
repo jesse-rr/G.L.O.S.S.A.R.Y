@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { FONT_FAMILY, RUNE_FONT, TITLE_FONT } from '../../../constants';
 import { SLATE_DEFINITIONS, SlateDefinition, SlateProgress } from '../../../data/SlateData';
-import { playScrambleAnimation, cleanupAnimations, ScrambleContext } from '../../../utils/ScrambleAnimation';
+import { cleanupAnimations, ScrambleContext } from '../../../utils/ScrambleAnimation';
 
 export class GlossarySlatesPage {
     private scene: Phaser.Scene;
@@ -110,9 +110,6 @@ export class GlossarySlatesPage {
         const numRows = Math.min(6, slates.length);
         const totalHeight = (numRows - 1) * spacingY;
         const startY = (topY + 410) - (totalHeight / 2);
-
-        const progress = SlateProgress.getInstance();
-        const completedIds = progress.getCompletedSlates();
 
         slates.forEach((slate, index) => {
             const isCol2 = index >= 6;

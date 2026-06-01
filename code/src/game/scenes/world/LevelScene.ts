@@ -3,7 +3,7 @@ import { createVignette } from '../../utils/Vignette';
 import { InputKeys, FONT_FAMILY } from '../../constants';
 import { LocationData } from '../../data/LocationData';
 import { parseCollisionObjects, parseStairObjects } from '../../systems/CollisionParser';
-import { DoorState, createDoors, handleDoorInteraction } from '../../systems/DoorSystem';
+import {DoorState, createDoors, handleDoorInteraction, initDoorAudio} from '../../systems/DoorSystem';
 import { SettlementDoor, createSettlementDoors, handleSettlementDoorInteraction } from '../../systems/SettlementDoorSystem';
 import { MechanicDoor, createMechanicDoors, handleMechanicDoorInteraction } from '../../systems/MechanicDoorSystem';
 import { BossButtonState, createBossButtons, handleBossButtonInteraction } from '../../systems/BossButtonSystem';
@@ -27,6 +27,8 @@ import { DashIndicatorHUD } from '../../systems/DashIndicatorHUD';
 import { SummitBossHUD } from '../../systems/SummitBossHUD';
 import { DamageOverlay } from '../../utils/DamageOverlay';
 import {LocationDisplayScene} from "../../utils/LocationDefinition";
+import {AudioManager} from "../../utils/AudioManager";
+import {ScreenShake} from "../../utils/ScreenShake";
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -56,7 +58,6 @@ export class LevelScene extends Phaser.Scene {
     private isCinematic = false;
     private settingsBtn!: Phaser.GameObjects.Sprite;
     private wasInteractPressed = {value: false};
-    private combatTrackerHUD?: CombatTrackerHUD;
     private levelHpHudIcon: Phaser.GameObjects.Sprite | null = null;
     private levelHpHudText: Phaser.GameObjects.Text | null = null;
     private summitBossHUD?: SummitBossHUD;
@@ -100,10 +101,9 @@ export class LevelScene extends Phaser.Scene {
     private cachedPlayerY = 0;
     private hasPlayerPositionCache = false;
     private isBossDefeatedSequence = false;
-    private bossDefeatedChoiceText?: Phaser.GameObjects.Text;
-    private bossDefeatedChoiceBg?: Phaser.GameObjects.Rectangle;
     private waitingForBossChoice = false;
-    private isGlossaryUIVisible = false;
+    private audioManager: AudioManager;
+    private replaceGlossaryText?: Phaser.GameObjects.Text;
 
     constructor() {
         super('LevelScene');
@@ -280,9 +280,21 @@ export class LevelScene extends Phaser.Scene {
         });
         this.load.image('boss-eye', 'assets/Models/Boss/boss-eye.png');
         this.load.spritesheet('boss-eye-bg', 'assets/Models/Boss/boss-eye-bg.png', {frameWidth: 64, frameHeight: 64});
+
+        this.audioManager = new AudioManager(this);
+        this.audioManager.loadAudio();
+
+        this.dashSystem = new DashSystem();
+        this.dashSystem.setAudioManager(this.audioManager);
+        this.dashSystem.preloadAudio(this);
+
+        ScreenShake.preload(this);
     }
 
     create() {
+        ScreenShake.init(this, this.audioManager);
+        initDoorAudio(this.audioManager);
+
         this.interactSystem = InteractSystem.getInstance(this);
 
         this.stairZones = this.add.group();
@@ -300,7 +312,6 @@ export class LevelScene extends Phaser.Scene {
         this.merchants = [];
         this.merchantItems = [];
 
-        this.dashSystem = new DashSystem();
         this.dashSystem.reset();
 
         if (this.scene.isActive('CombatScene')) this.scene.stop('CombatScene');
@@ -455,7 +466,7 @@ export class LevelScene extends Phaser.Scene {
         this.dashIndicatorHUD = new DashIndicatorHUD(this);
 
         if (this.mapKey !== 'summit-settlement') {
-            this.combatTrackerHUD = new CombatTrackerHUD(this, this.mapKey);
+            new CombatTrackerHUD(this, this.mapKey);
         }
 
         if (this.raidhoRuneSystem) {
@@ -825,7 +836,7 @@ export class LevelScene extends Phaser.Scene {
 
         this.cameras.main.pan(glossaryCenterX, glossaryCenterY, 1200, 'Quad.easeInOut');
 
-        this.time.delayedCall(1300, () => {
+        this.time.delayedCall(1200, () => {
             if (this.levelHpHudIcon) {
                 this.tweens.add({
                     targets: [this.levelHpHudIcon, this.levelHpHudText],
@@ -842,93 +853,73 @@ export class LevelScene extends Phaser.Scene {
                     duration: 3000,
                     ease: 'Sine.easeOut',
                     onComplete: () => {
-                        this.summitBossHUD?.setVisible(false);
                     }
                 });
             }
 
-            if (this.tentaclesAnimation) {
-                if (this.anims.exists('tentaclesRetract')) {
-                    this.tentaclesAnimation.play('tentaclesRetract');
-                    this.tentaclesAnimation.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-                        this.tentaclesAnimation?.destroy();
-                        this.tentaclesAnimation = undefined;
-                    });
-                } else {
-                    this.tentaclesAnimation.destroy();
-                    this.tentaclesAnimation = undefined;
+            this.time.delayedCall(1000, () => {
+                this.cameras.main.flash(200, 255, 0, 0);
+                ScreenShake.trigger(this, 500);
+
+                if (this.tentaclesAnimation?.anims) {
+                    this.tentaclesAnimation.stop();
+                    this.tentaclesAnimation.setFrame(0);
+                    this.tentaclesAnimation.play('tentaclesLoop');
                 }
-            }
 
-            this.retractTentaclesV2();
-            this.hideBossEye();
+                if (this.tentaclesV2Animation?.anims) {
+                    this.tentaclesV2Animation.stop();
+                    this.tentaclesV2Animation.setFrame(0);
+                    this.tentaclesV2Animation.play('tentaclesV2Loop');
+                }
 
-            this.time.delayedCall(3000, () => {
-                this.isGlossaryInteractable = true;
-                this.isCinematic = false;
-                this.waitingForBossChoice = true;
+                if (this.bossEyeIdle) {
+                    this.bossEyeIdle.setTexture('boss-eye');
+                }
 
-                this.showBossDefeatedChoice();
+                this.time.delayedCall(1000, () => {
+                    this.cameras.main.pan(this.player.x, this.player.y, 800, 'Quad.easeInOut');
+
+                    this.time.delayedCall(800, () => {
+                        this.isCinematic = false;
+                        this.waitingForBossChoice = true;
+                    });
+                });
             });
         });
     }
 
-    private showBossDefeatedChoice(): void {
-        const centerX = this.cameras.main.centerX;
-        const centerY = this.cameras.main.centerY;
+    private showReplaceGlossaryPrompt(): void {
+        const centerX = this.glossaryTentaclesX;
+        const centerY = this.glossaryTentaclesY - 60;
 
-        this.bossDefeatedChoiceBg = this.add.rectangle(centerX, centerY - 50, 400, 80, 0x000000, 0.85);
-        this.bossDefeatedChoiceBg.setOrigin(0.5);
-        this.bossDefeatedChoiceBg.setDepth(250);
-        this.bossDefeatedChoiceBg.setScrollFactor(0);
-
-        const promptText = "Replace glossary?";
-        this.bossDefeatedChoiceText = this.add.text(centerX, centerY - 65, promptText, {
+        this.replaceGlossaryText = this.add.text(centerX, centerY, 'Press X to replace glossary', {
             fontFamily: FONT_FAMILY,
-            fontSize: '16px',
+            fontSize: '20px',
             color: '#e4dacf',
+            stroke: '#000000',
+            strokeThickness: 3,
             align: 'center'
         }).setOrigin(0.5).setDepth(251).setScrollFactor(0);
-
-        const instructionText = this.add.text(centerX, centerY - 35, "[X] Yes    [ESC] No", {
-            fontFamily: FONT_FAMILY,
-            fontSize: '12px',
-            color: '#aaaaaa',
-            align: 'center'
-        }).setOrigin(0.5).setDepth(251).setScrollFactor(0);
-
-        this.input.keyboard?.once('keydown-X', () => {
-            if (this.waitingForBossChoice) {
-                this.waitingForBossChoice = false;
-                this.bossDefeatedChoiceBg?.destroy();
-                this.bossDefeatedChoiceText?.destroy();
-                instructionText.destroy();
-                this.completeBossDefeatedSequence(true);
-            }
-        });
-
-        this.input.keyboard?.once('keydown-ESC', () => {
-            if (this.waitingForBossChoice) {
-                this.waitingForBossChoice = false;
-                this.bossDefeatedChoiceBg?.destroy();
-                this.bossDefeatedChoiceText?.destroy();
-                instructionText.destroy();
-                this.completeBossDefeatedSequence(false);
-            }
-        });
     }
 
-    private completeBossDefeatedSequence(shouldReplaceGlossary: boolean): void {
+    private hideReplaceGlossaryPrompt(): void {
+        if (this.replaceGlossaryText) {
+            this.replaceGlossaryText.destroy();
+            this.replaceGlossaryText = undefined;
+        }
+    }
+
+    private completeBossDefeatedSequence(): void {
         this.isCinematic = true;
+        this.waitingForBossChoice = false;
+        this.hideReplaceGlossaryPrompt();
 
         const darkVignette = createVignette(this, 99, true);
         darkVignette.setAlpha(0);
 
-        fadeIn(this, darkVignette, 800, () => {
-            if (shouldReplaceGlossary) {
-                PlayerData.getInstance().replaceGlossary();
-            }
-
+        fadeIn(this, darkVignette, 3000, () => {
+            PlayerData.getInstance().replaceGlossary();
             PlayerData.getInstance().save();
             localStorage.removeItem('glossary_boss_fight_active');
             localStorage.removeItem('glossary_boss_pillars_defeated');
@@ -940,6 +931,7 @@ export class LevelScene extends Phaser.Scene {
                     currentScene: 'LevelScene',
                     targetData: { mapKey: 'hub' }
                 });
+                this.scene.launch('GameOver');
             });
         });
     }
@@ -1310,7 +1302,29 @@ export class LevelScene extends Phaser.Scene {
             return;
         }
 
-        if (this.isBossDefeatedSequence || this.waitingForBossChoice) {
+        if (this.isBossDefeatedSequence) {
+            this.player.setVelocity(0, 0);
+            if (this.player.anims.currentAnim?.key !== 'idle') {
+                this.player.play('idle');
+            }
+            if (this.playerShadow && this.player.active) {
+                this.playerShadow.setPosition(this.player.x, this.player.y + 16);
+            }
+            return;
+        }
+
+        if (this.waitingForBossChoice) {
+            if (this.glossaryInteractZone && this.glossaryInteractZone.getBounds().contains(this.player.x, this.player.y)) {
+                if (!this.replaceGlossaryText) {
+                    this.showReplaceGlossaryPrompt();
+                }
+                if (this.interactKey.isDown && !this.isCinematic) {
+                    this.completeBossDefeatedSequence();
+                }
+            } else {
+                this.hideReplaceGlossaryPrompt();
+            }
+
             this.player.setVelocity(0, 0);
             if (this.player.anims.currentAnim?.key !== 'idle') {
                 this.player.play('idle');
@@ -1332,7 +1346,7 @@ export class LevelScene extends Phaser.Scene {
             this.isNearGlossary = this.glossaryInteractZone.getBounds().contains(this.player.x, this.player.y);
         }
 
-        if (this.isNearGlossary && this.isGlossaryInteractable && !this.barrierActive && !this.isHoldingGlossary && !this.isBossDefeatedSequence) {
+        if (this.isNearGlossary && this.isGlossaryInteractable && !this.barrierActive && !this.isHoldingGlossary && !this.isBossDefeatedSequence && !this.waitingForBossChoice) {
             this.interactSystem.show(this.glossaryInteractZone!.x, this.glossaryInteractZone!.y - 30, 0);
 
             if ((this.interactKey.isDown || this.glossaryKey.isDown) && !this.isHoldingGlossary) {
@@ -1612,6 +1626,5 @@ export class LevelScene extends Phaser.Scene {
             }
         });
 
-        this.isGlossaryUIVisible = true;
     }
 }

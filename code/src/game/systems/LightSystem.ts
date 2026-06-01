@@ -1,3 +1,5 @@
+import {UserData} from "../data/UserData";
+
 export class LightSystem {
     private overlay: Phaser.GameObjects.Rectangle;
     private minAlpha: number = 0;
@@ -9,7 +11,6 @@ export class LightSystem {
     private static globalTween: Phaser.Tweens.Tween | null = null;
     private static globalOverlay: Phaser.GameObjects.Rectangle | null = null;
 
-    /** Stops and removes the shared darkness overlay (e.g. summit boss fight). */
     static clearOverlay(): void {
         if (LightSystem.globalTween) {
             LightSystem.globalTween.stop();
@@ -23,6 +24,10 @@ export class LightSystem {
     }
 
     constructor(scene: Phaser.Scene, maxAlpha?: number, color?: number) {
+        if (!UserData.getInstance().settings.lightSystem) {
+            this.destroy();
+            return;
+        }
         this.scene = scene;
 
         if (maxAlpha !== undefined) {

@@ -44,10 +44,8 @@ function saveDoorState(doorId: string, opened: boolean) {
 }
 
 const DOOR_GID_MAPPING: Record<number, number> = {
-    // closed -> open
     214: 215,
     254: 255,
-    // open -> closed
     215: 214,
     255: 254
 };

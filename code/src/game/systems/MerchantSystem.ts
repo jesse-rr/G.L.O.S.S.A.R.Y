@@ -9,7 +9,6 @@ export interface MerchantState {
 }
 
 export function createMerchants(
-    scene: Phaser.Scene,
     merchantLayer: Phaser.Tilemaps.ObjectLayer
 ): MerchantState[] {
     const merchants: MerchantState[] = [];

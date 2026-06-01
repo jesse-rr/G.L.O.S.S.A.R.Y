@@ -19,6 +19,7 @@ import { ItemModal } from './scenes/ui/ItemModal';
 import { SlateMinigame } from './scenes/ui/SlateMinigame';
 import { MerchantShop } from './scenes/ui/MerchantShop';
 import { LocationDisplayScene } from "./utils/LocationDefinition";
+import {GameOver} from "./scenes/world/GameOver";
 
 let useVsync = true;
 
@@ -29,6 +30,7 @@ if (data) {
         useVsync = parsed.settings.vsync;
     }
 }
+
 
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
@@ -74,12 +76,15 @@ const config: Phaser.Types.Core.GameConfig = {
         ItemModal,
         SlateMinigame,
         MerchantShop,
-        LocationDisplayScene
+        LocationDisplayScene,
+        GameOver
     ]
 };
 
 const StartGame = (parent: string) => {
-    return new Game({ ...config, parent });
+    const game = new Game({ ...config, parent });
+    window.__GAME__ = game;
+    return game;
 };
 
 export default StartGame;

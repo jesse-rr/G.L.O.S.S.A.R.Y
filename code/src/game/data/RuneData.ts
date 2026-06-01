@@ -93,10 +93,6 @@ function getTypeKey(types: RuneCardType[]): string {
     return sorted.join('+');
 }
 
-function pickRandom<T>(arr: T[]): T {
-    return arr[Math.floor(Math.random() * arr.length)];
-}
-
 export interface PredefinedCombo {
     id: string;
     name: string;
