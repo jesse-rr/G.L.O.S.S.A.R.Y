@@ -1,6 +1,6 @@
 const http = require('http');
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 let rooms = [];
 let signals = [];
 
@@ -41,7 +41,8 @@ const server = http.createServer((req, res) => {
             isPrivate: r.isPrivate,
             currentPlayers: r.currentPlayers,
             maxPlayers: r.maxPlayers,
-            passcode: r.isPrivate ? null : r.passcode
+            passcode: r.isPrivate ? null : r.passcode,
+            hostPeerId: r.hostPeerId ?? null
         }));
         sendJson(res, 200, safeRooms);
         return;
@@ -129,8 +130,8 @@ const server = http.createServer((req, res) => {
     res.end();
 });
 
-server.listen(PORT, () => {
-    console.log(`Lobby Server running at http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Lobby Server running at http://0.0.0.0:${PORT}`);
 });
 
 setInterval(() => {

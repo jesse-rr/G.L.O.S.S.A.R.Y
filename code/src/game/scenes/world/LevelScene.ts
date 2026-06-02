@@ -45,6 +45,7 @@ import {
     updateLevelPlayerMovement
 } from './level/LevelPlayerController';
 import { LevelMultiplayerPresence } from './level/LevelMultiplayerPresence';
+import { HostMigrationController } from '../../network/HostMigrationController';
 
 export class LevelScene extends Phaser.Scene {
     private player!: Phaser.Physics.Matter.Sprite;
@@ -128,6 +129,7 @@ export class LevelScene extends Phaser.Scene {
     private previousGamepadInteractDown = false;
     private previousGamepadDashDown = false;
     private multiplayerPresence?: LevelMultiplayerPresence;
+    private hostMigration?: HostMigrationController;
 
     constructor() {
         super('LevelScene');
@@ -233,6 +235,8 @@ export class LevelScene extends Phaser.Scene {
         this.portalSystem = new PortalSystem(this);
         this.multiplayerPresence?.destroy();
         this.multiplayerPresence = undefined;
+        this.hostMigration?.destroy();
+        this.hostMigration = undefined;
 
         if (this.mapKey === 'summit-settlement') {
             this.createPlayerHpLevelHUD();
@@ -291,6 +295,8 @@ export class LevelScene extends Phaser.Scene {
             EventBus.off(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
             this.multiplayerPresence?.destroy();
             this.multiplayerPresence = undefined;
+            this.hostMigration?.destroy();
+            this.hostMigration = undefined;
         });
 
         const w = this.scale.width, h = this.scale.height, camZoom = 2;
@@ -322,6 +328,8 @@ export class LevelScene extends Phaser.Scene {
             this.dashIndicatorHUD = undefined;
             this.multiplayerPresence?.destroy();
             this.multiplayerPresence = undefined;
+            this.hostMigration?.destroy();
+            this.hostMigration = undefined;
             this.persistPlayerLocation();
         });
 
@@ -1151,6 +1159,7 @@ export class LevelScene extends Phaser.Scene {
         this.updatePlayerPositionCache();
         this.persistPlayerLocation();
         this.multiplayerPresence?.destroy();
+        this.hostMigration?.destroy();
         this.multiplayerPresence = new LevelMultiplayerPresence(this, () => {
             if (!this.player?.active) {
                 return null;
@@ -1166,6 +1175,13 @@ export class LevelScene extends Phaser.Scene {
                 moving: !!velocity && (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05)
             };
         });
+
+        if (NetworkManager.getInstance().role !== 'offline') {
+            this.hostMigration = new HostMigrationController();
+            this.hostMigration.attach(this.multiplayerPresence);
+        } else {
+            this.hostMigration = undefined;
+        }
     }
 
     private updatePlayerPositionCache(): void {

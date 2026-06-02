@@ -3,7 +3,7 @@ import { PlayerData, CovenantType } from '../data/PlayerData';
 import { NetworkManager } from '../NetworkManager';
 import { UserData } from '../data/UserData';
 import { GodMode } from '../utils/GodMode';
-import { CombatCohortEntry } from '../utils/CombatStartSync';
+import { CombatCohortEntry, getActiveCombatParticipants, isActiveCombatPlayer } from '../utils/CombatStartSync';
 import { CombatEnemy, CombatPlayer, CombatSystem } from './CombatSystem';
 
 interface EnemyCombatDefinition {
@@ -78,30 +78,37 @@ export function createCombatEncounter(config: CombatEncounterConfig): CombatEnco
 function buildCombatRoster(playerData: PlayerData, combatCohort?: CombatCohortEntry[]): Array<{ id: string; covenant: CovenantType; isLocal: boolean }> {
     const nm = NetworkManager.getInstance();
     const localId = nm.role === 'offline' ? 'local' : nm.myPeerId || 'local';
+    const activeIds = new Set(getActiveCombatParticipants().map(entry => entry.peerId));
     const byPeer = new Map<string, CovenantType>();
 
     if (combatCohort && combatCohort.length > 0) {
         combatCohort.forEach(entry => {
-            if (entry.peerId && entry.covenant) {
+            if (entry.peerId && entry.covenant && activeIds.has(entry.peerId)) {
                 byPeer.set(entry.peerId, entry.covenant);
             }
         });
     } else if (nm.role !== 'offline') {
         for (const peer of nm.getPeerCovenants()) {
-            byPeer.set(peer.peerId, peer.covenant);
+            if (activeIds.has(peer.peerId)) {
+                byPeer.set(peer.peerId, peer.covenant);
+            }
         }
     }
 
     byPeer.set(localId, playerData.covenant);
 
-    const roster = Array.from(byPeer.entries()).map(([id, covenant]) => ({
-        id,
-        covenant,
-        isLocal: id === localId
-    }));
+    const roster = Array.from(byPeer.entries())
+        .filter(([id]) => activeIds.has(id))
+        .map(([id, covenant]) => ({
+            id,
+            covenant,
+            isLocal: id === localId
+        }));
 
     return roster.sort((a, b) => Number(b.isLocal) - Number(a.isLocal) || a.id.localeCompare(b.id)).slice(0, 3);
 }
+
+export { isActiveCombatPlayer };
 
 function pickEnemyFromBestiary(config: CombatEncounterConfig): EnemyCombatDefinition {
     let lookupId = config.targetEnemyId;

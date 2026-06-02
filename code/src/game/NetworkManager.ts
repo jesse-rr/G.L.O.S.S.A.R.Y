@@ -1,5 +1,5 @@
 import { EventBus, GameEvents } from './EventBus';
-import { CovenantType } from './data/PlayerData';
+import { CovenantType, PlayerData } from './data/PlayerData';
 
 export type NetworkRole = 'host' | 'client' | 'offline';
 
@@ -20,7 +20,7 @@ interface PeerConnectionState {
     pendingIceCandidates: RTCIceCandidateInit[];
 }
 
-const LOBBY_SERVER_URL = 'http://localhost:3000';
+const LOBBY_SERVER_URL = 'https://g-l-o-s-s-a-r-y-server.onrender.com';
 const SIGNAL_POLL_MS = 650;
 const RTC_CONFIGURATION: RTCConfiguration = {
     iceServers: [
@@ -35,11 +35,16 @@ export class NetworkManager {
     public myPeerId: string = '';
 
     private roomId = '';
+    private passcode = '';
     private connections: Map<string, PeerConnectionState> = new Map();
     private hostConnection: PeerConnectionState | null = null;
+    private relayHostPeerId: string | null = null;
+    private isTemporaryHost = false;
+    private knownPeers: Set<string> = new Set();
     private peerCovenants: Map<string, CovenantType> = new Map();
     private seenSignals: Set<string> = new Set();
     private pollTimer: number | null = null;
+    private signalErrorHandler: ((err: any) => void) | null = null;
 
     static getInstance(): NetworkManager {
         if (!NetworkManager.instance) {
@@ -48,38 +53,121 @@ export class NetworkManager {
         return NetworkManager.instance;
     }
 
+    public getPasscode(): string {
+        return this.passcode;
+    }
+
+    public getCanonicalHostPeerId(): string {
+        return this.roomId;
+    }
+
+    public isCanonicalHost(): boolean {
+        return this.role === 'host' && this.myPeerId === this.roomId && !this.isTemporaryHost;
+    }
+
+    public getRelayHostPeerId(): string | null {
+        return this.relayHostPeerId;
+    }
+
+    public getIsTemporaryHost(): boolean {
+        return this.isTemporaryHost;
+    }
+
+    public trackKnownPeer(peerId: string): void {
+        if (peerId && peerId !== this.myPeerId) {
+            this.knownPeers.add(peerId);
+        }
+    }
+
+    public electNewHost(): string | null {
+        const candidates = [...this.knownPeers, this.myPeerId]
+            .filter(id => id !== this.roomId)
+            .sort();
+        return candidates[0] ?? null;
+    }
+
     public hostRoom(passcode: string, onReady: (id: string) => void, onError: (err: any) => void) {
         this.disconnect();
         this.role = 'host';
+        this.passcode = passcode;
         this.roomId = this.getRoomId(passcode);
         this.myPeerId = this.roomId;
+        this.isTemporaryHost = false;
+        this.relayHostPeerId = null;
+        this.signalErrorHandler = onError;
         this.startSignalPolling(onError);
         onReady(this.myPeerId);
+    }
+
+    public restoreAsCanonicalHost(passcode: string, onReady: (id: string) => void, onError: (err: any) => void): void {
+        const savedPeers = PlayerData.getInstance().multiplayerPeers;
+        this.hostRoom(passcode, (peerId) => {
+            for (const peer of savedPeers) {
+                if (peer.peerId && peer.peerId !== peerId) {
+                    this.setPeerCovenant(peer.peerId, peer.covenant);
+                }
+            }
+            void this.registerRoom({
+                id: passcode,
+                title: PlayerData.getInstance().multiplayerRoomTitle || 'In Progress',
+                passcode,
+                isPrivate: true,
+                currentPlayers: 1,
+                maxPlayers: 3,
+                hostPeerId: peerId
+            });
+            onReady(peerId);
+        }, onError);
     }
 
     public joinRoom(passcode: string, onReady: () => void, onError: (err: any) => void) {
         this.disconnect();
         this.role = 'client';
+        this.passcode = passcode;
         this.roomId = this.getRoomId(passcode);
         this.myPeerId = this.createPeerId();
-
-        const peerState = this.createPeerConnection(this.roomId, onError);
-        this.hostConnection = peerState;
-
-        const channel = peerState.peerConnection.createDataChannel('glossary-game', { ordered: true });
-        peerState.dataChannel = channel;
-        this.bindDataChannel(this.roomId, channel, onReady);
+        this.isTemporaryHost = false;
+        this.signalErrorHandler = onError;
+        this.connectAsClient(this.roomId, onReady, onError);
         this.startSignalPolling(onError);
+    }
 
-        peerState.peerConnection.createOffer()
-            .then(offer => peerState.peerConnection.setLocalDescription(offer))
-            .then(() => this.sendSignal({
-                from: this.myPeerId,
-                to: this.roomId,
-                type: 'offer',
-                payload: peerState.peerConnection.localDescription!.toJSON()
-            }))
-            .catch(onError);
+    public promoteToHost(): void {
+        if (this.hostConnection) {
+            this.closePeerState(this.hostConnection);
+            this.hostConnection = null;
+        }
+        this.relayHostPeerId = null;
+        this.role = 'host';
+        this.isTemporaryHost = true;
+    }
+
+    public reconnectToHost(hostPeerId: string, onReady?: () => void, onError?: (err: any) => void): void {
+        const err = onError ?? this.signalErrorHandler ?? ((e: any) => console.error('Reconnect error', e));
+
+        if (this.hostConnection) {
+            this.closePeerState(this.hostConnection);
+            this.hostConnection = null;
+        }
+
+        this.role = 'client';
+        this.isTemporaryHost = false;
+        this.relayHostPeerId = hostPeerId;
+        this.connectAsClient(hostPeerId, onReady, err);
+
+        if (this.pollTimer === null && this.roomId && this.myPeerId) {
+            this.startSignalPolling(err);
+        }
+    }
+
+    public handleHostRestored(): void {
+        if (!this.isTemporaryHost || this.role !== 'host') return;
+
+        this.connections.forEach(conn => this.closePeerState(conn));
+        this.connections.clear();
+        this.role = 'client';
+        this.isTemporaryHost = false;
+        this.reconnectToHost(this.roomId);
     }
 
     public broadcast(data: any) {
@@ -107,6 +195,7 @@ export class NetworkManager {
 
     public setPeerCovenant(peerId: string, covenant: CovenantType): void {
         this.peerCovenants.set(peerId, covenant);
+        this.trackKnownPeer(peerId);
     }
 
     public getPeerCovenants(): Array<{ peerId: string; covenant: CovenantType }> {
@@ -136,8 +225,13 @@ export class NetworkManager {
         this.role = 'offline';
         this.myPeerId = '';
         this.roomId = '';
+        this.passcode = '';
+        this.relayHostPeerId = null;
+        this.isTemporaryHost = false;
+        this.knownPeers.clear();
         this.seenSignals.clear();
         this.peerCovenants.clear();
+        this.signalErrorHandler = null;
     }
 
     public async registerRoom(roomData: any) {
@@ -168,6 +262,28 @@ export class NetworkManager {
         } catch (e) {
             return [];
         }
+    }
+
+    private connectAsClient(targetPeerId: string, onReady?: () => void, onError?: (err: any) => void): void {
+        const err = onError ?? ((e: any) => console.error('Connect error', e));
+        this.relayHostPeerId = targetPeerId;
+
+        const peerState = this.createPeerConnection(targetPeerId, err);
+        this.hostConnection = peerState;
+
+        const channel = peerState.peerConnection.createDataChannel('glossary-game', { ordered: true });
+        peerState.dataChannel = channel;
+        this.bindDataChannel(targetPeerId, channel, onReady);
+
+        peerState.peerConnection.createOffer()
+            .then(offer => peerState.peerConnection.setLocalDescription(offer))
+            .then(() => this.sendSignal({
+                from: this.myPeerId,
+                to: targetPeerId,
+                type: 'offer',
+                payload: peerState.peerConnection.localDescription!.toJSON()
+            }))
+            .catch(err);
     }
 
     private createPeerConnection(peerId: string, onError: (err: any) => void): PeerConnectionState {
@@ -201,12 +317,22 @@ export class NetworkManager {
 
     private bindDataChannel(peerId: string, channel: RTCDataChannel, onOpen?: () => void): void {
         channel.onopen = () => {
+            this.trackKnownPeer(peerId);
             EventBus.emit(GameEvents.PEER_CONNECTED, peerId);
+
+            if (this.isCanonicalHost()) {
+                this.broadcast({ type: 'HOST_RESTORED', originPeerId: this.myPeerId });
+                EventBus.emit(GameEvents.HOST_RESTORED);
+            }
+
             onOpen?.();
         };
 
         channel.onmessage = (event) => {
             const data = this.parseData(event.data);
+            if (data?.originPeerId) {
+                this.trackKnownPeer(data.originPeerId);
+            }
             EventBus.emit(GameEvents.NETWORK_DATA_RECEIVED, { peerId, data });
         };
 
@@ -219,6 +345,7 @@ export class NetworkManager {
         if (signal.from === this.myPeerId || this.seenSignals.has(signal.id)) return;
 
         this.seenSignals.add(signal.id);
+        this.trackKnownPeer(signal.from);
 
         if (this.role === 'host') {
             await this.handleHostSignal(signal, onError);
@@ -287,6 +414,7 @@ export class NetworkManager {
     }
 
     private startSignalPolling(onError: (err: any) => void): void {
+        this.signalErrorHandler = onError;
         this.pollTimer = window.setInterval(() => {
             void this.fetchSignals()
                 .then(signals => Promise.all(signals.map(signal => this.handleSignal(signal, onError))))
@@ -335,6 +463,7 @@ export class NetworkManager {
         if (this.role === 'host') {
             const conn = this.connections.get(peerId);
             if (conn) {
+                this.broadcast({ type: 'PEER_LEFT', peerId, originPeerId: this.myPeerId });
                 this.closePeerState(conn);
                 this.connections.delete(peerId);
                 EventBus.emit(GameEvents.PEER_DISCONNECTED, peerId);
@@ -342,9 +471,10 @@ export class NetworkManager {
             return;
         }
 
-        if (this.hostConnection && peerId === this.roomId) {
+        if (this.hostConnection && peerId === this.relayHostPeerId) {
             this.closePeerState(this.hostConnection);
             this.hostConnection = null;
+            this.relayHostPeerId = null;
             EventBus.emit(GameEvents.PEER_DISCONNECTED, peerId);
         }
     }

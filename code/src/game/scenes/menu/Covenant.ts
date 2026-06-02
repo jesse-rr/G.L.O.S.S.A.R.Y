@@ -411,6 +411,21 @@ export class Covenant extends Phaser.Scene {
             userData?.discoverRune(r);
         }
 
+        const nm = NetworkManager.getInstance();
+        if (nm.role !== 'offline') {
+            const passcode = md.myRoom?.passcode || md.joinedRoom?.passcode || nm.getPasscode();
+            const wasHost = nm.role === 'host';
+            const roomTitle = md.myRoom?.title || md.joinedRoom?.title || '';
+            const peerMap = new Map<string, typeof playerData.covenant>();
+            peerMap.set(nm.myPeerId, playerData.covenant);
+            nm.getPeerCovenants().forEach(peer => peerMap.set(peer.peerId, peer.covenant));
+            const multiplayerPeers = Array.from(peerMap.entries()).map(([peerId, covenant]) => ({ peerId, covenant }));
+            if (passcode) {
+                playerData.setMultiplayerSession(passcode, wasHost, roomTitle, multiplayerPeers);
+            }
+            nm.getPeerCovenants().forEach(peer => nm.trackKnownPeer(peer.peerId));
+        }
+
         const sceneKeys = ['MainMenu', 'Help', 'Settings', 'SettingsUI', 'Achievements', 'AchievementsUI', 'Multiplayer'];
         for (const key of sceneKeys) {
             if (this.scene.isActive(key)) {

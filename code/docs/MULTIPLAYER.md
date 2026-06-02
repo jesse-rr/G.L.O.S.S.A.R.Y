@@ -70,6 +70,51 @@ Once connected, `NetworkManager` emits `PEER_CONNECTED`, `PEER_DISCONNECTED`, an
 - Remote players are only shown when they are on the same map.
 - Remote sprites interpolate toward their latest target position and time out after 3.5 seconds without updates.
 - Hosts rebroadcast received `PLAYER_STATE` messages so every connected client sees the same party presence.
+- **Away peers:** When any player disconnects, their sprite is frozen at the last known position instead of being removed. The relay host broadcasts `PEER_LEFT` so every remaining client applies the ghost state, not only the machine that saw the WebRTC drop.
+
+---
+
+## 5a. Host Migration & Rejoin
+
+When the canonical host (peer id = room id) disconnects mid-game, remaining clients elect a temporary relay host so gameplay sync continues.
+
+```mermaid
+sequenceDiagram
+    participant H as CanonicalHost
+    participant C1 as Client1
+    participant C2 as Client2
+
+    H--xC1: disconnect
+    H--xC2: disconnect
+    Note over C1,C2: mark host sprite as away (frozen)
+    C1->>C1: elect lowest peerId as newHost
+    C2->>C2: elect lowest peerId as newHost
+    C1->>C2: WebRTC reconnect to newHost
+    C2->>C1: WebRTC reconnect to newHost
+    Note over C1: newHost promotes to relay host
+    C1->>C2: HOST_MIGRATION broadcast
+    Note over C1,C2: PLAYER_STATE relay restored
+```
+
+- **Election:** `NetworkManager.electNewHost()` picks the lexicographically lowest known client peer id (excluding the canonical host id). Every client computes the same result.
+- **`HOST_MIGRATION`:** Broadcast by the new temporary host after promotion so late reconnecting clients can align.
+- **`HOST_RESTORED`:** Broadcast when the original host reconnects via **Continue**. The temporary host demotes back to client and all peers reconnect to the canonical host peer id.
+- **`PEER_LEFT`:** Broadcast by the relay host when any client disconnects. All remaining clients freeze that player's sprite.
+- **Lobby `hostPeerId`:** Room heartbeats include `hostPeerId` so clients can detect when the canonical host returns (`hostPeerId === roomId`) versus a temporary relay host. The lobby server must expose this field in `GET /rooms`.
+- **Lobby heartbeat:** The temporary host registers room heartbeats using passcode metadata saved in `PlayerData` so the session stays discoverable.
+
+### Continue Rejoin (Original Host)
+
+When a networked game starts, `PlayerData` stores:
+
+- `multiplayerPasscode` — room passcode
+- `wasMultiplayerHost` — whether this player hosted
+- `multiplayerRoomTitle` — lobby display title
+- `multiplayerPeers` — party roster (`peerId` + covenant) for restoring covenant metadata after host rejoin
+
+If the original host selects **Continue** on the main menu and `wasMultiplayerHost` is true, the game calls `NetworkManager.restoreAsCanonicalHost()` before loading `LevelScene` from the existing save. Covenant is skipped; rune and map progress come from the save file. The host registers lobby heartbeats with `hostPeerId` set to the canonical room id; remaining clients poll `GET /rooms` every second and reconnect when they detect the canonical host is back.
+
+Session fields are cleared on new game or when explicitly leaving a room from the multiplayer menu.
 
 ---
 
@@ -91,16 +136,20 @@ The Central Hub Raidho rune is the current floor-advance gate.
 Combat entry is synchronized with `CombatStartSync`.
 
 - The local scene builds a combat payload with a unique combat id, encounter tier, map key, enemy id, and combat cohort.
-- The cohort includes the local player plus known peer covenant selections.
+- The cohort includes the local player plus **currently connected** peer covenant selections (`getActiveCombatParticipants()`).
+- Stale covenant lock-ins from disconnected players are excluded so solo or partial parties do not spawn ghost combat lanes.
 - `COMBAT_START` is broadcast to other peers.
 - Remote peers store their return location and launch the same combat transition.
 - Hosts rebroadcast received combat starts to keep all clients aligned.
+- Each client re-filters incoming cohort payloads against live connections when building the local roster.
 
 ---
 
 ## 8. Combat Rules
 
-- Combat is turn-based and supports up to 3 players through the shared cohort payload.
+- Combat is turn-based and supports up to 3 **connected** players through the shared cohort payload.
+- Turn resolution only waits for active connected allies; the wait indicator uses the live player count (for example `1/2`, not `1/3` when one peer is gone).
+- If an ally disconnects mid-combat, that ally and their lane enemy are auto-forfeited so the remaining party can continue.
 - Players retain their own covenant-derived HP and stats.
 - Currency is not shared.
 - Rune discovery and progression are shared at run start through the shared rune seed; local save data still stores each player's unlocked knowledge.

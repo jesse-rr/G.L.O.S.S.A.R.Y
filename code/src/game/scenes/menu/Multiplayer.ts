@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { MultiplayerData, RoomData } from '../../data/MultiplayerData';
+import { PlayerData } from '../../data/PlayerData';
 import { RuneData } from '../../data/RuneData';
 import { NetworkManager } from '../../NetworkManager';
 import { EventBus, GameEvents } from '../../EventBus';
@@ -225,10 +226,14 @@ export class Multiplayer extends Phaser.Scene {
                 NetworkManager.getInstance().unregisterRoom(md.myRoom.passcode);
                 NetworkManager.getInstance().disconnect();
                 md.myRoom = null;
+                PlayerData.getInstance().clearMultiplayerSession();
+                PlayerData.getInstance().save();
             } else if (md.joinedRoom) {
                 md.joinedRoom.currentPlayers--;
                 NetworkManager.getInstance().disconnect();
                 md.joinedRoom = null;
+                PlayerData.getInstance().clearMultiplayerSession();
+                PlayerData.getInstance().save();
             } else {
                 return;
             }
@@ -389,6 +394,8 @@ export class Multiplayer extends Phaser.Scene {
             if (md.joinedRoom) {
                 md.joinedRoom = null;
                 NetworkManager.getInstance().disconnect();
+                PlayerData.getInstance().clearMultiplayerSession();
+                PlayerData.getInstance().save();
                 updateRightPanel();
                 updateJoinPanel();
                 renderPage();

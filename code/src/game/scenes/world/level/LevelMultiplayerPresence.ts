@@ -29,6 +29,7 @@ export class LevelMultiplayerPresence {
     private scene: Phaser.Scene;
     private getLocalState: () => LocalPresenceState | null;
     private remotePlayers = new Map<string, RemotePlayerAvatar>();
+    private awayPeers = new Set<string>();
     private lastStateSent = 0;
 
     constructor(scene: Phaser.Scene, getLocalState: () => LocalPresenceState | null) {
@@ -65,6 +66,11 @@ export class LevelMultiplayerPresence {
             remote.shadow.destroy();
         });
         this.remotePlayers.clear();
+        this.awayPeers.clear();
+    }
+
+    markPeerAway(peerId: string): void {
+        this.awayPeers.add(peerId);
     }
 
     private broadcastLocalState(time: number): void {
@@ -89,6 +95,9 @@ export class LevelMultiplayerPresence {
 
     private receiveRemoteState(data: any): void {
         if (typeof data.originPeerId !== 'string' || typeof data.x !== 'number' || typeof data.y !== 'number') return;
+
+        NetworkManager.getInstance().trackKnownPeer(data.originPeerId);
+        this.awayPeers.delete(data.originPeerId);
 
         let remote = this.remotePlayers.get(data.originPeerId);
         if (!remote) {
@@ -136,6 +145,9 @@ export class LevelMultiplayerPresence {
     private updateRemotePlayers(time: number): void {
         this.remotePlayers.forEach((remote, peerId) => {
             if (time - remote.lastSeen > REMOTE_TIMEOUT_MS) {
+                if (this.awayPeers.has(peerId)) {
+                    return;
+                }
                 this.destroyRemotePlayer(peerId);
                 return;
             }

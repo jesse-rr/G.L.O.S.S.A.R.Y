@@ -8,6 +8,8 @@ import { BestiaryData } from '../../data/BestiaryData';
 import { SlateProgress } from '../../data/SlateData';
 import { AudioManager } from "../../utils/AudioManager";
 import { clearGameplayStorageForNewRun } from '../../utils/SaveReset';
+import { NetworkManager } from '../../NetworkManager';
+import { EventBus, GameEvents } from '../../EventBus';
 
 const BG_FRAME_RATE = 8;
 const SELECTOR_FRAME_RATE = 10;
@@ -312,33 +314,19 @@ export class MainMenu extends Phaser.Scene {
                 if (this.hasExistingGame()) {
                     this.inputLocked = true;
                     const pData = PlayerData.getInstance();
-                    if (PlayerData.shouldReturnToSummitBossBattle(pData)) {
-                        pData.returnToSummitBossBattle();
-                        this.scene.launch('TransitionScene', {
-                            targetScene: 'LevelScene',
-                            currentScene: 'MainMenu',
-                            targetData: { mapKey: 'summit-settlement' }
-                        });
-                    } else if (pData.inCombat) {
-                        this.scene.launch('TransitionScene', {
-                            targetScene: 'CombatScene',
-                            currentScene: 'MainMenu',
-                            targetData: { encounterTier: pData.combatTier, mapKey: pData.lastMap, enemyId: pData.combatEnemyId }
-                        });
-                    } else {
-                        const targetData: { mapKey: string; spawnX?: number; spawnY?: number } = {
-                            mapKey: pData.lastMap || 'hub'
-                        };
-                        if (pData.lastX != null && pData.lastY != null) {
-                            targetData.spawnX = pData.lastX;
-                            targetData.spawnY = pData.lastY;
-                        }
-                        this.scene.launch('TransitionScene', {
-                            targetScene: 'LevelScene',
-                            currentScene: 'MainMenu',
-                            targetData
-                        });
+                    if (pData.wasMultiplayerHost && pData.multiplayerPasscode) {
+                        EventBus.emit(GameEvents.SHOW_NOTIFICATION, 'Rejoining session…');
+                        NetworkManager.getInstance().restoreAsCanonicalHost(
+                            pData.multiplayerPasscode,
+                            () => this.launchContinueGame(pData),
+                            (err) => {
+                                console.error('Failed to rejoin multiplayer session', err);
+                                this.launchContinueGame(pData);
+                            }
+                        );
+                        break;
                     }
+                    this.launchContinueGame(pData);
                 }
                 break;
             case 'MULTIPLAYER':
@@ -353,6 +341,36 @@ export class MainMenu extends Phaser.Scene {
                 localStorage.clear();
                 window.location.reload();
                 break;
+        }
+    }
+
+    private launchContinueGame(pData: PlayerData): void {
+        if (PlayerData.shouldReturnToSummitBossBattle(pData)) {
+            pData.returnToSummitBossBattle();
+            this.scene.launch('TransitionScene', {
+                targetScene: 'LevelScene',
+                currentScene: 'MainMenu',
+                targetData: { mapKey: 'summit-settlement' }
+            });
+        } else if (pData.inCombat) {
+            this.scene.launch('TransitionScene', {
+                targetScene: 'CombatScene',
+                currentScene: 'MainMenu',
+                targetData: { encounterTier: pData.combatTier, mapKey: pData.lastMap, enemyId: pData.combatEnemyId }
+            });
+        } else {
+            const targetData: { mapKey: string; spawnX?: number; spawnY?: number } = {
+                mapKey: pData.lastMap || 'hub'
+            };
+            if (pData.lastX != null && pData.lastY != null) {
+                targetData.spawnX = pData.lastX;
+                targetData.spawnY = pData.lastY;
+            }
+            this.scene.launch('TransitionScene', {
+                targetScene: 'LevelScene',
+                currentScene: 'MainMenu',
+                targetData
+            });
         }
     }
 

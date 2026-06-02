@@ -1,5 +1,10 @@
 export type CovenantType = 'dragon' | 'phoenix' | 'snake';
 
+export interface MultiplayerPeerEntry {
+    peerId: string;
+    covenant: CovenantType;
+}
+
 export interface ItemData {
     id: string;
     quantity: number;
@@ -37,6 +42,10 @@ export class PlayerData {
     currentFloor: number = 1;
     private static instance: PlayerData | null = null;
     glossaryReplaced: boolean = false;
+    multiplayerPasscode: string | null = null;
+    wasMultiplayerHost: boolean = false;
+    multiplayerRoomTitle: string = '';
+    multiplayerPeers: MultiplayerPeerEntry[] = [];
 
     static getInstance(): PlayerData {
         if (!PlayerData.instance) {
@@ -244,6 +253,22 @@ export class PlayerData {
         this.combatTier = 1;
         this.currentFloor = 1;
         this.glossaryReplaced = false;
+        this.clearMultiplayerSession();
+        this.save();
+    }
+
+    clearMultiplayerSession(): void {
+        this.multiplayerPasscode = null;
+        this.wasMultiplayerHost = false;
+        this.multiplayerRoomTitle = '';
+        this.multiplayerPeers = [];
+    }
+
+    setMultiplayerSession(passcode: string, wasHost: boolean, roomTitle: string = '', peers: MultiplayerPeerEntry[] = []): void {
+        this.multiplayerPasscode = passcode;
+        this.wasMultiplayerHost = wasHost;
+        this.multiplayerRoomTitle = roomTitle;
+        this.multiplayerPeers = peers;
         this.save();
     }
 
@@ -264,7 +289,11 @@ export class PlayerData {
             inCombat: this.inCombat,
             combatEnemyId: this.combatEnemyId,
             combatTier: this.combatTier,
-            currentFloor: this.currentFloor
+            currentFloor: this.currentFloor,
+            multiplayerPasscode: this.multiplayerPasscode,
+            wasMultiplayerHost: this.wasMultiplayerHost,
+            multiplayerRoomTitle: this.multiplayerRoomTitle,
+            multiplayerPeers: this.multiplayerPeers
         };
     }
 
@@ -305,6 +334,10 @@ export class PlayerData {
         if (data.combatEnemyId !== undefined) this.combatEnemyId = data.combatEnemyId;
         if (data.combatTier !== undefined) this.combatTier = data.combatTier;
         if (data.currentFloor !== undefined) this.currentFloor = data.currentFloor;
+        if (data.multiplayerPasscode !== undefined) this.multiplayerPasscode = data.multiplayerPasscode;
+        if (data.wasMultiplayerHost !== undefined) this.wasMultiplayerHost = data.wasMultiplayerHost;
+        if (data.multiplayerRoomTitle !== undefined) this.multiplayerRoomTitle = data.multiplayerRoomTitle;
+        if (data.multiplayerPeers) this.multiplayerPeers = data.multiplayerPeers;
     }
 
     save(): void {

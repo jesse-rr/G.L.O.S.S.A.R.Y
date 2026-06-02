@@ -13,7 +13,7 @@ import { getSelectedItems } from '../ui/glossary/GlossaryItemsPage';
 import { RuneData } from '../../data/RuneData';
 import { EnemyAnimator } from '../../combat/EnemyAnimator';
 import { preloadCombatSceneAssets, ensureCombatSceneAnimations } from '../../combat/CombatSceneAssets';
-import { createCombatEncounter } from '../../combat/CombatEncounter';
+import { createCombatEncounter, isActiveCombatPlayer } from '../../combat/CombatEncounter';
 import { CombatTurnController } from '../../combat/CombatTurnController';
 import { CombatEndController } from '../../combat/CombatEndController';
 import { createCombatSceneControls } from '../../combat/CombatSceneControls';
@@ -62,6 +62,7 @@ export class CombatScene extends Phaser.Scene {
     private bufferedCombatActions: Map<number, Array<{ playerId: string, chain: string[] }>> = new Map();
     private localChainBroadcasted = false;
     private combatEndBroadcasted = false;
+    private onPeerDisconnectedBound = (peerId: string) => this.onPeerDisconnected(peerId);
     private turnController: CombatTurnController | null = null;
     private endController: CombatEndController | null = null;
     private static readonly PILLAR_WHITE_HOLD_MS = 850;
@@ -84,6 +85,7 @@ export class CombatScene extends Phaser.Scene {
             this.laneViews.forEach(lane => lane.enemyAnimator?.destroy());
             this.bufferedCombatActions.clear();
             EventBus.off(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
+            EventBus.off(GameEvents.PEER_DISCONNECTED, this.onPeerDisconnectedBound);
         });
 
         const fadeFromWhite = !!data?.fadeFromWhite;
@@ -204,6 +206,7 @@ export class CombatScene extends Phaser.Scene {
         this.createEndController();
         this.setupCombatEvents();
         EventBus.on(GameEvents.NETWORK_DATA_RECEIVED, this.onNetworkData, this);
+        EventBus.on(GameEvents.PEER_DISCONNECTED, this.onPeerDisconnectedBound);
         createCombatSceneControls(this, {
             clearRuneChain: () => this.runePickerSystem?.clearChain(),
             hideInventory: () => this.inventoryUI?.hide(),
@@ -883,9 +886,12 @@ export class CombatScene extends Phaser.Scene {
     private tryResolvePendingCombos(): void {
         if (!this.combatSystem || !this.turnController) return;
 
+        this.forfeitInactiveRosterPlayers();
+
         const waitingFor = this.combatSystem.getAllPlayers()
             .filter(player => {
                 if (player.stats.hp <= 0) return false;
+                if (!isActiveCombatPlayer(player.id)) return false;
 
                 const ownEnemy = this.combatSystem?.getEnemyForPlayer(player.id);
                 if (ownEnemy && ownEnemy.stats.hp > 0) return true;
@@ -921,6 +927,59 @@ export class CombatScene extends Phaser.Scene {
         this.pendingCombatChains.clear();
         this.localChainBroadcasted = false;
         this.turnController.submitPlayerChains(chains);
+    }
+
+    private onPeerDisconnected(peerId: string): void {
+        if (!this.combatSystem) return;
+        const player = this.combatSystem.getPlayer(peerId);
+        if (!player || player.isLocal) return;
+        this.forfeitCombatPlayer(peerId);
+    }
+
+    private forfeitInactiveRosterPlayers(): void {
+        if (!this.combatSystem) return;
+
+        for (const player of this.combatSystem.getAllPlayers()) {
+            if (player.isLocal || player.stats.hp <= 0) continue;
+            if (!isActiveCombatPlayer(player.id)) {
+                this.forfeitCombatPlayer(player.id);
+            }
+        }
+    }
+
+    private forfeitCombatPlayer(playerId: string): void {
+        if (!this.combatSystem) return;
+
+        const player = this.combatSystem.getPlayer(playerId);
+        if (!player || player.stats.hp <= 0) return;
+
+        player.stats.hp = 0;
+        this.pendingCombatChains.delete(playerId);
+
+        const enemy = this.combatSystem.getEnemyForPlayer(playerId);
+        if (enemy && enemy.stats.hp > 0) {
+            enemy.stats.hp = 0;
+        }
+
+        const lane = this.laneViews.get(playerId);
+        if (lane) {
+            lane.playerSprite.setAlpha(0.25);
+            lane.playerShadow.setAlpha(0.1);
+            lane.enemySprite.setAlpha(0.25);
+            lane.enemyShadow.setAlpha(0.15);
+            lane.enemyHpText.setText('0/0');
+        }
+
+        if (player.isLocal) {
+            this.updatePlayerHp();
+        }
+        this.updateEnemyHp();
+
+        if (this.combatSystem.checkCombatEnd()) {
+            return;
+        }
+
+        this.tryResolvePendingCombos();
     }
 
     private broadcastCombatEnd(result: 'VICTORY' | 'DEFEAT'): void {

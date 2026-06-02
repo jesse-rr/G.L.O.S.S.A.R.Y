@@ -54,15 +54,39 @@ export function launchCombat(scene: Phaser.Scene, data: Omit<CombatStartPayload,
     });
 }
 
-function buildCombatCohort(): CombatCohortEntry[] {
+export function getActiveCombatParticipants(): CombatCohortEntry[] {
     const nm = NetworkManager.getInstance();
     const localId = nm.role === 'offline' ? 'local' : nm.myPeerId || 'local';
     const cohort = new Map<string, CovenantType>();
 
     cohort.set(localId, PlayerData.getInstance().covenant);
-    nm.getPeerCovenants().forEach(peer => {
-        cohort.set(peer.peerId, peer.covenant);
-    });
 
-    return Array.from(cohort.entries()).map(([peerId, covenant]) => ({ peerId, covenant }));
+    if (nm.role !== 'offline') {
+        const connected = new Set(nm.getConnectedPeers());
+        nm.getPeerCovenants().forEach(peer => {
+            if (connected.has(peer.peerId)) {
+                cohort.set(peer.peerId, peer.covenant);
+            }
+        });
+    }
+
+    return Array.from(cohort.entries())
+        .map(([peerId, covenant]) => ({ peerId, covenant }))
+        .sort((a, b) => a.peerId.localeCompare(b.peerId))
+        .slice(0, 3);
+}
+
+export function isActiveCombatPlayer(playerId: string): boolean {
+    const nm = NetworkManager.getInstance();
+    if (nm.role === 'offline') {
+        return playerId === 'local';
+    }
+
+    const localId = nm.myPeerId || 'local';
+    if (playerId === localId) return true;
+    return nm.getConnectedPeers().includes(playerId);
+}
+
+function buildCombatCohort(): CombatCohortEntry[] {
+    return getActiveCombatParticipants();
 }

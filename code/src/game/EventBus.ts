@@ -4,6 +4,7 @@ export const GameEvents = {
     NETWORK_DATA_RECEIVED: 'network-data-received',
     PEER_CONNECTED: 'peer-connected',
     PEER_DISCONNECTED: 'peer-disconnected',
+    HOST_RESTORED: 'host-restored',
     SHOW_NOTIFICATION: 'show-notification',
     COMBAT_PROGRESS_CHANGED: 'combat-progress-changed',
 } as const;
