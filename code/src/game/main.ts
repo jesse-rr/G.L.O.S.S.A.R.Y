@@ -21,11 +21,7 @@ import { MerchantShop } from './scenes/ui/MerchantShop';
 import { LocationDisplayScene } from "./utils/LocationDefinition";
 import {GameOver} from "./scenes/world/GameOver";
 
-declare global {
-    interface Window {
-        __GAME__: Game;
-    }
-}
+
 
 let useVsync = true;
 
@@ -90,7 +86,6 @@ const config: Phaser.Types.Core.GameConfig = {
 
 const StartGame = (parent: string) => {
     const game = new Game({ ...config, parent });
-    window.__GAME__ = game;
     return game;
 };
 

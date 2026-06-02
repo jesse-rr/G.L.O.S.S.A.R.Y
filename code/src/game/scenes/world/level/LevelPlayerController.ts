@@ -71,7 +71,7 @@ export function spawnLevelPlayer(scene: Phaser.Scene, x: number, y: number): Lev
     player.setBounce(0);
     player.setMass(10);
 
-    const playerShadow = scene.add.image(x, y + 11, 'protagonist-shadow');
+    const playerShadow = scene.add.image(x, y + 16, 'protagonist-shadow');
     playerShadow.setOrigin(0.5, 1.06);
     playerShadow.setDepth(14);
     playerShadow.setAlpha(0.6);
@@ -88,7 +88,7 @@ export function syncPlayerShadow(
     playerShadow: Phaser.GameObjects.Image
 ): void {
     if (!playerShadow || !player.active) return;
-    playerShadow.setPosition(player.x, player.y + 11);
+    playerShadow.setPosition(player.x, player.y + 16);
     playerShadow.setFlipX(player.flipX);
 }
 

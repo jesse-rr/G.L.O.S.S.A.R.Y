@@ -40,6 +40,13 @@ export function broadcastCombatStart(data: Omit<CombatStartPayload, 'type' | 'or
 export function launchCombat(scene: Phaser.Scene, data: Omit<CombatStartPayload, 'type' | 'originPeerId'>): void {
     if (scene.scene.isActive('CombatScene')) return;
 
+    const overlays = ['GlossaryUI', 'Help', 'Settings', 'SettingsUI', 'Achievements', 'AchievementsUI'];
+    for (const key of overlays) {
+        if (scene.scene.isActive(key)) {
+            scene.scene.stop(key);
+        }
+    }
+
     scene.scene.launch('TransitionScene', {
         targetScene: 'CombatScene',
         currentScene: scene.sys.settings.key,
@@ -62,12 +69,18 @@ export function getActiveCombatParticipants(): CombatCohortEntry[] {
     cohort.set(localId, PlayerData.getInstance().covenant);
 
     if (nm.role !== 'offline') {
-        const connected = new Set(nm.getConnectedPeers());
-        nm.getPeerCovenants().forEach(peer => {
-            if (connected.has(peer.peerId)) {
+        if (nm.role === 'host') {
+            const connected = new Set(nm.getConnectedPeers());
+            nm.getPeerCovenants().forEach(peer => {
+                if (connected.has(peer.peerId)) {
+                    cohort.set(peer.peerId, peer.covenant);
+                }
+            });
+        } else {
+            nm.getPeerCovenants().forEach(peer => {
                 cohort.set(peer.peerId, peer.covenant);
-            }
-        });
+            });
+        }
     }
 
     return Array.from(cohort.entries())
@@ -84,6 +97,22 @@ export function isActiveCombatPlayer(playerId: string): boolean {
 
     const localId = nm.myPeerId || 'local';
     if (playerId === localId) return true;
+
+    if (nm.role === 'client') {
+        const hostId = nm.getCanonicalHostPeerId();
+        const relayHostId = nm.getRelayHostPeerId();
+        const effectiveHost = relayHostId || hostId;
+
+        if (playerId === effectiveHost) {
+            return nm.getConnectedPeers().includes(effectiveHost);
+        }
+
+        const hostConnected = nm.getConnectedPeers().includes(effectiveHost);
+        if (!hostConnected) return false;
+
+        return nm.getPeerCovenants().some(p => p.peerId === playerId);
+    }
+
     return nm.getConnectedPeers().includes(playerId);
 }
 

@@ -11,6 +11,13 @@ export class TransitionScene extends Scene {
         if (TransitionScene.isPlaying) return;
         TransitionScene.isPlaying = true;
 
+        const overlays = ['GlossaryUI', 'Help', 'Settings', 'SettingsUI', 'Achievements', 'AchievementsUI'];
+        for (const key of overlays) {
+            if (this.scene.isActive(key)) {
+                this.scene.stop(key);
+            }
+        }
+
         this.scene.bringToTop();
 
         const centerX = this.scale.width / 2;

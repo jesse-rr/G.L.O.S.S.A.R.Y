@@ -1,3 +1,4 @@
+import { generateUUID } from 'three/src/math/MathUtils.js';
 import { EventBus, GameEvents } from './EventBus';
 import { CovenantType, PlayerData } from './data/PlayerData';
 
@@ -188,6 +189,13 @@ export class NetworkManager {
     }
 
     public getConnectedPeers(): string[] {
+        if (this.role === 'client') {
+            const hostId = this.relayHostPeerId || this.roomId;
+            if (hostId && this.hostConnection?.dataChannel?.readyState === 'open') {
+                return [hostId];
+            }
+            return [];
+        }
         return Array.from(this.connections.entries())
             .filter(([, conn]) => conn.dataChannel?.readyState === 'open')
             .map(([peerId]) => peerId);
@@ -333,6 +341,15 @@ export class NetworkManager {
             if (data?.originPeerId) {
                 this.trackKnownPeer(data.originPeerId);
             }
+
+            if (data && typeof data === 'object') {
+                if (data.type === 'PEER_LEFT' && typeof data.peerId === 'string') {
+                    this.peerCovenants.delete(data.peerId);
+                    this.knownPeers.delete(data.peerId);
+                    EventBus.emit(GameEvents.PEER_DISCONNECTED, data.peerId);
+                }
+            }
+
             EventBus.emit(GameEvents.NETWORK_DATA_RECEIVED, { peerId, data });
         };
 

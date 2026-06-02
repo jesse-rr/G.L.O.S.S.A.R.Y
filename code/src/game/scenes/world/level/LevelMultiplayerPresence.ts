@@ -120,7 +120,7 @@ export class LevelMultiplayerPresence {
 
     private createRemotePlayer(_peerId: string, x: number, y: number, covenant: PresenceCovenant): RemotePlayerAvatar {
         const depth = getLevelPlayerDepth(this.getLocalState()?.mapKey ?? 'hub');
-        const shadow = this.scene.add.image(x, y + 11, 'protagonist-shadow')
+        const shadow = this.scene.add.image(x, y + 16, 'protagonist-shadow')
             .setOrigin(0.5, 1.06)
             .setDepth(depth - 1)
             .setAlpha(0.35)
@@ -154,7 +154,7 @@ export class LevelMultiplayerPresence {
 
             remote.sprite.x = Phaser.Math.Linear(remote.sprite.x, remote.targetX, 0.24);
             remote.sprite.y = Phaser.Math.Linear(remote.sprite.y, remote.targetY, 0.24);
-            remote.shadow.setPosition(remote.sprite.x, remote.sprite.y + 11);
+            remote.shadow.setPosition(remote.sprite.x, remote.sprite.y + 16);
         });
     }
 

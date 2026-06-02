@@ -228,6 +228,24 @@ export class CombatScene extends Phaser.Scene {
             }
             this.finalizePillarWhiteoutTransition();
         }
+
+        this.broadcastCombatInit();
+    }
+
+    private broadcastCombatInit(): void {
+        const nm = NetworkManager.getInstance();
+        if (nm.role !== 'host') return;
+        
+        const combatState = {
+            type: 'COMBAT_INIT',
+            combatId: this.combatId,
+            encounterTier: this.encounterTier,
+            encounterMapKey: this.encounterMapKey,
+            targetEnemyId: this.targetEnemyId,
+            peers: nm.getPeerCovenants().map(p => ({ peerId: p.peerId, covenant: p.covenant })),
+            originPeerId: nm.myPeerId
+        };
+        nm.broadcast(combatState);
     }
 
     update(time: number, _delta: number): void {
@@ -826,10 +844,44 @@ export class CombatScene extends Phaser.Scene {
 
     private onNetworkData(payload: any): void {
         const data = payload.data;
-        if (!data || (data.type !== 'COMBAT_ACTION' && data.type !== 'COMBAT_END')) return;
+        if (!data) return;
 
         const nm = NetworkManager.getInstance();
         if (data.originPeerId === nm.myPeerId) return;
+
+        if (data.type === 'COMBAT_INIT' && nm.role === 'client') {
+            if (data.combatId && data.combatId !== this.combatId) {
+                this.combatId = data.combatId;
+                this.encounterTier = data.encounterTier;
+                this.encounterMapKey = data.encounterMapKey;
+                this.targetEnemyId = data.targetEnemyId;
+                
+                for (const peer of data.peers) {
+                    nm.setPeerCovenant(peer.peerId, peer.covenant);
+                }
+                
+                const encounter = createCombatEncounter({
+                    playerData: this.playerData!,
+                    encounterTier: this.encounterTier,
+                    encounterMapKey: this.encounterMapKey,
+                    targetEnemyId: this.targetEnemyId,
+                    cohort: data.peers.map((p: any) => ({ peerId: p.peerId, covenant: p.covenant, isReady: true }))
+                });
+                this.combatSystem = encounter.combatSystem;
+                this.targetEnemyId = encounter.targetEnemyId;
+                
+                this.laneViews.clear();
+                this.createPlayerVisual();
+                this.createEnemyVisual();
+                this.updateEnemyHp();
+                this.updateStatusEffects();
+                this.updateHUD();
+            }
+            return;
+        }
+
+        if (data.type !== 'COMBAT_ACTION' && data.type !== 'COMBAT_END') return;
+
         if (nm.role === 'host') {
             nm.broadcast(data);
         }
@@ -996,7 +1048,6 @@ export class CombatScene extends Phaser.Scene {
             originPeerId: nm.myPeerId
         });
     }
-
 
     private updateStatusEffects(): void {
         if (!this.combatSystem || !this.statusEffectUI || !this.enemyStatusContainer) return;

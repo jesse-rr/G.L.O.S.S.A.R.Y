@@ -1205,6 +1205,7 @@ export class LevelScene extends Phaser.Scene {
     }
 
     update(_time: number, delta: number) {
+        if (!this.player || !this.player.active || !this.player.body) return;
         this.updateGamepadInput();
         this.multiplayerPresence?.update(_time);
         const interactDown = this.interactKey.isDown || this.gamepadInteractDown;

@@ -2,7 +2,7 @@ import { BESTIARY, BestiaryData } from '../data/BestiaryData';
 import { PlayerData, CovenantType } from '../data/PlayerData';
 import { NetworkManager } from '../NetworkManager';
 import { UserData } from '../data/UserData';
-import { GodMode } from '../utils/GodMode';
+
 import { CombatCohortEntry, getActiveCombatParticipants, isActiveCombatPlayer } from '../utils/CombatStartSync';
 import { CombatEnemy, CombatPlayer, CombatSystem } from './CombatSystem';
 
@@ -32,16 +32,15 @@ export interface CombatEncounterState {
 
 export function createCombatEncounter(config: CombatEncounterConfig): CombatEncounterState {
     const combatSystem = new CombatSystem();
-    const godModeStats = GodMode.getActiveStats();
     const roster = buildCombatRoster(config.playerData, config.cohort);
     const players: CombatPlayer[] = roster.map((entry, index) => ({
         id: entry.id,
         name: entry.isLocal ? 'You' : `Ally ${index + 1}`,
         covenant: entry.covenant,
         stats: {
-            hp: entry.isLocal ? (godModeStats?.hp ?? config.playerData.hp) : config.playerData.maxHp,
-            maxHp: entry.isLocal ? (godModeStats?.hp ?? config.playerData.maxHp) : config.playerData.maxHp,
-            attack: entry.isLocal ? (godModeStats?.attack ?? 0) : 0,
+            hp: entry.isLocal ? config.playerData.hp : config.playerData.maxHp,
+            maxHp: entry.isLocal ? config.playerData.maxHp : config.playerData.maxHp,
+            attack: 0,
             defense: 3
         },
         gemstones: entry.isLocal ? config.playerData.gemstones : 0,
@@ -78,27 +77,57 @@ export function createCombatEncounter(config: CombatEncounterConfig): CombatEnco
 function buildCombatRoster(playerData: PlayerData, combatCohort?: CombatCohortEntry[]): Array<{ id: string; covenant: CovenantType; isLocal: boolean }> {
     const nm = NetworkManager.getInstance();
     const localId = nm.role === 'offline' ? 'local' : nm.myPeerId || 'local';
-    const activeIds = new Set(getActiveCombatParticipants().map(entry => entry.peerId));
     const byPeer = new Map<string, CovenantType>();
 
-    if (combatCohort && combatCohort.length > 0) {
-        combatCohort.forEach(entry => {
-            if (entry.peerId && entry.covenant && activeIds.has(entry.peerId)) {
-                byPeer.set(entry.peerId, entry.covenant);
-            }
-        });
-    } else if (nm.role !== 'offline') {
-        for (const peer of nm.getPeerCovenants()) {
-            if (activeIds.has(peer.peerId)) {
+    if (nm.role === 'host') {
+        if (combatCohort && combatCohort.length > 0) {
+            combatCohort.forEach(entry => {
+                if (entry.peerId && entry.covenant) {
+                    byPeer.set(entry.peerId, entry.covenant);
+                }
+            });
+        } else {
+            for (const peer of nm.getPeerCovenants()) {
                 byPeer.set(peer.peerId, peer.covenant);
             }
         }
+        byPeer.set(localId, playerData.covenant);
+    } else if (nm.role === 'client') {
+        const hostId = nm.getCanonicalHostPeerId();
+        const relayHostId = nm.getRelayHostPeerId();
+        const effectiveHost = relayHostId || hostId;
+        
+        if (combatCohort && combatCohort.length > 0) {
+            combatCohort.forEach(entry => {
+                if (entry.peerId && entry.covenant) {
+                    byPeer.set(entry.peerId, entry.covenant);
+                }
+            });
+            if (effectiveHost && effectiveHost !== localId && !byPeer.has(effectiveHost)) {
+                const hostCovenant = nm.getPeerCovenants().find(p => p.peerId === effectiveHost)?.covenant;
+                byPeer.set(effectiveHost, hostCovenant || 'dragon');
+            }
+        } else if (nm.getPeerCovenants().length > 0) {
+            for (const peer of nm.getPeerCovenants()) {
+                byPeer.set(peer.peerId, peer.covenant);
+            }
+            if (effectiveHost && effectiveHost !== localId && !byPeer.has(effectiveHost)) {
+                const hostCovenant = nm.getPeerCovenants().find(p => p.peerId === effectiveHost)?.covenant;
+                if (hostCovenant) {
+                    byPeer.set(effectiveHost, hostCovenant);
+                }
+            }
+        } else {
+            if (effectiveHost && effectiveHost !== localId) {
+                byPeer.set(effectiveHost, 'dragon');
+            }
+        }
+        byPeer.set(localId, playerData.covenant);
+    } else {
+        byPeer.set(localId, playerData.covenant);
     }
 
-    byPeer.set(localId, playerData.covenant);
-
     const roster = Array.from(byPeer.entries())
-        .filter(([id]) => activeIds.has(id))
         .map(([id, covenant]) => ({
             id,
             covenant,
