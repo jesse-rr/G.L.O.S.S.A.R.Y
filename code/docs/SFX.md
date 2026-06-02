@@ -1,167 +1,230 @@
 # SFX, Music, and Ambience Plan
 
-This document lists the sound assets still needed for **G.L.O.S.S.A.R.Y.** and the folder structure to keep them organized.
+This document lists the audio assets required for **G.L.O.S.S.A.R.Y.** during the current production phase. The focus is on essential gameplay feedback, ambience, and boss encounters while keeping the audio scope manageable.
 
 ---
 
-## Asset Folder Structure
+# Asset Folder Structure
 
 ```text
 public/assets/
 ├── ambience/
 │   ├── hub/
-│   ├── biomes/
-│   │   ├── desert/
-│   │   ├── abandoned/
-│   │   └── mechanic/
-│   ├── merchant/
+│   ├── desert/
+│   ├── swamp/
+│   ├── mechanic/
 │   └── summit/
-├── music/
-│   ├── menu/
-│   ├── exploration/
-│   ├── combat/
-│   ├── boss/
-│   └── stingers/
 └── sfx/
     ├── ui/
     ├── glossary/
     ├── movement/
-    │   ├── dash/
-    │   └── footsteps/
-    ├── exploration/
-    │   ├── interactions/
-    │   ├── items/
-    │   └── doors/
-    ├── world/
-    │   ├── chains/
-    │   └── impacts/
-    ├── transitions/
-    │   ├── teleport/
-    │   └── portal/
+    │   ├── footsteps/
+    │   └── dash/
+    ├── interactions/
     ├── combat/
-    │   ├── runes/
-    │   ├── hits/
-    │   └── status/
-    ├── enemies/
-    ├── bosses/
-    │   └── summit/
-    └── merchant/
+    ├── raidho/
+    └── bosses/
 ```
 
-### Current Files
+---
+
+# Current Files
 
 ```text
 public/assets/sfx/ui/click.mp3
-public/assets/sfx/movement/dash/whoosh-1.mp3
-public/assets/sfx/movement/dash/whoosh-2.mp3
-public/assets/sfx/movement/dash/whoosh-3.mp3
-public/assets/sfx/movement/dash/whoosh-4.mp3
-public/assets/sfx/movement/dash/whoosh-5.mp3
-public/assets/sfx/world/rumble.mp3
-public/assets/sfx/world/impacts/rocks.mp3
-public/assets/sfx/world/chains/chains-1.mp3
-public/assets/sfx/world/chains/chains-2.mp3
-public/assets/sfx/world/chains/chains-3.mp3
-public/assets/sfx/world/chains/chains-4.mp3
-public/assets/sfx/transitions/teleport/teleport-whoosh-1.mp3
+
+public/assets/sfx/movement/dash/
+├── whoosh-1.mp3
+├── whoosh-2.mp3
+├── whoosh-3.mp3
+├── whoosh-4.mp3
+└── whoosh-5.mp3
+
+public/assets/sfx/world/
+├── rumble.mp3
+├── impacts/rocks.mp3
+└── chains/
+    ├── chains-1.mp3
+    ├── chains-2.mp3
+    ├── chains-3.mp3
+    └── chains-4.mp3
+
+public/assets/sfx/transitions/teleport/
+└── teleport-whoosh-1.mp3
 ```
 
 ---
 
-## Naming Conventions
+# Naming Conventions
 
-- Use lowercase kebab-case: `rune-select-1.mp3`, `door-stone-open-2.mp3`.
-- Number variants with `-1`, `-2`, `-3` for random pitch/selection variety.
-- Keep short one-shot SFX in `sfx/`.
-- Keep looping environmental beds in `ambience/`.
-- Keep composed themes and combat loops in `music/`.
+* Use lowercase kebab-case.
+* Example: `rune-select-1.mp3`
+* Example: `footstep-stone-2.mp3`
+* Example: `boss-death-1.mp3`
+* Use numbered variants (`-1`, `-2`, `-3`) when multiple versions exist.
+* Keep one-shot effects in `sfx/`.
+* Keep looping environmental sounds in `ambience/`.
 
 ---
 
-## Priority Order
+# Priority Order
 
 1. Footsteps by surface.
 2. Combat hit, cast, and enemy death sounds.
-3. Glossary, book, page, and rune unlock sounds.
-4. Raidho rune charge and activation sounds.
+3. Glossary open, page turn, and unlock sounds.
+4. Raidho charge and teleport sounds.
 5. Biome ambience loops.
 6. Boss attack sounds.
-7. Menu and covenant polish sounds.
-8. Full music loops after the game feel is stable.
+7. UI polish and menu sounds.
 
 ---
-Movement
-Footstep Stone
-Footstep Dirt/Sand
-Dash
-Hurt
-Death
 
-5 sounds
+# Required Audio Assets
 
-Interactions
-Interact
-Confirm
-Item Pickup
-Chest Open
-Door Open
-Portal
+## Movement
 
-6 sounds
+Folder: `public/assets/sfx/movement/`
 
-UI
-Hover
-Select
-Back
-Error
+### Footsteps
 
-4 sounds
+* footstep-stone
+* footstep-dirt
 
-Combat
-Rune Select
-Cast
-Hit
-Critical Hit
-Block
-Heal
-Enemy Hurt
-Enemy Death
-Victory
+### Movement Actions
 
-9 sounds
+* dash
+* player-hurt
+* player-death
 
-Raidho
-Charged Hum
-Activation Charge
-Teleport
+**Total: 5 Sounds**
 
-3 sounds
+---
 
-Glossary
-Open
-Page Turn
-Unlock Entry
+## Interactions
 
-3 sounds
+Folder: `public/assets/sfx/interactions/`
 
-Ambience
+* interact
+* confirm
+* item-pickup
+* chest-open
+* door-open
+* portal
 
-Only one loop per biome:
+**Total: 6 Sounds**
 
-Hub
-Desert
-Swamp
-Mechanic
-Summit
+---
 
-5 loops
+## UI
 
-Boss
-Encounter Start
-Eye Open
-Pillar Attack
-Spike Attack
-Boss Hurt
-Boss Death
+Folder: `public/assets/sfx/ui/`
 
-6 sounds
+* hover
+* select
+* back
+* error
+
+**Total: 4 Sounds**
+
+---
+
+## Combat
+
+Folder: `public/assets/sfx/combat/`
+
+* rune-select
+* cast
+* hit
+* critical-hit
+* block
+* heal
+* enemy-hurt
+* enemy-death
+* victory
+
+**Total: 9 Sounds**
+
+---
+
+## Raidho
+
+Folder: `public/assets/sfx/raidho/`
+
+* charged-hum
+* activation-charge
+* teleport
+
+**Total: 3 Sounds**
+
+---
+
+## Glossary
+
+Folder: `public/assets/sfx/glossary/`
+
+* glossary-open
+* page-turn
+* unlock-entry
+
+**Total: 3 Sounds**
+
+---
+
+## Ambience
+
+Folder: `public/assets/ambience/`
+
+### Hub
+
+* hub-loop
+
+### Desert
+
+* desert-loop
+
+### Swamp
+
+* swamp-loop
+
+### Mechanic
+
+* mechanic-loop
+
+### Summit
+
+* summit-loop
+
+**Total: 5 Loops**
+
+---
+
+## Boss
+
+Folder: `public/assets/sfx/bosses/`
+
+* encounter-start
+* eye-open
+* pillar-attack
+* spike-attack
+* boss-hurt
+* boss-death
+
+**Total: 6 Sounds**
+
+---
+
+# Summary
+
+| Category           |  Count |
+| ------------------ | -----: |
+| Movement           |      5 |
+| Interactions       |      6 |
+| UI                 |      4 |
+| Combat             |      9 |
+| Raidho             |      3 |
+| Glossary           |      3 |
+| Boss               |      6 |
+| **Total SFX**      | **36** |
+| **Ambience Loops** |  **5** |
+
+This represents the minimum audio package required to achieve strong gameplay feedback and atmosphere while avoiding unnecessary production overhead during active development.
