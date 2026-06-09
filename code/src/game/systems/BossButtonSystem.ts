@@ -4,6 +4,7 @@ import { createVignette } from '../utils/Vignette';
 import { InteractSystem } from './InteractSystem';
 import { hasReachedMaxCombats } from './PipeSystem';
 import { broadcastCombatStart, buildCombatStartData } from '../utils/CombatStartSync';
+import { getCompletedCombatsForMap } from '../utils/CombatProgress';
 
 const INTERACT_DISTANCE = 30;
 const SYMBOL_Y_OFFSET = -6;
@@ -32,6 +33,14 @@ function getBossButtonTextureKey(mapKey: string): string {
     if (mapKey.includes('mechanic')) return 'btn-boss-mechanic';
     if (mapKey.includes('summit')) return 'btn-boss-summit';
     return 'btn-boss-abandoned';
+}
+
+function getFloorKeyForMap(mapKey: string): string {
+    if (mapKey.includes('abandoned')) return 'boss-floor-abandoned';
+    if (mapKey.includes('desert')) return 'boss-floor-desert';
+    if (mapKey.includes('mechanic')) return 'boss-floor-mechanic';
+    const lastFloor = localStorage.getItem('glossary_last_floor') || 'abandoned';
+    return `boss-floor-${lastFloor}`;
 }
 
 function incrementBossPressCount(mapKey: string): number {
@@ -159,7 +168,7 @@ export function handleBossButtonInteraction(
             ease: 'Sine.easeOut'
         });
 
-        const encounterTier = Math.min(incrementBossPressCount(mapKey), 3);
+        const encounterTier = Math.min(getCompletedCombatsForMap(getFloorKeyForMap(mapKey)) + 1, 3);
 
         const darkVignette = createVignette(scene, 99, true);
         darkVignette.setAlpha(0);

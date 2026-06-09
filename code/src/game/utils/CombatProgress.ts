@@ -24,6 +24,16 @@ export function getTotalCompletedCombats(): number {
     }
 }
 
+export function getCompletedCombatsForMap(encounterMapKey: string): number {
+    try {
+        const parsed = readCompletedCombats();
+        const mapList = parsed[encounterMapKey];
+        return Array.isArray(mapList) ? mapList.length : 0;
+    } catch {
+        return 0;
+    }
+}
+
 export function recordCompletedCombat(encounterMapKey: string, combatRecord: CombatCompletionRecord): boolean {
     const allCompleted = readCompletedCombats();
     const mapList = allCompleted[encounterMapKey] || [];

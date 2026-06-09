@@ -50,6 +50,7 @@ export class CombatScene extends Phaser.Scene {
     private abilityBtnText: Phaser.GameObjects.Text | null = null;
     private abilityWobbleTween: Phaser.Tweens.Tween | null = null;
     private enemyStatusContainer: Phaser.GameObjects.Container | null = null;
+    private playerStatusContainer: Phaser.GameObjects.Container | null = null;
     private combatTimer: number = 0;
     private enemyTooltip: Phaser.GameObjects.Container | null = null;
     private enemyTooltipTitle: Phaser.GameObjects.Text | null = null;
@@ -495,7 +496,9 @@ export class CombatScene extends Phaser.Scene {
                 this.playerShadow = playerShadow;
             }
 
-            this.bindPlayerTooltip(player, playerSprite);
+            if (NetworkManager.getInstance().role !== 'offline') {
+                this.bindPlayerTooltip(player, playerSprite);
+            }
         });
     }
 
@@ -563,9 +566,12 @@ export class CombatScene extends Phaser.Scene {
         });
 
         this.enemyStatusContainer = this.add.container(this.scale.width - 40, 95).setScrollFactor(0);
+        if (NetworkManager.getInstance().role === 'offline') {
+            this.playerStatusContainer = this.add.container(40, 95).setScrollFactor(0);
+        }
 
         this.enemyTooltip = this.add.container(0, 0).setDepth(1000).setScrollFactor(0).setAlpha(0);
-        const bg = this.add.rectangle(75, -42.5, 150, 85, 0x000000, 0.9).setStrokeStyle(1, 0x847E87);
+        const bg = this.add.rectangle(75, -15, 150, 140, 0x000000, 0.9).setStrokeStyle(1, 0x847E87);
         this.enemyTooltipTitle = this.add.text(10, -75, '', {
             fontFamily: FONT_FAMILY, fontSize: '15px', color: '#FFD700', fontStyle: 'bold'
         }).setOrigin(0, 0);
@@ -1050,10 +1056,17 @@ export class CombatScene extends Phaser.Scene {
     }
 
     private updateStatusEffects(): void {
-        if (!this.combatSystem || !this.statusEffectUI || !this.enemyStatusContainer) return;
+        if (!this.combatSystem || !this.statusEffectUI) return;
 
-        const enemyEffects = this.combatSystem.getAttackTargetEnemy(this.combatSystem.getLocalPlayerId())?.statusEffects ?? [];
-        this.statusEffectUI.syncIcons(enemyEffects, this.enemyStatusContainer);
+        if (this.enemyStatusContainer) {
+            const enemyEffects = this.combatSystem.getAttackTargetEnemy(this.combatSystem.getLocalPlayerId())?.statusEffects ?? [];
+            this.statusEffectUI.syncIcons(enemyEffects, this.enemyStatusContainer);
+        }
+
+        if (NetworkManager.getInstance().role === 'offline' && this.playerStatusContainer) {
+            const playerEffects = this.combatSystem.getLocalPlayer()?.statusEffects ?? [];
+            this.statusEffectUI.syncIcons(playerEffects, this.playerStatusContainer);
+        }
     }
 
     private updateTimer(): void {

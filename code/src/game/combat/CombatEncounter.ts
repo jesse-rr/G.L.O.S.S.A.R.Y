@@ -23,6 +23,7 @@ export interface CombatEncounterConfig {
     encounterMapKey: string;
     targetEnemyId: string | null;
     cohort?: CombatCohortEntry[];
+    combatId?: string;
 }
 
 export interface CombatEncounterState {
@@ -51,26 +52,38 @@ export function createCombatEncounter(config: CombatEncounterConfig): CombatEnco
         roundDefense: 0
     }));
 
-    const enemyDef = pickEnemyFromBestiary(config);
-    const enemies: CombatEnemy[] = players.map((player) => ({
-        id: `${enemyDef.id}-${player.id}`,
-        name: enemyDef.name,
-        stats: { hp: enemyDef.hp, maxHp: enemyDef.hp, attack: enemyDef.attack, defense: enemyDef.defense },
-        targetPlayerId: player.id,
-        texture: enemyDef.texture,
-        frame: enemyDef.frame,
-        animProfile: enemyDef.animProfile,
-        damageModifier: 1.0,
-        statusEffects: [],
-        slowSkipNext: false
-    }));
+    const isMultiplayer = NetworkManager.getInstance().role !== 'offline' && players.length > 1;
+    const firstEnemyDef = pickEnemyFromBestiary(config);
+
+    const enemies: CombatEnemy[] = players.map((player, laneIndex) => {
+        let enemyDef: EnemyCombatDefinition;
+
+        if (!isMultiplayer || config.targetEnemyId || laneIndex === 0) {
+            enemyDef = firstEnemyDef;
+        } else {
+            enemyDef = pickEnemyForLane(config, player.id, firstEnemyDef.id);
+        }
+
+        return {
+            id: `${enemyDef.id}-${player.id}`,
+            name: enemyDef.name,
+            stats: { hp: enemyDef.hp, maxHp: enemyDef.hp, attack: enemyDef.attack, defense: enemyDef.defense },
+            targetPlayerId: player.id,
+            texture: enemyDef.texture,
+            frame: enemyDef.frame,
+            animProfile: enemyDef.animProfile,
+            damageModifier: 1.0,
+            statusEffects: [],
+            slowSkipNext: false
+        };
+    });
 
     combatSystem.initCombat(players, enemies);
     combatSystem.startRound();
 
     return {
         combatSystem,
-        targetEnemyId: enemyDef.id
+        targetEnemyId: firstEnemyDef.id
     };
 }
 

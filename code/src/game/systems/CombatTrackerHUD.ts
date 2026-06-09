@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { FONT_FAMILY } from '../constants';
+import { EventBus, GameEvents } from '../EventBus';
 
 export interface CompletedCombat {
     enemyName: string;
@@ -22,8 +23,19 @@ export class CombatTrackerHUD {
         this.container = this.scene.add.container(0, 0).setDepth(200).setScrollFactor(0);
         this.loadCompletedCombats();
         this.createIcons();
+        EventBus.on(GameEvents.COMBAT_PROGRESS_CHANGED, this.refreshProgress, this);
         this.scene.events.on('shutdown', this.destroy, this);
         this.scene.events.on('destroy', this.destroy, this);
+    }
+
+    public refreshProgress(): void {
+        this.hideTooltip();
+        this.tweens.forEach(t => t.stop());
+        this.tweens = [];
+        this.sprites.forEach(s => s.destroy());
+        this.sprites = [];
+        this.loadCompletedCombats();
+        this.createIcons();
     }
 
     private getFloorMapKey(mapKey: string): string {
@@ -185,6 +197,7 @@ export class CombatTrackerHUD {
         this.sprites.forEach(s => s.destroy());
         this.sprites = [];
         this.container.destroy();
+        EventBus.off(GameEvents.COMBAT_PROGRESS_CHANGED, this.refreshProgress, this);
         this.scene.events.off('shutdown', this.destroy, this);
         this.scene.events.off('destroy', this.destroy, this);
     }

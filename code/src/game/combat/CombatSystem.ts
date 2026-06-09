@@ -364,7 +364,7 @@ export class CombatSystem {
             enemyDef = 0;
         }
 
-        result.damage = Math.max(1, rawDamage - enemyDef);
+        result.damage = Math.max(1, Math.round(rawDamage * (10 / (10 + enemyDef))));
         result.heal = healPower;
         result.defense = defensePower;
 
@@ -377,7 +377,8 @@ export class CombatSystem {
             }
 
             if (enemyDef > 0) {
-                dmgExpr = `${dmgExpr} - ${enemyDef}`;
+                const reductionPercent = Math.round((enemyDef / (10 + enemyDef)) * 100);
+                dmgExpr = `${dmgExpr} (Reduced by ${reductionPercent}%)`;
             }
 
             result.damageLine = `DMG: ${dmgExpr} = ${result.damage}`;
@@ -494,7 +495,7 @@ export class CombatSystem {
             rawDamage = Math.max(1, Math.floor(rawDamage * 0.75));
         }
 
-        const damage = Math.max(1, rawDamage - enemyDef);
+        const damage = Math.max(1, Math.round(rawDamage * (10 / (10 + enemyDef))));
 
         enemy.stats.hp = Math.max(0, enemy.stats.hp - damage);
         this.emit({ type: 'enemy_damaged', data: { enemyId: enemy.id, damage, remainingHp: enemy.stats.hp } });
@@ -633,7 +634,7 @@ export class CombatSystem {
             playerDef = Math.floor(playerDef * 1.5);
         }
 
-        let damage = Math.max(1, rawDamage - playerDef);
+        let damage = Math.max(1, Math.round(rawDamage * (10 / (10 + playerDef))));
 
         if (hasSecondAmendment) {
             damage = Math.floor(damage * 1.25);
