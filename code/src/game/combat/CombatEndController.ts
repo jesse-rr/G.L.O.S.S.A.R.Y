@@ -76,7 +76,8 @@ export class CombatEndController {
             localStorage.setItem('glossary_boss_combat_victory', 'true');
         }
 
-        const enemy = this.deps.combatSystem.getAllEnemies()[0] ?? null;
+        const localPlayerId = this.deps.combatSystem.getLocalPlayerId();
+        const enemy = this.deps.combatSystem.getEnemyForPlayer(localPlayerId) ?? this.deps.combatSystem.getAllEnemies()[0] ?? null;
         const defeatedEnemyName = enemy ? enemy.name : 'Unknown Enemy';
         const earnedGems = this.deps.encounterTier * 15 + Phaser.Math.Between(5, 15);
         const earnedSpecial = this.deps.encounterTier;

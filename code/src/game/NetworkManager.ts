@@ -1,4 +1,3 @@
-import { generateUUID } from 'three/src/math/MathUtils.js';
 import { EventBus, GameEvents } from './EventBus';
 import { CovenantType, PlayerData } from './data/PlayerData';
 

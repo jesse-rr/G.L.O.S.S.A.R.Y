@@ -42,6 +42,7 @@ export class CombatScene extends Phaser.Scene {
     private encounterTier: number = 1;
     private encounterMapKey: string = '';
     private targetEnemyId: string | null = null;
+    private enemyMapping: Record<string, string> | undefined = undefined;
     private enemySprite: Phaser.GameObjects.Sprite | null = null;
     private enemyHpText: Phaser.GameObjects.Text | null = null;
     private playerSprite: Phaser.GameObjects.Sprite | null = null;
@@ -123,10 +124,12 @@ export class CombatScene extends Phaser.Scene {
             encounterTier: this.encounterTier,
             encounterMapKey: this.encounterMapKey,
             targetEnemyId: this.targetEnemyId,
-            cohort: data?.cohort
+            cohort: data?.cohort,
+            enemyMapping: data?.enemyMapping
         });
         this.combatSystem = encounter.combatSystem;
         this.targetEnemyId = encounter.targetEnemyId;
+        this.enemyMapping = encounter.enemyMapping;
 
         this.equippedItemStatus.clear();
         const equippedIds = getSelectedItems();
@@ -243,7 +246,8 @@ export class CombatScene extends Phaser.Scene {
             encounterTier: this.encounterTier,
             encounterMapKey: this.encounterMapKey,
             targetEnemyId: this.targetEnemyId,
-            peers: nm.getPeerCovenants().map(p => ({ peerId: p.peerId, covenant: p.covenant })),
+            enemyMapping: this.enemyMapping,
+            peers: this.combatSystem ? this.combatSystem.getAllPlayers().map(p => ({ peerId: p.id, covenant: p.covenant })) : [],
             originPeerId: nm.myPeerId
         };
         nm.broadcast(combatState);
@@ -856,32 +860,43 @@ export class CombatScene extends Phaser.Scene {
         if (data.originPeerId === nm.myPeerId) return;
 
         if (data.type === 'COMBAT_INIT' && nm.role === 'client') {
-            if (data.combatId && data.combatId !== this.combatId) {
-                this.combatId = data.combatId;
-                this.encounterTier = data.encounterTier;
-                this.encounterMapKey = data.encounterMapKey;
-                this.targetEnemyId = data.targetEnemyId;
-                
-                for (const peer of data.peers) {
-                    nm.setPeerCovenant(peer.peerId, peer.covenant);
+            if (data.combatId) {
+                const isDifferentCombat = data.combatId !== this.combatId;
+                const needsEnemySync = this.shouldReinitEnemies(data.enemyMapping);
+
+                if (isDifferentCombat || needsEnemySync) {
+                    this.combatId = data.combatId;
+                    this.encounterTier = data.encounterTier;
+                    this.encounterMapKey = data.encounterMapKey;
+                    this.targetEnemyId = data.targetEnemyId;
+                    this.enemyMapping = data.enemyMapping;
+                    
+                    for (const peer of data.peers) {
+                        nm.setPeerCovenant(peer.peerId, peer.covenant);
+                    }
+                    
+                    const encounter = createCombatEncounter({
+                        playerData: this.playerData!,
+                        encounterTier: this.encounterTier,
+                        encounterMapKey: this.encounterMapKey,
+                        targetEnemyId: this.targetEnemyId,
+                        cohort: data.peers.map((p: any) => ({ peerId: p.peerId, covenant: p.covenant, isReady: true })),
+                        enemyMapping: this.enemyMapping
+                    });
+                    this.combatSystem = encounter.combatSystem;
+                    this.targetEnemyId = encounter.targetEnemyId;
+
+                    this.createTurnController();
+                    this.createEndController();
+                    this.setupCombatEvents();
+                    
+                    this.destroyVisuals();
+                    this.createPlayerVisual();
+                    this.createEnemyVisual();
+                    this.updateEnemyHp();
+                    this.updateStatusEffects();
+                    this.updateHUD();
                 }
-                
-                const encounter = createCombatEncounter({
-                    playerData: this.playerData!,
-                    encounterTier: this.encounterTier,
-                    encounterMapKey: this.encounterMapKey,
-                    targetEnemyId: this.targetEnemyId,
-                    cohort: data.peers.map((p: any) => ({ peerId: p.peerId, covenant: p.covenant, isReady: true }))
-                });
-                this.combatSystem = encounter.combatSystem;
-                this.targetEnemyId = encounter.targetEnemyId;
-                
-                this.laneViews.clear();
-                this.createPlayerVisual();
-                this.createEnemyVisual();
-                this.updateEnemyHp();
-                this.updateStatusEffects();
-                this.updateHUD();
             }
             return;
         }
@@ -1078,5 +1093,64 @@ export class CombatScene extends Phaser.Scene {
         if (this.turnController?.isBusy()) return;
         this.inventoryUI = new CombatInventoryUI(this, this.equippedItemStatus);
         this.inventoryUI.show();
+    }
+
+    private shouldReinitEnemies(enemyMapping: Record<string, string> | undefined): boolean {
+        if (!enemyMapping || !this.combatSystem) return true;
+        for (const player of this.combatSystem.getAllPlayers()) {
+            const currentEnemy = this.combatSystem.getEnemyForPlayer(player.id);
+            const expectedEnemyId = enemyMapping[player.id];
+            if (!currentEnemy || !expectedEnemyId || !currentEnemy.id.startsWith(expectedEnemyId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private destroyVisuals(): void {
+        this.laneViews.forEach(lane => {
+            lane.playerSprite?.destroy();
+            lane.playerShadow?.destroy();
+            lane.enemySprite?.destroy();
+            lane.enemyShadow?.destroy();
+            lane.enemyHpText?.destroy();
+            lane.enemyAnimator?.destroy();
+        });
+        this.laneViews.clear();
+
+        if (this.playerSprite) {
+            this.playerSprite.destroy();
+            this.playerSprite = null;
+        }
+        if (this.playerShadow) {
+            this.playerShadow.destroy();
+            this.playerShadow = null;
+        }
+        if (this.enemySprite) {
+            this.enemySprite.destroy();
+            this.enemySprite = null;
+        }
+        if (this.enemyHpText) {
+            this.enemyHpText.destroy();
+            this.enemyHpText = null;
+        }
+        if (this.enemyShadow) {
+            this.enemyShadow.destroy();
+            this.enemyShadow = null;
+        }
+        if (this.enemyStatusContainer) {
+            this.enemyStatusContainer.destroy();
+            this.enemyStatusContainer = null;
+        }
+        if (this.playerStatusContainer) {
+            this.playerStatusContainer.destroy();
+            this.playerStatusContainer = null;
+        }
+        if (this.enemyTooltip) {
+            this.enemyTooltip.destroy();
+            this.enemyTooltip = null;
+            this.enemyTooltipTitle = null;
+            this.enemyTooltipDesc = null;
+        }
     }
 }

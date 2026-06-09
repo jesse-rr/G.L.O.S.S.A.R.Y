@@ -1498,7 +1498,8 @@ export class LevelScene extends Phaser.Scene {
             mapKey: data.mapKey ?? this.mapKey,
             enemyId: data.enemyId ?? null,
             fadeFromWhite: !!data.fadeFromWhite,
-            cohort: data.cohort
+            cohort: data.cohort,
+            enemyMapping: data.enemyMapping
         });
     }
 

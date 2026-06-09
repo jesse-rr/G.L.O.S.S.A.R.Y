@@ -15,6 +15,7 @@ export interface CombatStartPayload {
     enemyId?: string | null;
     fadeFromWhite?: boolean;
     cohort?: CombatCohortEntry[];
+    enemyMapping?: Record<string, string>;
     originPeerId: string;
 }
 
@@ -56,7 +57,8 @@ export function launchCombat(scene: Phaser.Scene, data: Omit<CombatStartPayload,
             mapKey: data.mapKey,
             enemyId: data.enemyId ?? null,
             fadeFromWhite: !!data.fadeFromWhite,
-            cohort: data.cohort
+            cohort: data.cohort,
+            enemyMapping: data.enemyMapping
         }
     });
 }

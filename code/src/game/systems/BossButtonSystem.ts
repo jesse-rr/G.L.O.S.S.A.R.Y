@@ -5,6 +5,8 @@ import { InteractSystem } from './InteractSystem';
 import { hasReachedMaxCombats } from './PipeSystem';
 import { broadcastCombatStart, buildCombatStartData } from '../utils/CombatStartSync';
 import { getCompletedCombatsForMap } from '../utils/CombatProgress';
+import { generateEnemyMapping } from '../combat/CombatEncounter';
+import { PlayerData } from '../data/PlayerData';
 
 const INTERACT_DISTANCE = 30;
 const SYMBOL_Y_OFFSET = -6;
@@ -13,7 +15,6 @@ const SHAKE_DURATION = 300;
 const SHAKE_INTENSITY = 0.002;
 const BUTTON_PRESS_ANIM_KEY = 'btn-boss-press';
 const BUTTON_FRAME_RATE = 6;
-const BOSS_PRESS_STORAGE_KEY = 'glossary_boss_presses';
 
 export interface BossButtonState {
     button: Phaser.GameObjects.Sprite;
@@ -43,17 +44,6 @@ function getFloorKeyForMap(mapKey: string): string {
     return `boss-floor-${lastFloor}`;
 }
 
-function incrementBossPressCount(mapKey: string): number {
-    let counts: Record<string, number> = {};
-    try {
-        const data = localStorage.getItem(BOSS_PRESS_STORAGE_KEY);
-        if (data) counts = JSON.parse(data);
-    } catch {}
-    const current = (counts[mapKey] || 0) + 1;
-    counts[mapKey] = current;
-    localStorage.setItem(BOSS_PRESS_STORAGE_KEY, JSON.stringify(counts));
-    return current;
-}
 
 export function createBossButtons(
     scene: Phaser.Scene,
@@ -210,6 +200,19 @@ export function handleBossButtonInteraction(
                             localStorage.setItem('glossary_combat_player_x', String(player.x));
                             localStorage.setItem('glossary_combat_player_y', String(player.y));
                             const combatStartData = buildCombatStartData({ encounterTier, mapKey });
+
+                            // Pre-generate enemy mapping so all peers use the same enemies
+                            const mapping = generateEnemyMapping({
+                                playerData: PlayerData.getInstance(),
+                                encounterTier,
+                                encounterMapKey: mapKey,
+                                targetEnemyId: null,
+                                cohort: combatStartData.cohort
+                            });
+                            if (Object.keys(mapping).length > 0) {
+                                combatStartData.enemyMapping = mapping;
+                            }
+
                             broadcastCombatStart(combatStartData);
 
                             scene.scene.launch('TransitionScene', {

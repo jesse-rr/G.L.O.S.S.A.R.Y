@@ -3,7 +3,7 @@ import { PlayerData, CovenantType } from '../data/PlayerData';
 import { NetworkManager } from '../NetworkManager';
 import { UserData } from '../data/UserData';
 
-import { CombatCohortEntry, getActiveCombatParticipants, isActiveCombatPlayer } from '../utils/CombatStartSync';
+import { CombatCohortEntry, isActiveCombatPlayer } from '../utils/CombatStartSync';
 import { CombatEnemy, CombatPlayer, CombatSystem } from './CombatSystem';
 
 interface EnemyCombatDefinition {
@@ -24,11 +24,13 @@ export interface CombatEncounterConfig {
     targetEnemyId: string | null;
     cohort?: CombatCohortEntry[];
     combatId?: string;
+    enemyMapping?: Record<string, string>;
 }
 
 export interface CombatEncounterState {
     combatSystem: CombatSystem;
     targetEnemyId: string;
+    enemyMapping?: Record<string, string>;
 }
 
 export function createCombatEncounter(config: CombatEncounterConfig): CombatEncounterState {
@@ -55,14 +57,37 @@ export function createCombatEncounter(config: CombatEncounterConfig): CombatEnco
     const isMultiplayer = NetworkManager.getInstance().role !== 'offline' && players.length > 1;
     const firstEnemyDef = pickEnemyFromBestiary(config);
 
+    const generatedMapping: Record<string, string> = {};
+
     const enemies: CombatEnemy[] = players.map((player, laneIndex) => {
         let enemyDef: EnemyCombatDefinition;
 
-        if (!isMultiplayer || config.targetEnemyId || laneIndex === 0) {
-            enemyDef = firstEnemyDef;
+        if (config.enemyMapping && config.enemyMapping[player.id]) {
+            const mappedId = config.enemyMapping[player.id];
+            const pick = BESTIARY.find(e => e.id === mappedId) || BESTIARY.find(e => e.id === firstEnemyDef.id) || BESTIARY[0];
+            
+            BestiaryData.getInstance().discoverEntity(pick.id);
+            UserData.getInstance().checkCompletionist();
+
+            enemyDef = {
+                id: pick.id,
+                name: pick.name,
+                hp: pick.hp,
+                attack: pick.baseDamage,
+                defense: Math.floor(pick.baseDamage * 0.2),
+                texture: pick.texture,
+                frame: pick.frame,
+                animProfile: pick.animProfile
+            };
         } else {
-            enemyDef = pickEnemyForLane(config, player.id, firstEnemyDef.id);
+            if (!isMultiplayer || config.targetEnemyId || laneIndex === 0) {
+                enemyDef = firstEnemyDef;
+            } else {
+                enemyDef = pickEnemyForLane(config, firstEnemyDef.id);
+            }
         }
+
+        generatedMapping[player.id] = enemyDef.id;
 
         return {
             id: `${enemyDef.id}-${player.id}`,
@@ -83,7 +108,43 @@ export function createCombatEncounter(config: CombatEncounterConfig): CombatEnco
 
     return {
         combatSystem,
-        targetEnemyId: firstEnemyDef.id
+        targetEnemyId: firstEnemyDef.id,
+        enemyMapping: generatedMapping
+    };
+}
+
+function pickEnemyForLane(config: CombatEncounterConfig, excludeEnemyId: string): EnemyCombatDefinition {
+    let targetTier = config.encounterTier;
+    if (config.encounterMapKey === 'summit-settlement') {
+        targetTier = 4;
+    }
+
+    const tierEnemies = BESTIARY.filter(e => e.tier === targetTier);
+    const pool = tierEnemies.length > 0 ? tierEnemies : BESTIARY.filter(e => e.tier === 1);
+    const battledNames = readBattledEnemyNames();
+
+    let unbattled = pool.filter(e => e.id !== excludeEnemyId && !battledNames.has(e.name.toLowerCase()));
+    if (unbattled.length === 0) {
+        unbattled = pool.filter(e => e.id !== excludeEnemyId);
+    }
+    if (unbattled.length === 0) {
+        unbattled = pool;
+    }
+
+    const pick = unbattled[Math.floor(Math.random() * unbattled.length)];
+
+    BestiaryData.getInstance().discoverEntity(pick.id);
+    UserData.getInstance().checkCompletionist();
+
+    return {
+        id: pick.id,
+        name: pick.name,
+        hp: pick.hp,
+        attack: pick.baseDamage,
+        defense: Math.floor(pick.baseDamage * 0.2),
+        texture: pick.texture,
+        frame: pick.frame,
+        animProfile: pick.animProfile
     };
 }
 
@@ -151,6 +212,33 @@ function buildCombatRoster(playerData: PlayerData, combatCohort?: CombatCohortEn
 }
 
 export { isActiveCombatPlayer };
+
+/**
+ * Pre-generate the enemy mapping (playerId → bestiaryId) without creating a
+ * full CombatSystem. Call this at the time of COMBAT_START broadcast so the
+ * mapping can be included in the payload and every peer uses the same enemies.
+ */
+export function generateEnemyMapping(config: Omit<CombatEncounterConfig, 'enemyMapping'>): Record<string, string> {
+    const nm = NetworkManager.getInstance();
+    if (nm.role === 'offline') return {};
+
+    const roster = buildCombatRoster(config.playerData, config.cohort);
+    if (roster.length <= 1) return {};
+
+    const firstEnemyDef = pickEnemyFromBestiary(config as CombatEncounterConfig);
+    const mapping: Record<string, string> = {};
+
+    roster.forEach((entry, laneIndex) => {
+        if (config.targetEnemyId || laneIndex === 0) {
+            mapping[entry.id] = firstEnemyDef.id;
+        } else {
+            const laneDef = pickEnemyForLane(config as CombatEncounterConfig, firstEnemyDef.id);
+            mapping[entry.id] = laneDef.id;
+        }
+    });
+
+    return mapping;
+}
 
 function pickEnemyFromBestiary(config: CombatEncounterConfig): EnemyCombatDefinition {
     let lookupId = config.targetEnemyId;
