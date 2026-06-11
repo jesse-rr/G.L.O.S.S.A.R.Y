@@ -24,7 +24,7 @@ export class GameOver extends Scene {
 
     init(data: { finalCredits?: number }) {
         if (data.finalCredits) {
-            this.finalCredits = Math.min(data.finalCredits, 200);
+            this.finalCredits = Math.min(data.finalCredits, 800);
         } else {
             const completedCombats = localStorage.getItem('glossary_echojar_completed_combats');
             const combatsWon = completedCombats ? parseInt(completedCombats) : 0;
@@ -36,7 +36,7 @@ export class GameOver extends Scene {
                 credits = credits * 2;
             }
 
-            this.finalCredits = Math.min(credits, 200);
+            this.finalCredits = Math.min(credits, 800);
         }
 
         const playerData = this.registry.get('playerData');
