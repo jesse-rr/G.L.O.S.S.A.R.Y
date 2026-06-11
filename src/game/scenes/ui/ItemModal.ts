@@ -1,0 +1,58 @@
+import * as Phaser from 'phaser';
+import { NetworkManager } from '../../NetworkManager';
+import { fadeIn, fadeOut } from '../../utils/TweenUtils';
+import { AudioManager } from '../../utils/AudioManager';
+
+export class ItemModal extends Phaser.Scene {
+    private bgOverlay!: Phaser.GameObjects.Rectangle;
+    private itemSprite!: Phaser.GameObjects.Sprite;
+
+    constructor() {
+        super('ItemModal');
+    }
+
+    create(data: { itemKey: string, itemFrame: number, itemName: string }) {
+        const { width, height } = this.scale;
+
+        this.bgOverlay = this.add.rectangle(0, 0, width, height, 0x000000, 0)
+            .setOrigin(0, 0);
+
+        this.tweens.add({
+            targets: this.bgOverlay,
+            fillAlpha: 0.85,
+            duration: 600
+        });
+
+        this.itemSprite = this.add.sprite(width / 2, height / 2 - 10, data.itemKey, data.itemFrame)
+            .setScale(2)
+            .setTint(0x000000)
+            .setAlpha(0);
+
+        fadeIn(this, this.itemSprite, 600, () => {
+            this.time.delayedCall(800, () => {
+                this.itemSprite.clearTint();
+                this.cameras.main.flash(400, 255, 255, 255);
+                new AudioManager(this).playUnlockedItem();
+
+                const nm = NetworkManager.getInstance();
+                if (nm.role !== 'offline') {
+                    nm.broadcast({
+                        type: 'ITEM_FOUND',
+                        itemId: data.itemFrame,
+                        itemName: data.itemName,
+                        originPeerId: nm.myPeerId
+                    });
+                }
+
+                this.time.delayedCall(1000, () => this.closeModal());
+            });
+        });
+    }
+
+    private closeModal() {
+        fadeOut(this, [this.bgOverlay, this.itemSprite], 400, () => {
+            this.scene.resume('LevelScene');
+            this.scene.stop();
+        });
+    }
+}
