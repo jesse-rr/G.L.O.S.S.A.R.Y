@@ -85,7 +85,7 @@ export class CombatEndController {
         const defeatedEnemyName = enemy ? enemy.name : 'Unknown Enemy';
         const earnedGems = this.deps.encounterTier * 15 + Phaser.Math.Between(5, 15);
         const earnedSpecial = this.deps.encounterTier;
-        const earnedTokens = 10;
+        const earnedTokens = 50;
 
         this.deps.playerData.gemstones += earnedGems;
         this.deps.playerData.specialCurrency += earnedSpecial;

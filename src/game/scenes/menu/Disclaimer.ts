@@ -69,7 +69,7 @@ export class Disclaimer extends Phaser.Scene {
             'This game is designed to be a longer experience',
             '(expect 15 to 30 minutes of exploration).',
             '',
-            'Each combat victory rewards 20 tokens,',
+            'Each combat victory rewards 50 tokens,',
             'but you must reach the boss to cash them out.',
             '',
             'There is no permanent death.',
