@@ -1,5 +1,8 @@
 # G.L.O.S.S.A.R.Y.
 
+<img width="1276" height="713" alt="image" src="https://github.com/user-attachments/assets/4adbb8b5-f1ad-4f74-ad5c-41a7bfde3e6c" />
+
+
 A cooperative 1–3 player exploration turn-based RPG.
 
 **The Shadows** — nameless consciousnesses stripped of their identities — awaken in a fractured Central Hub. To reclaim their lost meaning, players must journey through three decaying realms, master ancient runes, conquer realm guardians, and unite at the Summit to face a mythical god in a final, conjoined battle.
